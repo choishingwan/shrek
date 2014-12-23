@@ -3,17 +3,17 @@
 
 std::string usefulTools::clean(const std::string seq) {
 	// clean out the special characters at the end of the sequence
-	int j = seq.length()-1;
+	size_t j = seq.length()-1;
 	while ((j>=0) && ((seq.at(j)<'!') || (seq.at(j)>='~')))
 		j--;
-	
+
 	if (j<0) return "";
 	else return seq.substr(0,j+1);
 }
 
 std::string usefulTools::trim(const std::string seq) {
 	std::string cleanSeq = clean(seq);
-	int i = 0;
+	size_t i = 0;
 	while((i < cleanSeq.length()) && ((cleanSeq.at(i)<'!') || (cleanSeq.at(i)>='~'))) i++;
 	if(i == cleanSeq.length()) return "";
 	else return cleanSeq.substr(i, cleanSeq.length());
@@ -23,9 +23,9 @@ void usefulTools::tokenizer(const std::string seq, const std::string separators,
       // split the seq into many parts by "separators"
       // the vector<string> *result cannot be NULL
       result->clear();
-      int startpos = seq.find_first_not_of(separators);
+      size_t startpos = seq.find_first_not_of(separators);
       while (startpos != std::string::npos) {
-            int endpos = seq.find_first_of(separators, startpos);
+            size_t endpos = seq.find_first_of(separators, startpos);
             if (endpos != std::string::npos) {
                   result->push_back(seq.substr(startpos, endpos-startpos));
                   startpos = seq.find_first_not_of(separators, endpos);
@@ -44,7 +44,7 @@ bool usefulTools::fileExists(const std::string fileName){
 bool usefulTools::checkIfNumeric(const std::string seq) {
       // clean out the special characters at the end of the sequence
       std::string numSeq = clean(seq);
-      if(numSeq.at(0) == '+' || numSeq.at(0) == '-' && numSeq.length() ==1){
+      if((numSeq.at(0) == '+' || numSeq.at(0) == '-') && numSeq.length() ==1){
         return false;
       }
       int j = numSeq.length()-1;
@@ -108,9 +108,9 @@ double usefulTools::qnorm(const double p){
 							* r + .13692988092273580531) * r +
 							.59983220655588793769) * r + 1.);
 		}
-	
+
 		if(q < 0.0)
 			val = -val;
 	}
 	return val;
-}	
+}
