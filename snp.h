@@ -27,6 +27,7 @@ class Snp
         double Getoriginal() const;
         double Getbeta() const;
         double Getheritability() const;
+        bool Concordant(std::string chr, size_t bp, std::string rsId) const;
         void Setheritability(double heritability);
         void setFlag(size_t index, bool value);
         static void cleanSnp(std::vector<Snp*> &snpList);

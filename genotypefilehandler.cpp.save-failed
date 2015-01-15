@@ -152,32 +152,31 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 }
 
 
-ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, size_t distance, size_t anchor, std::string anchorChr, std::deque<size_t> snpLoc, std::vector<Snp*> &snpList){
+void GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, size_t distance){
 	//We will get snps according to the distance
 	//We want to use flanking distance, e.g. getting the 1mb flanking on the both side
+    if(genotype.empty()){
+        //We have not done anything, so we know we need to go 2 distance to get the snps we needed
+
+    }
 	while (m_snpIter<m_inputSnp){ //While there are still Snps to read
 		bool snp = false;
 		if(m_inclusion[m_snpIter] != -1){//indicate whether if we need this snp
-			if(anchorChr.empty()){
-                anchorChr = snpList[m_inclusion[m_snpIter]]->Getchr();
-			}
             snp=true;
 		}
 		if(snp){
             genotype.push_back(new Genotype());
             snpLoc.push_back(m_inclusion[m_snpIter]);
 		}
-		size_t indx = 0; //The iterative count
-		double meanSum = 0;
-		double variance = 0.0;
-        double oldM, newM,oldS, newS;
-		while ( indx < m_ldSampleSize ){
+		unsigned int indx = 0; //The iterative count
+		int meanSum = 0;
+		while ( indx < sampleSize_ ){
 			std::bitset<8> b; //Initiate the bit array
 			char ch[1];
 			bedFile_.read(ch,1); //Read the information
 			if (!bedFile_){
 				std::cerr << "Problem with the BED file...has the FAM/BIM file been changed?" << std::endl;
-				return fatalError;
+				return fatal;
 			}
 			b = ch[0];
 			int c=0;
@@ -187,19 +186,10 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, size_t
 					int first = b[c++];
 					int second = b[c++];
 					if(first == 1 && second == 0) first = 0; //We consider the missing value to be reference
-					genotype.back()->AddSampleGenotype(first+second, indx); //0 1 or 2
-					double value = first+second+0.0;
-                    if(indx==0){
-                        oldM = newM = value;
-                        oldS = 0.0;
-                    }
-                    else{
-                        newM = oldM + (value-oldM)/(indx+1);
-                        newS = oldS + (value-oldM)*(x-newM);
-                        oldM = newM;
-                        oldS = newS;
-                    }
-					//meanSum+= value;
+					//Now we add this snp to the matrix
+					int value= first+second; //0 1 or 2
+					meanSum+= value;
+                    genotype->addIndividual(indx, value);
 				}
 				else{
 					c+=2;
@@ -207,8 +197,50 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, size_t
                 ++indx;
 			}
 		}
-        if(indx > 0) ? genotype.back().SetMean(newM) : genotype.back()->SetMean(0.0);
-        if(indx > 1) ? genotype.back().SetStandardDeviation(std::sqrt(newS/(indx - 1.0)) : genotype.back().SetStandardDeviation(0.0);
+		if(snp){
+            reportCount++;
+            double calculatedMaf = (meanSum+0.0)/((sampleSize_+0.0)*2.0);
+            if(calculatedMaf <= maf || calculatedMaf >= 1-maf){
+                //We don't want this Snp as it is likely to be mono-morphic
+                genotype->removeLastSnp();
+                snpList[snpLoc[snpLoc.size()-1]]->setFlag(0, false);
+                snpLoc.pop_back();
+
+            }
+            else{
+                processedSnp++;
+                genotype->computeDiff( (meanSum+0.0)/(sampleSize_+0.0));
+                if(!first && removeCount < (signed) blockSize/3){
+                    genotype->pop_front();
+                    snpLoc.pop_front();
+                    removeCount++;
+                    fromPrev--;
+                }
+            }
+		}
 		m_snpIter++;
+
+		if(chrCount->retrieveIndex(locList_[chrIndex]) <= chrIterationCount ){
+            //We have finished this chromosome
+            chrIndex++;
+            if(genotype->Getsize() == 0){
+                //we've got nothing
+                chrIterationCount = 0;
+                std::cerr << "Start working on chromosome: " << locList_[chrIndex]  << std::endl;
+                //std::cerr << "Got nothing, so move to next chromosome" << std::endl;
+
+            }
+            else{
+                chrIterationCount = 0;
+                //std::cerr << "Finish chromosome " << genotype->Getsize() << std::endl;
+            //std::cerr << "\r" << std::setw(2) << std::setfill('0')  << (progressCount+0.0)/(inputNumSnp_+0.0)*100.0 << "% processed" << std::flush;
+                return finish_chromosome;
+            }
+		}
+		else if(numSnpToProcess <=processedSnp ){
+            //std::cerr << "Have got enough snps" << std::endl;
+            //std::cerr << "\r" << std::setw(2) << std::setfill('0')  << (progressCount+0.0)/(inputNumSnp_+0.0)*100.0 << "% processed" << std::flush;
+            return finish_block;
+		}
 	}
 }

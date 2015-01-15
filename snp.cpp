@@ -156,6 +156,7 @@ void Snp::computeVarianceExplained(const size_t &caseSize, const size_t &control
 	int totalSampleSize = caseSize + controlSize;
 	double portionCase = (caseSize+0.0) / (totalSampleSize+0.0);
 	double i2 = usefulTools::dnorm(usefulTools::qnorm(prevalence))/(prevalence);
+	i2 = i2*i2;
 	m_beta = ((1-prevalence)*(1-prevalence)*ncp)/(i2*portionCase*(1-portionCase)*(totalSampleSize));
 	m_heritability = m_beta;
 }
@@ -173,4 +174,8 @@ void Snp::cleanSnp(std::vector<Snp*> &snpList){
         delete snpList[i];
     }
     snpList.clear();
+}
+
+bool Snp::Concordant(std::string chr, size_t bp, std::string rsId) const{
+    return chr.compare(m_chr) ==0 && bp==m_bp && rsId.compare(m_rs) == 0;
 }

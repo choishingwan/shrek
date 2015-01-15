@@ -22,9 +22,9 @@ int main(int argc, char *argv[]){
 		 Snp::generateSnpIndex(snpIndex, snpList,commander->GetcaseSize(), commander->GetcontrolSize(), commander->Getprevalence(), regionList, commander->isPvalue() );
 	}
 	//From now on, we are only allow to iterate through snpList through snpIndex
-	GenotypeFileHandler *genotypeFileHandler = new GenotypeFileHandler(commander->GetgenotypeFilePrefix(), snpIndex, snpList);
-	SnpEstimation *snpEstimation = new SnpEstimation(genotypeFileHandler, snpIndex, &snpList);
-
+	GenotypeFileHandler *genotypeFileHandler = new GenotypeFileHandler(commander->GetgenotypeFilePrefix(), snpIndex, snpList, commander->validate());
+	SnpEstimation *snpEstimation = new SnpEstimation(genotypeFileHandler, snpIndex, &snpList, commander->GetblockSize(), commander->Getthread(), commander->Getmaf(), commander->Getdistance());
+	snpEstimation->performEstimation();
     //Cleaning section
 	Snp::cleanSnp(snpList);
 	delete snpEstimation;

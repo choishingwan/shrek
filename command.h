@@ -18,6 +18,8 @@ class Command
         void printBriefUsage();
         size_t Getthread() const;
         size_t GetblockSize() const;
+        size_t Getdistance() const;
+        size_t GetstepSize() const;
         size_t GetsampleSize() const;
         size_t GetcaseSize() const;
         size_t GetcontrolSize() const;
@@ -45,6 +47,8 @@ class Command
     private:
         size_t m_thread;
         size_t m_blockSize;
+        size_t m_distance;
+        size_t m_stepSize;
         size_t m_sampleSize;
         size_t m_caseSize;
         size_t m_controlSize;

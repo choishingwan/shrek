@@ -2,6 +2,8 @@
 
 size_t Command::Getthread() const { return m_thread; }
 size_t Command::GetblockSize() const { return m_blockSize; }
+size_t Command::Getdistance() const { return m_distance; }
+size_t Command::GetstepSize() const { return m_stepSize; }
 size_t Command::GetsampleSize() const { return m_sampleSize; }
 size_t Command::GetcaseSize() const { return m_caseSize; }
 size_t Command::GetcontrolSize() const { return m_controlSize; }
@@ -58,10 +60,12 @@ Command::Command(int argc, char* argv[])
     m_pValueFileName = "";
 	m_regionList="";
 	m_programmeName =argv[0];
-	static const char *optString = "t:b:s:a:q:c:r:x:k:m:nvuo:p:g:L:h?";
+	static const char *optString = "t:b:d:e:s:a:q:c:r:x:k:m:nvuo:p:g:L:h?";
 	static const struct option longOpts[]={
 		{"thread", required_argument, NULL, 't'},
         {"blockSize", required_argument, NULL, 'b'},
+        {"distance", required_argument, NULL, 'd'},
+        {"step", required_argument, NULL, 'e'},
 		{"sampleSize", required_argument, NULL, 's'},
 		{"case", required_argument, NULL, 0},
 		{"control", required_argument, NULL, 0},
@@ -109,6 +113,12 @@ Command::Command(int argc, char* argv[])
 				break;
 			case 'b':
 				m_blockSize = atoi(optarg);
+				break;
+			case 'd':
+				m_distance = atoi(optarg);
+				break;
+			case 'e':
+				m_stepSize = atoi(optarg);
 				break;
             case 's':
 				m_sampleSize= atoi(optarg);
@@ -333,6 +343,11 @@ void Command::printUsage(){
     std::cerr << "                   the blockSize to be divisible by 3 to avoid off-by-one "      << std::endl;
     std::cerr << "                   error. Shall the used provide value not divisible by 3, we "  << std::endl;
     std::cerr << "                   will change it to a value divisible by 3."                    << std::endl;
+    std::cerr << "  -d,--distance    The flanking distance of each snps to be included. Run time " << std::endl;
+    std::cerr << "                   increase exponentially with the selection of this number. "   << std::endl;
+    std::cerr << "                   This number will also affect the prediction of the programme" << std::endl;
+    std::cerr << "  -e,--step        The step size of the window. The larger it is, the faster  "  << std::endl;
+    std::cerr << "                   the programme runs. "                                         << std::endl;
     std::cerr << "  -L,--region      The region field. You may provide a bed file in the format:"  << std::endl;
     std::cerr << "                   <region name>:<fileName>,<region name>:<fileName>,..."        << std::endl;
     std::cerr << "                   The summary output will provide the per region estimate "     << std::endl;
