@@ -3,6 +3,7 @@
 
 #include <map>
 #include <string>
+#include <iostream>
 
 class SnpIndex
 {
@@ -17,9 +18,8 @@ class SnpIndex
 		void increment(std::string key);
 		bool find(std::string key);
 		bool valid();
-		SnpIndex operator++();
-
-
+		bool next();
+		void print();
 	protected:
 	private:
 		std::map<std::string, size_t> m_index;

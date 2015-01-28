@@ -13,6 +13,7 @@ Region::~Region()
 }
 
 void Region::generateRegion(std::vector<std::vector<Region*> > &regionOut, std::string regionList){
+    if(regionList.empty()) return;
 	regionList = usefulTools::trim(regionList);
     if(regionList.empty()) return;
     std::vector<std::string> seperateFiles;

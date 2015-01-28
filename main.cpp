@@ -6,8 +6,13 @@
 #include "snpestimation.h"
 
 int main(int argc, char *argv[]){
-	Command *commander = new Command(argc, argv);
+    bool commandError;
+	Command *commander = new Command(argc, argv, commandError);
+	if(commandError){
+        exit(-1);
+	}
     std::vector<std::vector<Region*> > regionList;
+    std::cerr << "Process Region" << std::endl;
 	Region::generateRegion(regionList, commander->GetregionList());
 	commander->printRunSummary(std::to_string(regionList.size()));
 	std::vector<Snp*> snpList;
@@ -21,9 +26,10 @@ int main(int argc, char *argv[]){
 		Snp::generateSnpList(snpList, commander->GetpValueFileName(), commander->GetcIndex(), commander->GetsampleSize(), commander->GetrsIndex(), commander->GetbpIndex(), commander->GetchrIndex(), commander->GetsampleSizeIndex(), commander->provideSampleSize());
 		 Snp::generateSnpIndex(snpIndex, snpList,commander->GetcaseSize(), commander->GetcontrolSize(), commander->Getprevalence(), regionList, commander->isPvalue() );
 	}
+
 	//From now on, we are only allow to iterate through snpList through snpIndex
-	GenotypeFileHandler *genotypeFileHandler = new GenotypeFileHandler(commander->GetgenotypeFilePrefix(), snpIndex, snpList, commander->validate());
-	SnpEstimation *snpEstimation = new SnpEstimation(genotypeFileHandler, snpIndex, &snpList, commander->GetblockSize(), commander->Getthread(), commander->Getmaf(), commander->Getdistance());
+	GenotypeFileHandler *genotypeFileHandler = new GenotypeFileHandler(commander->GetldFilePrefix(), snpIndex, snpList, commander->validate(), commander->maxBlockSet(), commander->GetmaxBlock(), commander->GetminBlock(), commander->Getthread());
+	SnpEstimation *snpEstimation = new SnpEstimation(genotypeFileHandler, snpIndex, &snpList, commander->Getthread(), commander->Getmaf(), commander->ldCorrect());
 	snpEstimation->performEstimation();
     //Cleaning section
 	Snp::cleanSnp(snpList);

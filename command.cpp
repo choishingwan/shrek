@@ -1,9 +1,8 @@
 #include "command.h"
 
 size_t Command::Getthread() const { return m_thread; }
-size_t Command::GetblockSize() const { return m_blockSize; }
-size_t Command::Getdistance() const { return m_distance; }
-size_t Command::GetstepSize() const { return m_stepSize; }
+size_t Command::GetminBlock() const { return m_minBlock; }
+size_t Command::GetmaxBlock() const { return m_maxBlock; }
 size_t Command::GetsampleSize() const { return m_sampleSize; }
 size_t Command::GetcaseSize() const { return m_caseSize; }
 size_t Command::GetcontrolSize() const { return m_controlSize; }
@@ -14,7 +13,6 @@ size_t Command::GetchrIndex() const { return m_chrIndex; }
 size_t Command::GetrsIndex() const { return m_rsIndex; }
 size_t Command::GetsampleSizeIndex() const { return m_sampleSizeIndex; }
 double Command::Getprevalence() const { return m_prevalence; }
-double Command::Getinflation() const { return m_inflation; }
 double Command::Getmaf() const { return m_maf; }
 bool Command::ldCorrect() const { return m_ldCorrection; }
 bool Command::validate() const { return m_validate; }
@@ -22,25 +20,27 @@ bool Command::isPvalue() const { return m_isPvalue; }
 bool Command::provideSampleSize() const { return m_provideSampleSize; }
 bool Command::quantitative() const { return m_quantitative; }
 bool Command::caseControl() const { return m_caseControl; }
+bool Command::maxBlockSet() const { return m_maxBlockSet; }
 std::string Command::GetoutputPrefix() const { return m_outputPrefix; }
 std::string Command::GetpValueFileName() const { return m_pValueFileName; }
-std::string Command::GetgenotypeFilePrefix() const { return m_genotypeFilePrefix; }
+std::string Command::GetldFilePrefix() const { return m_ldFilePrefix; }
 std::string Command::GetregionList() const { return m_regionList; }
 std::string Command::GetprogrammeName() const { return m_programmeName; }
 
 
 
-Command::Command(int argc, char* argv[])
+Command::Command(int argc, char* argv[], bool &error)
 {
-
+    error = false;
     if(argc == 1){
 		std::cerr << "You have not provided any arguments. Please provide all the required arguments" << std::endl;
 		printBriefUsage();
-		exit(-1);
+		error = true;
+		return;
 	}
     int threadDefault = 1;
-    int blockSizeDefault = 420;
     bool providedPrevalence = false;
+    bool providedMaf= false;
     m_ldCorrection = true;
     m_validate = false;
 	m_isPvalue = false;
@@ -48,24 +48,24 @@ Command::Command(int argc, char* argv[])
     m_quantitative = false;
     m_caseControl = false;
     m_provideSampleSize =false;
+    m_maxBlockSet = false;
     m_thread = threadDefault;
-    m_blockSize = blockSizeDefault;
-	m_chrIndex = 0;
+    m_chrIndex = 0;
     m_rsIndex = 1;
     m_bpIndex = 2;
     m_sampleSizeIndex = 3;
-	m_maf = 0.0;
-
-    m_genotypeFilePrefix = "";
+	m_maf = -1.0;
+    m_maxBlock = 0;
+    m_minBlock = 0;
+    m_ldFilePrefix = "";
     m_pValueFileName = "";
 	m_regionList="";
 	m_programmeName =argv[0];
-	static const char *optString = "t:b:d:e:s:a:q:c:r:x:k:m:nvuo:p:g:L:h?";
+	static const char *optString = "t:b:B:s:a:q:c:r:x:k:m:nvuo:p:l:L:h?";
 	static const struct option longOpts[]={
 		{"thread", required_argument, NULL, 't'},
-        {"blockSize", required_argument, NULL, 'b'},
-        {"distance", required_argument, NULL, 'd'},
-        {"step", required_argument, NULL, 'e'},
+        {"minBlock", required_argument, NULL, 'b'},
+        {"maxBlock", required_argument, NULL, 'B'},
 		{"sampleSize", required_argument, NULL, 's'},
 		{"case", required_argument, NULL, 0},
 		{"control", required_argument, NULL, 0},
@@ -73,7 +73,7 @@ Command::Command(int argc, char* argv[])
         {"quant", required_argument, NULL, 'q'},
 		{"bp", required_argument, NULL, 0},
         {"chr", required_argument, NULL, 'c'},
-		{"rsid", required_argument, NULL, 'r'},
+		{"rs", required_argument, NULL, 'r'},
 		{"sampleIndex", required_argument, NULL, 'x'},
 		{"prevalence", required_argument, NULL, 'k'},
 		{"maf", required_argument, NULL, 'm'},
@@ -82,14 +82,12 @@ Command::Command(int argc, char* argv[])
 		{"pvalue", no_argument, NULL, 'u'},
 		{"out", required_argument, NULL, 'o'},
 		{"pfile", required_argument, NULL, 'p'},
-		{"genotype", required_argument, NULL, 'g'},
+		{"linkage", required_argument, NULL, 'l'},
 		{"region", required_argument, NULL, 'L'},
-
         {"help", no_argument, NULL, 'h'},
 		{NULL, 0, 0, 0}
 	};
 
-	bool error = false;
     int longIndex;
 	int opt = 0;
 	std::string interpret="";
@@ -112,15 +110,13 @@ Command::Command(int argc, char* argv[])
 				m_thread = atoi(optarg);
 				break;
 			case 'b':
-				m_blockSize = atoi(optarg);
+				m_minBlock = atoi(optarg);
 				break;
-			case 'd':
-				m_distance = atoi(optarg);
+			case 'B':
+				m_maxBlock = atoi(optarg);
+				m_maxBlockSet =true;
 				break;
-			case 'e':
-				m_stepSize = atoi(optarg);
-				break;
-            case 's':
+			case 's':
 				m_sampleSize= atoi(optarg);
 				break;
             case 'a':
@@ -147,6 +143,7 @@ Command::Command(int argc, char* argv[])
 				break;
             case 'm':
                 m_maf = atof(optarg);
+                providedMaf= true;
                 break;
 			case 'n':
 				m_ldCorrection = false;
@@ -163,8 +160,8 @@ Command::Command(int argc, char* argv[])
 			case 'p':
 				m_pValueFileName = optarg;
 				break;
-            case 'g':
-                m_genotypeFilePrefix = optarg;
+            case 'l':
+                m_ldFilePrefix = optarg;
                 break;
             case 'L':
 				m_regionList = optarg;
@@ -187,78 +184,81 @@ Command::Command(int argc, char* argv[])
 		std::cerr << "Undefined number of thread(s): " << m_thread << ". Number of thread(s) must be greater than 0, set number of thread(s) to default: " << threadDefault << std::endl;
 		m_thread = threadDefault;
 	}
-	if(m_blockSize <= 2){
-		std::cerr << "Undefined block size: " << m_blockSize << ". Block size must be greater than 2, set block size to default: " << blockSizeDefault << std::endl;
-		m_blockSize = blockSizeDefault;
-	}
-	else if(m_blockSize %3 != 0){
-        std::cerr << "Block size should be dividable by 3 to avoid complex algorithm. Block size now changed to " ;
-        m_blockSize = m_blockSize-(m_blockSize%3);
-        std::cerr << m_blockSize << std::endl;
-	}
-    if(m_caseControl && m_quantitative){
-		std::cerr << "You must select either case control study or quantitative traits, but not both or none" << std::endl;
-		error=true;
-    }
-	else if(m_rsIndex <= 0 || m_chrIndex <0 || m_bpIndex <0 || m_sampleSizeIndex <0){
-        std::cerr << "The column number must be a positive integer" << std::endl;
-        error=true;
-	}
-    else if(m_caseControl && (m_cIndex==m_chrIndex || m_cIndex == m_rsIndex || m_cIndex==m_bpIndex)){
-        std::cerr << "The column should be unique!" << std::endl;
-        error=true;
-    }
-    else if(m_quantitative && (m_tIndex==m_chrIndex || m_tIndex == m_rsIndex || m_tIndex==m_bpIndex || (m_provideSampleSize && m_tIndex==m_sampleSizeIndex))){
-        std::cerr << "The column should be unique!" << std::endl;
-        error=true;
-    }
-    if(m_caseControl && (m_caseSize == 0 || m_controlSize == 0 )){
-		std::cerr << "Require to provide number of case and control for case control study" << std::endl;
-		std::cerr << "And the number of case and number of control must both be larger than 0" << std::endl;
-		error=true;
-	}
-	else if(m_caseControl && !providedPrevalence){
-		std::cerr << "Require to provide the prevalence for case control study" << std::endl;
-		error = true;
-	}
-	else if(m_caseControl){
-		if(m_caseSize + m_controlSize == 0){
-			std::cerr << "The Sum of Case and control are equal to zero! Please check that your input is correct" << std::endl;
-			error=true;
-		}
-	}
-	if(m_chrIndex == m_rsIndex || m_chrIndex == m_bpIndex || m_rsIndex == m_bpIndex){
-        std::cerr << "The number of columns must be unique!" << std::endl;
-        error=true;
-	}
-	else if(m_provideSampleSize && (m_sampleSizeIndex == m_rsIndex || m_sampleSizeIndex == m_bpIndex || m_sampleSizeIndex == m_chrIndex) ){
-        std::cerr << "The number of columns must be unique!" << std::endl;
-        error=true;
-	}
-	if(m_genotypeFilePrefix.empty()){
-		std::cerr << "You must provide the genotype file for LD construction!" << std::endl;
-		error = true;
-	}
-	else if(!usefulTools::fileExists(m_genotypeFilePrefix+".bed") &&
-            !usefulTools::fileExists(m_genotypeFilePrefix+".bim") &&
-            !usefulTools::fileExists(m_genotypeFilePrefix+".fam")){
-        std::cerr << "Cannot open the genotype file(s), please check if they exists" << std::endl;
-        std::cerr << "Genotype prefix: " << m_genotypeFilePrefix << std::endl;
+
+    if(m_maxBlockSet && m_minBlock > m_maxBlock){ //Enabled max block, so we need to have minBlock smaller than maxBlock
         error = true;
-	}
-	if(m_pValueFileName.empty()){
-        error=true;
-        std::cerr << "You must provide the p-value file for the analysis" << std::endl;
+        std::cerr << "Maximum block size enabled. Therefore minimum block size must be smaller than or equal to maximum block size" << std::endl;
+        std::cerr << "Minimum block size: " << m_minBlock << std::endl;
+        std::cerr << "Maximum block size: " << m_maxBlock << std::endl;
+    }
+    if(m_maxBlockSet && m_maxBlock == 0){
+		error = true;
+        std::cerr << "Maximum block size enabled. The maximum block size must be bigger than 0" << std::endl;
+    }
+    if(m_caseControl && m_caseSize == 0){
+        error = true;
+        std::cerr << "Your case control study has 0 case and we cannot perform the analysis on such type of study." << std::endl;
+        std::cerr << "Please check your input is correct. Sorry." << std::endl;
+    }
+    else if(m_caseControl && m_controlSize == 0){
+        std::cerr << "Warning! Your case control study has 0 control and we are uncertain how will this affect the result." << std::endl;
+        std::cerr << "Please be cautious with the result" << std::endl;
+    }
+    if(m_quantitative && m_caseControl){
+        error = true;
+        std::cerr << "You may specify the study as either quantitative or case control study but not both." << std::endl;
+        std::cerr << "Please make sure you have the correct input" << std::endl;
+    }
+    if(m_quantitative && m_provideSampleSize && m_sampleSize <= 0){
+        error = true;
+        std::cerr << "Sample size provided for the quantitative study is less than or equal to zero" << std::endl;
+        std::cerr << "Please check you have the correct input" << std::endl;
+    }
+    if(m_pValueFileName.empty()){
+        error = true;
+        std::cerr << "You must provide the p-value file input!" << std::endl;
     }
     else if(!usefulTools::fileExists(m_pValueFileName)){
         error = true;
-        std::cerr << "Cannot open p-value file: " << m_pValueFileName << std::endl;
-        std::cerr << "Please check if they exists" << std::endl;
+        std::cerr << "Cannot open the p-value file, please check that the file exists" << std::endl;
+    }
+
+    if(m_quantitative && (m_tIndex == m_bpIndex || m_tIndex == m_chrIndex || m_tIndex == m_rsIndex || m_tIndex == m_sampleSizeIndex ||
+       m_bpIndex == m_chrIndex || m_bpIndex == m_rsIndex || m_bpIndex == m_sampleSizeIndex ||
+       m_chrIndex == m_rsIndex || m_chrIndex == m_sampleSizeIndex ||
+       m_rsIndex == m_sampleSizeIndex)){
+        error = true;
+        std::cerr << "Duplicated index! Please make sure the index are not duplicated!" << std::endl;
+        std::cerr << "Statistic index: " << m_tIndex << std::endl;
+        std::cerr << "bp index: " << m_bpIndex << std::endl;
+        std::cerr << "chr index: " << m_chrIndex << std::endl;
+        std::cerr << "rsId index: " << m_rsIndex << std::endl;
+        std::cerr << "sample size index: " << m_sampleSizeIndex << std::endl;
 
     }
-    if(m_maf < 0.0 || m_maf > 1.0){
+    else if(m_caseControl && (m_cIndex == m_bpIndex || m_cIndex == m_chrIndex || m_cIndex == m_rsIndex ||
+                              m_bpIndex==m_chrIndex || m_bpIndex == m_rsIndex ||
+                              m_chrIndex == m_rsIndex)){
         error = true;
-        std::cerr << "Invalid maf! maf must be within the range of 0.0 to 1.0. Your input: " << m_maf << std::endl;
+        std::cerr << "Duplicated index! Please make sure the index are not duplicated!" << std::endl;
+        std::cerr << "Statistic index: " << m_cIndex << std::endl;
+        std::cerr << "bp index: " << m_bpIndex << std::endl;
+        std::cerr << "chr index: " << m_chrIndex << std::endl;
+        std::cerr << "rsId index: " << m_rsIndex << std::endl;
+    }
+    if(m_caseControl && !providedPrevalence ){
+        error = true;
+        std::cerr << "You must provide the prevalence for case control study." << std::endl;
+    }
+    if(providedMaf && (m_maf < 0.0 || m_maf > 1.0)){
+        error = true;
+        std::cerr << "maf must be between 0.0 and 1.0" << std::endl;
+        std::cerr << "maf input: " << m_maf << std::endl;
+    }
+
+    if(m_ldFilePrefix.empty()){
+        error = true;
+        std::cerr << "Genotype files must be provided for ld calculation" << std::endl;
     }
 
 	if(error){
@@ -273,31 +273,67 @@ Command::~Command()
 }
 
 void Command::printBriefUsage(){
-
-}
-
-void Command::printUsage(){
-
     std::cerr << "------------------------------------------------------------------------------"  << std::endl;
-    std::cerr << "| Heritability Estimate using summary statistic                               |" << std::endl;
+    std::cerr << "| Snp HeRitability Estimation Kit                                             |" << std::endl;
     std::cerr << "| version 0.01                                                                |" << std::endl;
     std::cerr << "| (C) 2014 Johnny Kwan, Sam Choi                                              |" << std::endl;
     std::cerr << "| The University of Hong Kong                                                 |" << std::endl;
     std::cerr << "| Haven't figure out which license                                            |" << std::endl;
     std::cerr << "------------------------------------------------------------------------------"  << std::endl;
     std::cerr << "usage: ./Jest [-p <p-value_file>] [--tstat <t-stat_index> | --chi <chi_index>]"  << std::endl;
-    std::cerr << "              [ --g <genotype_prefix> | --l <linkage_file> ] ..."                << std::endl;
+    std::cerr << "              [ --g <linkage_file_prefix> ] ..."                << std::endl;
+    std::cerr << "Required options: "                                                              << std::endl;
+    std::cerr << "  -p,--pfile       The p-value file.                              [ Required ]"  << std::endl;
+    std::cerr << "  -c,--chr         The column number of chromosome              [ Default: 1 ]"  << std::endl;
+    std::cerr << "  --rs             The column number of rsid                    [ Default: 2 ]"  << std::endl;
+    std::cerr << "  --bp             The column number of coordinate              [ Default: 3 ]"  << std::endl;
+    std::cerr << "  -l,--linkage     The linkage  file prefix.                      [ Required ]"  << std::endl;
+    std::cerr << "  -n,--no_correct  Turn off LD correction. "                                     << std::endl;
+    std::cerr << "  -m,--maf         The minor allele frequency filtering.      [ Default: off ]"  << std::endl;
+    std::cerr << "                                                                              "  << std::endl;
+    std::cerr << "Quantitative trait analysis: "                                                   << std::endl;
+    std::cerr << "  --quant          The column of statistic. Quantitative trait    [ Required ]"  << std::endl;
+    std::cerr << "  -s,--sampleSize  The number of sample used."                                   << std::endl;
+    std::cerr << "  --sampleIndex    The sample column index.                     [ Default: 4 ]"  << std::endl;
+    std::cerr << "                                                                              "  << std::endl;
+    std::cerr << "Case Control analysis: "                                                         << std::endl;
+    std::cerr << "  --cc             The column of statistic. Case Control study    [ Required ]"  << std::endl;
+    std::cerr << "  -k,--prevalence  Prevalence of the phenotype                    [ Required ]"  << std::endl;
+    std::cerr << "  --case           The number of case used in the study           [ Required ]"  << std::endl;
+    std::cerr << "  --control        The number of control used in the study        [ Required ]"  << std::endl;
+    std::cerr << "                                                                              "  << std::endl;
+    std::cerr << "General options: " << std::endl;
+    std::cerr << "  -u,--pvalue      Input is p-value "                                            << std::endl;
+    std::cerr << "  -b,--minBlock    The minimum block size                    [ Default: None ]"  << std::endl;
+    std::cerr << "  -B,--maxBlock    The maximum block size                    [ Default: None ]"  << std::endl;
+    std::cerr << "  -L,--region      Region information"                                           << std::endl;
+    std::cerr << "  -t,--thread      The number of thread                         [ Default: 1 ]"  << std::endl;
+    std::cerr << "  -o,--out         The output file prefix."                                      << std::endl;
+    std::cerr << "  -h,-?,--help     Display the detail help message"                              << std::endl;
+}
+
+void Command::printUsage(){
+
+    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
+    std::cerr << "| Snp HeRitability Estimation Kit                                             |" << std::endl;
+    std::cerr << "| version 0.01                                                                |" << std::endl;
+    std::cerr << "| (C) 2014 Johnny Kwan, Sam Choi                                              |" << std::endl;
+    std::cerr << "| The University of Hong Kong                                                 |" << std::endl;
+    std::cerr << "| Haven't figure out which license                                            |" << std::endl;
+    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
+    std::cerr << "usage: ./Jest [-p <p-value_file>] [--tstat <t-stat_index> | --chi <chi_index>]"  << std::endl;
+    std::cerr << "              [ --g <genotype_prefix> ] ..."                << std::endl;
     std::cerr << "Required options: "                                                              << std::endl;
     std::cerr << "  -p,--pfile       The p-value file. The first 3 fields of the file must be"     << std::endl;
     std::cerr << "                   <Chr>    <rsID>    <BP>"                                      << std::endl;
     std::cerr << "                   and test statistic for each snp must also be provided"        << std::endl;
     std::cerr << "  -c,--chr         The column number of chromosome in the p-value file"          << std::endl;
-    std::cerr << "  --rsid           The column number of rsid in the p-value file"                << std::endl;
+    std::cerr << "  --rs             The column number of rsid in the p-value file"                << std::endl;
     std::cerr << "  --bp             The column number of rsid coordinate in the p-value file"     << std::endl;
-    std::cerr << "  -g,--genotype    The genotype file prefix. The programme will use this to "    << std::endl;
+    std::cerr << "  -l,--linkage     The linkage  file prefix. The programme will use this to "    << std::endl;
     std::cerr << "                   calculate the LD matrix. Will require the fam, bim and bed"   << std::endl;
     std::cerr << "                   file. Please try to perform quality control beforehand "      << std::endl;
-    std::cerr << "  -n,--no_correct  Turn of LD correction. The LD correction is used when "       << std::endl;
+    std::cerr << "  -n,--no_correct  Turn off LD correction. The LD correction is used when "      << std::endl;
     std::cerr << "                   using the genotype file to calculate the LD matrix. The "     << std::endl;
     std::cerr << "                   LD correction is performed to adjust for number of sample"    << std::endl;
     std::cerr << "                   used for calculating the LD. It is not recommended to turn"   << std::endl;
@@ -331,23 +367,17 @@ void Command::printUsage(){
     std::cerr << "                                                                               " << std::endl;
     std::cerr << "General options: " << std::endl;
     std::cerr << "  -u,--pvalue      Indicate whether if the input is p-value or test-statistic  " << std::endl;
-    std::cerr << "  -b,--blockSize   The size of the block of analysis. As it is computationally " << std::endl;
-    std::cerr << "                   difficult to perform decomposition for the whole genome, "    << std::endl;
-    std::cerr << "                   we break each chromosomes into a small blocks and perform a"  << std::endl;
-    std::cerr << "                   sliding window approach. Please note that this option will "  << std::endl;
-    std::cerr << "                   be the main determinant of memory usage and run time and "    << std::endl;
-    std::cerr << "                   will have a effect to the result. If the block size is too "  << std::endl;
-    std::cerr << "                   small, the result will tend to be over-estimated; if the "    << std::endl;
-    std::cerr << "                   block size is too big, it might take forever to finish the "  << std::endl;
-    std::cerr << "                   analysis. As we use a step size of blockSize/3, we require "  << std::endl;
-    std::cerr << "                   the blockSize to be divisible by 3 to avoid off-by-one "      << std::endl;
-    std::cerr << "                   error. Shall the used provide value not divisible by 3, we "  << std::endl;
-    std::cerr << "                   will change it to a value divisible by 3."                    << std::endl;
-    std::cerr << "  -d,--distance    The flanking distance of each snps to be included. Run time " << std::endl;
-    std::cerr << "                   increase exponentially with the selection of this number. "   << std::endl;
-    std::cerr << "                   This number will also affect the prediction of the programme" << std::endl;
-    std::cerr << "  -e,--step        The step size of the window. The larger it is, the faster  "  << std::endl;
-    std::cerr << "                   the programme runs. "                                         << std::endl;
+    std::cerr << "                   Cannot handle p-value of 0 or 1"                              << std::endl;
+    std::cerr << "  -b,--minBlock    The minimum block size for the sliding window. A large"       << std::endl;
+    std::cerr << "                   number will increase the run time exponentially. Window size" << std::endl;
+    std::cerr << "                   is the most important factor affecting the run time and "     << std::endl;
+    std::cerr << "                   memory usage of the programme. Must be bigger than the "      << std::endl;
+    std::cerr << "                   maximum block size if maximum block size is used. Default=0"  << std::endl;
+    std::cerr << "  -B,--maxBlock    The maximum block size allowed. This helps to set a limit on" << std::endl;
+    std::cerr << "                   the block size used. Will help to avoid using a huge block."  << std::endl;
+    std::cerr << "                   However, if the maximum block doesn't cover a full LD block " << std::endl;
+    std::cerr << "                   it is likely that the final estimate will be inflated"        << std::endl;
+    std::cerr << "                   Default = no maximum block size limit"                        << std::endl;
     std::cerr << "  -L,--region      The region field. You may provide a bed file in the format:"  << std::endl;
     std::cerr << "                   <region name>:<fileName>,<region name>:<fileName>,..."        << std::endl;
     std::cerr << "                   The summary output will provide the per region estimate "     << std::endl;
@@ -365,12 +395,12 @@ void Command::printUsage(){
 
 
 void Command::printRunSummary(std::string regionMessage){
-    std::cerr 	<< "Jest\tCoding by Sam CHOI\tMethod by Johnny KWAN" <<std::endl
+    std::cerr 	<< "SHREK\tCoding by Sam CHOI\tMethod by Johnny KWAN" <<std::endl
         << "===============================================================" << std::endl
 		<< "Performing analysis using the following parameters: " << std::endl
 		<< "===============================================================" << std::endl
 		<< "Essential Input  " <<std::endl;
-		std::cerr	<< "Genotype File Prefix : " << m_genotypeFilePrefix << std::endl;
+		std::cerr	<< "Genotype File Prefix : " << m_ldFilePrefix << std::endl;
 	    std::cerr 	<< "P-Value File         : " << m_pValueFileName << std::endl;
     if(m_isPvalue){
 	    std::cerr 	<< "Input is P-value     : True" << std::endl;
@@ -393,8 +423,13 @@ void Command::printRunSummary(std::string regionMessage){
 	}
     std::cerr	<< "===============================================================" << std::endl
 				<< "Options " << std::endl
-				<< "Number of Thread     : " << m_thread << std::endl
-				<< "Block Size           : " << m_blockSize << std::endl;
+				<< "Number of Thread     : " << m_thread << std::endl;
+	if(m_maxBlock != 0){
+        std::cerr << "Maximum block size   : " << m_maxBlock << std::endl;
+	}
+    if(m_minBlock != 0){
+        std::cerr << "Minimum block size   : " << m_minBlock << std::endl;
+    }
     if(m_ldCorrection){
         std::cerr << "Use LD correction    : True" << std::endl;
     }

@@ -1,0 +1,64 @@
+# depslib dependency file v1.0
+1419321053 source:c:\users\sam\desktop\shrek\shrek\decomposition.cpp
+	"decomposition.h"
+
+1419321064 c:\users\sam\desktop\shrek\shrek\decomposition.h
+
+1421047737 source:c:\users\sam\desktop\shrek\shrek\genotype.cpp
+	"genotype.h"
+
+1421046979 c:\users\sam\desktop\shrek\shrek\genotype.h
+	<cstdlib>
+	<string.h>
+	<iostream>
+
+1421741388 source:c:\users\sam\desktop\shrek\shrek\genotypefilehandler.cpp
+	"genotypefilehandler.h"
+
+1421725975 c:\users\sam\desktop\shrek\shrek\genotypefilehandler.h
+	<iostream>
+	<fstream>
+	<cstdlib>
+	<vector>
+	<deque>
+	<string>
+	<bitset>
+	<math.h>
+	<fstream>
+	"usefulTools.h"
+	"snp.h"
+	"snpindex.h"
+	"genotype.h"
+	"processcode.h"
+
+1409196410 c:\users\sam\desktop\shrek\shrek\usefultools.h
+	<iostream>
+	<string>
+	<vector>
+	<fstream>
+	<math.h>
+
+1420774635 c:\users\sam\desktop\shrek\shrek\snp.h
+	<string>
+	<vector>
+	<iostream>
+	<fstream>
+	<cmath>
+	<algorithm>
+	"snpindex.h"
+	"usefulTools.h"
+	"region.h"
+
+1418983660 c:\users\sam\desktop\shrek\shrek\snpindex.h
+	<map>
+	<string>
+
+1418978944 c:\users\sam\desktop\shrek\shrek\region.h
+	<vector>
+	<string>
+	<cstdlib>
+	<iostream>
+	"usefulTools.h"
+
+1421057945 c:\users\sam\desktop\shrek\shrek\processcode.h
+

@@ -10,11 +10,12 @@ class Genotype
 	public:
 		Genotype();
 		virtual ~Genotype();
-        double GetR(Genotype* snpB, bool correction);
-        static void SetSampleNum(size_t sampleNum);
-        void SetMean(double mean);
-        void SetStandardDeviation(double standardDeviation);
-        void AddSampleGenotype(int genotype, size_t sampleIndex);
+        double Getr(Genotype* snpB, bool correction);
+        static void SetsampleNum(size_t sampleNum);
+        void Setmean(double mean);
+        void SetstandardDeviation(double standardDeviation);
+        void AddsampleGenotype(int genotype, size_t sampleIndex);
+
 	protected:
 	private:
         unsigned long long *m_genotypeA;

@@ -70,7 +70,7 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, std::
 	std::vector<size_t> regionIncrementationIndex(regionList.size(), 0);
 	size_t duplicate = 0;
 	for(size_t i = 0; i < snpList.size(); ++i){
-        if(snpIndex->find(snpList[i]->GetrsId())){
+        if(!snpIndex->find(snpList[i]->GetrsId())){
             snpIndex->set(snpList[i]->GetrsId(), i);
             snpList[i]->computeVarianceExplained(isPvalue);
             snpList[i]->m_regionFlag.push_back(false);
@@ -84,7 +84,7 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, std::
                     if(regionList[j][k]->Getchr().compare(snpList[i]->Getchr())==0 &&
                        regionList[j][k]->Getstart() <= snpList[i]->Getbp() &&
                        regionList[j][k]->Getend() >= snpList[i]->Getbp()){
-                        std::cerr << snpList[i]->GetrsId() << "\tWithin region" << std::endl;
+                        //std::cerr << snpList[i]->GetrsId() << "\tWithin region" << std::endl;
                         regionIncrementationIndex[j] = k;
                         snpList[i]->m_regionFlag[j+1]=true;
                         break;
@@ -104,7 +104,7 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const
 	std::vector<size_t> regionIncrementationIndex(regionList.size(), 0);
 	size_t duplicate = 0;
 	for(size_t i = 0; i < snpList.size(); ++i){
-        if(snpIndex->find(snpList[i]->GetrsId())){
+        if(!snpIndex->find(snpList[i]->GetrsId())){
             snpIndex->set(snpList[i]->GetrsId(), i);
             snpList[i]->computeVarianceExplained(caseSize, controlSize, prevalence, isPvalue);;
             snpList[i]->m_regionFlag.push_back(false);
@@ -118,7 +118,7 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const
                     if(regionList[j][k]->Getchr().compare(snpList[i]->Getchr())==0 &&
                        regionList[j][k]->Getstart() <= snpList[i]->Getbp() &&
                        regionList[j][k]->Getend() >= snpList[i]->Getbp()){
-                        std::cerr << snpList[i]->GetrsId() << "\tWithin region" << std::endl;
+                        //std::cerr << snpList[i]->GetrsId() << "\tWithin region" << std::endl;
                         regionIncrementationIndex[j] = k;
                         snpList[i]->m_regionFlag[j+1]=true;
                         break;
@@ -139,7 +139,7 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const
 void Snp::computeVarianceExplained(bool isPvalue){
     if(isPvalue){
         m_beta = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
-        if(!std::isfinite(m_beta)) m_beta = std::fabs(usefulTools::qnorm(((m_original+0.0)/2.0)));
+        if(!std::isfinite(m_beta)) m_beta = usefulTools::qnorm(((m_original+0.0)/2.0));
     }
     m_beta = m_beta*m_beta;
 	m_beta = (m_beta/(m_sampleSize-2.0+m_beta))-1.0/(m_sampleSize-1.0);
@@ -149,7 +149,7 @@ void Snp::computeVarianceExplained(bool isPvalue){
 void Snp::computeVarianceExplained(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue){
     if(isPvalue){
         m_beta = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
-        if(!std::isfinite(m_beta)) m_beta = std::fabs(usefulTools::qnorm(((m_original+0.0)/2.0)));
+        if(!std::isfinite(m_beta)) m_beta =usefulTools::qnorm(((m_original+0.0)/2.0));
         m_beta = m_beta*m_beta;
     }
     double ncp = (m_beta -1.0);
