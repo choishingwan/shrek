@@ -22,7 +22,7 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpInde
         if(!line.empty()) m_ldSampleSize++;
     }
     famFile.close();
-    std::cerr << "A total of " << m_ldSampleSize << " were found in the genotype file for LD construction" << std::endl;
+    std::cerr << "A total of " << m_ldSampleSize << " samples were found in the genotype file for LD construction" << std::endl << std::endl;
     Genotype::SetsampleNum(m_ldSampleSize);
 
     std::string bimFileName = genotypeFilePrefix+".bim";
@@ -37,7 +37,7 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpInde
 
 
 
-    double currentMaxBlock = 0;
+    size_t currentMaxBlock = 0;
 	std::deque<size_t> locList;
 	std::string prevChr;
     while(std::getline(bimFile, line)){
@@ -81,6 +81,7 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpInde
 							}
 							else{
 								if(currentMaxBlock < locList.size()*2) currentMaxBlock = locList.size()*2;
+								if(currentMaxBlock%3 != 0) currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
 								std::cerr << "Recommended block size for chromosome "<< prevChr << ": " << currentMaxBlock << std::endl;
 								if(maxBlockSet && maxBlock < currentMaxBlock ){
 									currentMaxBlock = maxBlock;
@@ -107,6 +108,7 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpInde
     }
 
     if(currentMaxBlock < locList.size()*2) currentMaxBlock = locList.size()*2;
+    if(currentMaxBlock%3 != 0) currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
 	std::cerr << "Recommended block size for chromosome "<< prevChr << ": " << currentMaxBlock << std::endl;
     if(maxBlockSet && maxBlock < currentMaxBlock ){
 		currentMaxBlock = maxBlock;
@@ -116,9 +118,12 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpInde
 	m_blockSizeTract->set(prevChr, currentMaxBlock);
 
     bimFile.close();
-    std::cerr << "A total of " << duplicateCount << " Snps in the LD information were duplicated" << std::endl;
-    if(duplicateCount > 0) std::cerr << "Only the first instance of each Snp will be used" << std::endl;
-
+    if(duplicateCount == 0) std::cerr << "There are no duplicated snps in the LD file" << std::endl;
+    else{
+		std::cerr << "A total of " << duplicateCount << " Snps in the LD file were duplicated" << std::endl;
+		std::cerr << "Only the first instance of each Snp will be used" << std::endl;
+    }
+	std::cerr << std::endl;
 
     std::string bedFileName = genotypeFilePrefix+".bed";
 	bool bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_bedFile); //We will try to open the connection to bedFile
@@ -146,7 +151,8 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpInde
 
 GenotypeFileHandler::~GenotypeFileHandler()
 {
-	//dtor
+	delete m_blockSizeTract;
+	delete m_chrCount;
 }
 
 
@@ -221,16 +227,14 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 }
 
 
-ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> snpLoc, std::vector<Snp*> &snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &prevResidual, size_t &blockSize){
+ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> &snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &prevResidual, size_t &blockSize){
 	//We will get snps according to the distance
 	//We want to use flanking distance, e.g. getting the 1mb flanking on the both side
 	blockSize = m_blockSizeTract->value(m_chrExists.front());
     size_t processSize = blockSize/3*m_thread; //This is the expected number of snps to be processed
-    prevResidual =blockSize; //default amount of residule
+    prevResidual =genotype.size(); //default amount of residule
     if(chromosomeStart){
         processSize+= blockSize/3*2;
-        prevResidual = 0;
-        chromosomeStart=false;
     }
 	while (m_snpIter < m_inputSnp){ //While there are still Snps to read
 		bool snp = false;
@@ -293,12 +297,15 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 				(maf >= 0.0 && maf < currentMaf)){
 				Genotype *temp = genotype.back();
 				genotype.pop_back();
+                snpList[snpLoc.back()]->setFlag(0, false);
+				snpLoc.pop_back();
 				delete temp;
 			}
 			else if(prevResidual > (blockSize/3)*2){
 				prevResidual--;
 				Genotype *temp = genotype.front();
 				genotype.pop_front();
+                snpLoc.pop_front();
 				delete temp;
 				processSize--;
 			}

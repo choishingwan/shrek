@@ -6,11 +6,15 @@ std::string Snp::Getchr() const { return m_chr; }
 std::string Snp::GetrsId() const { return m_rs; }
 size_t Snp::Getbp() const { return m_bp; }
 size_t Snp::GetsampleSize() const { return m_sampleSize; }
+size_t Snp::GetregionSize() const {return m_regionFlag.size(); }
 double Snp::Getoriginal() const { return m_original; }
 double Snp::Getbeta() const { return m_beta; }
 double Snp::Getheritability() const { return m_heritability; }
 void Snp::Setheritability(double heritability ) { m_heritability = heritability; }
-
+bool Snp::GetFlag(size_t index) const {
+	if(index>= m_regionFlag.size()) return false;
+	return m_regionFlag[index];
+}
 
 Snp::~Snp()
 {
@@ -18,7 +22,7 @@ Snp::~Snp()
 }
 
 
-void Snp::generateSnpList(std::vector<Snp*> &snpList, const std::string &pvalueFile, const size_t index, const size_t sampleSize, const size_t rsIndex, const size_t bpIndex, const size_t chrIndex, const size_t sampleIndex, bool sampleIndexProvided){
+void Snp::generateSnpList(std::vector<Snp*> &snpList, const std::string &pvalueFile, const size_t index, const size_t sampleSize, const size_t rsIndex, const size_t bpIndex, const size_t chrIndex, const size_t sampleIndex, bool sampleSizeProvided){
 	std::ifstream pValue;
     pValue.open(pvalueFile.c_str());
     if(!pValue.is_open()){
@@ -26,13 +30,14 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const std::string &pvalueF
 		exit(-1);
     }
     std::string line;
+    std::getline(pValue, line); //First line is header
     while(std::getline(pValue, line)){
 		line = usefulTools::trim(line);
         if(!line.empty()){
 			std::vector<std::string> token;
 			usefulTools::tokenizer(line, " \t", &token);
             if(token.size() > index && token.size() > rsIndex && token.size() > bpIndex && token.size() > chrIndex){
-				if(sampleIndexProvided && token.size() <= sampleIndex){
+				if(sampleSizeProvided && token.size() <= sampleIndex){
 					//Skip, as the sample index will be out of bound
 				}
 				else{
@@ -40,7 +45,7 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const std::string &pvalueF
                     size_t bp = atoi(token[bpIndex].c_str());
                     std::string rsId = token[rsIndex];
                     size_t sizeOfSample = sampleSize;
-                    if(sampleIndexProvided) sizeOfSample = atoi(token[sampleIndex].c_str());
+                    if(!sampleSizeProvided) sizeOfSample = atoi(token[sampleIndex].c_str());
                     double predictedBeta = atof(token[index].c_str());
 					if(!std::isfinite(predictedBeta)){
                         predictedBeta=0;
@@ -97,7 +102,8 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, std::
         }
 
     }
-    std::cerr <<  "There are a total of " << duplicate << " duplicated rsID(s)" << std::endl << std::endl;
+    if(duplicate == 0) std::cerr << "There are no duplicated rsID in the p-value file" << std::endl << std::endl;
+    else std::cerr <<  "There are a total of " << duplicate << " duplicated rsID(s) in the p-value file" << std::endl << std::endl;
 }
 
 void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const size_t &caseSize, const size_t &controlSize, const double &prevalence, std::vector<std::vector<Region*> > &regionList, bool isPvalue){
@@ -157,8 +163,9 @@ void Snp::computeVarianceExplained(const size_t &caseSize, const size_t &control
 	double portionCase = (caseSize+0.0) / (totalSampleSize+0.0);
 	double i2 = usefulTools::dnorm(usefulTools::qnorm(prevalence))/(prevalence);
 	i2 = i2*i2;
-	m_beta = ((1-prevalence)*(1-prevalence)*ncp)/(i2*portionCase*(1-portionCase)*(totalSampleSize));
-	m_heritability = m_beta;
+	m_sampleSize =((1-prevalence)*(1-prevalence))/(i2*portionCase*(1-portionCase)*(totalSampleSize));
+	m_beta = m_sampleSize*ncp;
+    m_heritability = m_beta;
 }
 
 void Snp::setFlag(size_t index, bool value){

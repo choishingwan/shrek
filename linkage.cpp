@@ -12,18 +12,26 @@ Linkage::~Linkage()
 	//dtor
 }
 
+size_t Linkage::rows() const { return m_linkage.rows(); }
+size_t Linkage::cols() const { return m_linkage.cols(); }
+double Linkage::Geteffective() const { return m_effectiveNumber; }
+Eigen::MatrixXd Linkage::block(size_t blockStart, size_t lengthOfBlock){ return m_linkage.block(blockStart, blockStart, lengthOfBlock, lengthOfBlock); }
 
 void Linkage::triangularThread( const size_t startBlock, const size_t endBlock, bool correction, std::deque<Genotype*> &genotype){
     //Make the thread region
     std::vector<LinkageThread*> garbageCollection;
-    for(size_t i = 0; i < m_thread; ++i){
+    size_t maxThread = (endBlock-startBlock)/ m_thread;
+    if(maxThread >=1) maxThread = m_thread;
+    else maxThread =(endBlock-startBlock)%m_thread;
+    for(size_t i = 0; i < maxThread; ++i){
         garbageCollection.push_back(new LinkageThread(correction, endBlock, &m_effectiveNumber, &m_linkage, &genotype));
     }
+
     for(size_t i = startBlock; i < endBlock; ++i){
-        garbageCollection[i%m_thread]->Addstart(i); //So we distribute the items to the corresponding "thread"
+        garbageCollection[i%maxThread]->Addstart(i); //So we distribute the items to the corresponding "thread"
     }
     std::vector<pthread_t*> threadList;
-    for(size_t i = 0; i < m_thread; ++i){
+    for(size_t i = 0; i < maxThread; ++i){
         pthread_t *thread1 = new pthread_t();
         threadList.push_back(thread1);
         int threadStatus = pthread_create( thread1, NULL, &LinkageThread::triangularProcess, garbageCollection[i]);
@@ -58,7 +66,7 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
             garbageCollection.push_back(new LinkageThread(correction, i, i+1, start, width, &m_effectiveNumber, &m_linkage, &genotype));
             pthread_t *thread1 = new pthread_t();
             threadList.push_back(thread1);
-            int threadStatus = pthread_create( thread1, NULL, &LinkageThread::rectangularProcess, garbageCollection[i]);
+            int threadStatus = pthread_create( thread1, NULL, &LinkageThread::rectangularProcess, garbageCollection.back());
             if(threadStatus != 0){
                 std::cerr << "Failed to spawn thread with status: " << threadStatus << std::endl;
                 exit(-1);
@@ -66,10 +74,13 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
         }
     }
     else{
-        size_t step = (snpEnd -snpStart ) / m_thread;
-        size_t remaining = (snpEnd -snpStart )%m_thread;
+        size_t maxThread = (snpEnd -snpStart ) / m_thread;
+        if(maxThread >=1) maxThread = m_thread;
+        else maxThread =(snpEnd -snpStart ) % m_thread;
+        size_t step=(snpEnd -snpStart )/maxThread;
+        size_t remaining = (snpEnd -snpStart )%maxThread;
         size_t current = snpStart;
-        for(size_t i = 0; i < m_thread; ++i){
+        for(size_t i = 0; i < maxThread; ++i){
             if(remaining > 0){
                 garbageCollection.push_back(new LinkageThread(correction, current, current+step+1, start, width, &m_effectiveNumber, &m_linkage, &genotype));
                 remaining--;
@@ -80,7 +91,7 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
             }
             pthread_t *thread1 = new pthread_t();
             threadList.push_back(thread1);
-            int threadStatus = pthread_create( thread1, NULL, &LinkageThread::rectangularProcess, garbageCollection[i]);
+            int threadStatus = pthread_create( thread1, NULL, &LinkageThread::rectangularProcess, garbageCollection.back());
             if(threadStatus != 0){
                 std::cerr << "Failed to spawn thread with status: " << threadStatus << std::endl;
                 exit(-1);
@@ -101,19 +112,20 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
 }
 
 
-void Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResiduals, const size_t &blockSize, bool correction){
+ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResiduals, const size_t &blockSize, bool correction){
 	if(genotype.empty()){
-        return;
+        return continueProcess;
 	}
 	if(blockSize == 0){
         //Doesn't have to build the LD matrix when the block size is 0
-        return;
+        return continueProcess;
 	}
 	//Use previous informations
     if(prevResiduals == 0){
         m_linkage = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
     }
     else{
+        std::cerr << prevResiduals << "\t" << m_linkage.rows() << "\t" << m_linkage.cols() << std::endl;
 		Eigen::MatrixXd temp = m_linkage.bottomRightCorner(prevResiduals,prevResiduals);
 		m_linkage= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
 		m_linkage.topLeftCorner(prevResiduals, prevResiduals) = temp;
@@ -133,22 +145,13 @@ void Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResid
             m_effectiveNumber += 1.0;
             for(size_t j = i+1; j < genotype.size(); ++j){
                 double rSquare = genotype[i]->Getr(genotype[j], correction);
-                if(rSquare > 1.0){
-                    std::cerr << "Warning: rSquare bigger than 1" << std::endl;
-                    rSquare = 1.0;
-                }
-                if(rSquare < 0.0){
-                    std::cerr << "Warning: rSquare smaller than 0" << std::endl;
-                    rSquare = 0.0;
-                }
                 m_linkage(i,j) = rSquare;
                 m_linkage(j,i) = rSquare;
                 m_effectiveNumber += 2.0*rSquare;
             }
         }
-        std::cerr << m_effectiveNumber << std::endl;
     }
-    else{
+    else if(stepSize > 0){
         size_t counting= 0;
         for(size_t i = 0; i < genotype.size(); i+= stepSize){
             if(counting < 2){
@@ -174,6 +177,7 @@ void Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResid
             if(startLoc.size() != 0 && !startLoc.empty()){ //Double safe
                 triangularThread(startLoc.back(), genotype.size(), correction, genotype);
             }
+
             for(size_t i = 0; i < startLoc.size()-1; ++i){
                 if(prevResiduals==0 && i == 0){
 
@@ -192,5 +196,38 @@ void Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResid
         }
         startLoc.clear();
     }
-
+    else{
+        std::cerr << "Undefined behaviour! Step size should never be negative as block size is positive" << std::endl;
+        return fatalError;
+	}
+	return completed;
 }
+
+Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate){
+
+	Eigen::JacobiSVD<Eigen::MatrixXd> svd(m_linkage.block(start, start, length, length), Eigen::ComputeThinU);
+
+    Eigen::MatrixXd rInvert = svd.matrixU()*(svd.singularValues().array().abs() > svd.threshold()).select(svd.singularValues().array().inverse(), 0).matrix().asDiagonal() * svd.matrixU().transpose();
+    Eigen::VectorXd result = rInvert*(*betaEstimate).segment(start, length);
+	double relative_error = 0.0;
+	Eigen::VectorXd error =-(m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length));
+    for(size_t i = 0; i < length; ++i){
+        relative_error += std::fabs(error(i));
+    }
+    double prev_error = relative_error+1;
+    Eigen::VectorXd update = result;
+    while(relative_error < prev_error){
+        prev_error = relative_error;
+        update =rInvert*(error);
+        relative_error = 0.0;
+        error= -(m_linkage.block(start, start, length, length)*(result+update) - (*betaEstimate).segment(start, length));
+        for(size_t i = 0; i < length; ++i){
+            relative_error += std::fabs(error(i));
+        }
+        if(relative_error < 1e-300) relative_error = 0;
+        result = result+update;
+    }
+    return result;
+}
+
+

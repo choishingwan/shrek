@@ -29,8 +29,8 @@ double Genotype::Getr(Genotype* snpB, bool correction){
 	if(remainSample > 0){
 		rSquare += (__builtin_popcountll(m_genotypeA[i] & snpB->m_genotypeB[i] )- remainSample*m_mean*snpB->m_mean)/(m_standardDeviation *snpB->m_standardDeviation);
     }
-    rSquare = rSquare*1/(m_sampleNum-1);
-	rSquare = rSquare*rSquare;
+    rSquare *= 1/(m_sampleNum-1);
+	rSquare *= rSquare;
 	if(correction){
         return 1.0-((m_sampleNum-3.0)/(m_sampleNum-2.0))*(1.0-rSquare)*(1.0+(2.0*(1.0-rSquare))/(m_sampleNum-3.3));
 	}
@@ -39,6 +39,10 @@ double Genotype::Getr(Genotype* snpB, bool correction){
 }
 
 void Genotype::SetsampleNum(size_t sampleNum){
+	if(sampleNum < 2){
+        std::cerr << "ERROR! Sample number must be bigger than 1!" << std::endl;
+        exit(-1);
+	}
     Genotype::m_sampleNum = sampleNum;
 }
 
@@ -66,3 +70,12 @@ void Genotype::AddsampleGenotype(int genotype, size_t sampleIndex){
     }
 }
 
+void Genotype::clean(std::deque<Genotype*> &genotype, size_t remaining){
+	size_t sizeOfGenotype = genotype.size();
+	size_t removeCount = sizeOfGenotype-remaining;
+    for(size_t i = 0; i < removeCount; ++i){
+        Genotype* temp = genotype.front();
+        genotype.pop_front();
+        delete temp;
+    }
+}

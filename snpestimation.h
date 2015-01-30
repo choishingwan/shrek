@@ -3,18 +3,20 @@
 
 #include <vector>
 #include <deque>
+#include <fstream>
 #include "processcode.h"
 #include "decomposition.h"
 #include "genotypefilehandler.h"
 #include "genotype.h"
 #include "linkage.h"
-
+#include "region.h"
 
 class SnpEstimation
 {
 	public:
 		SnpEstimation(GenotypeFileHandler *genotypeFileHandler,SnpIndex *snpIndex, std::vector<Snp*> *snpList, size_t thread, double maf, bool correction);
-		void performEstimation();
+		void Estimate();
+		void Getresult(std::string outputPrefix);
 		virtual ~SnpEstimation();
 	protected:
 	private:
@@ -23,6 +25,7 @@ class SnpEstimation
 		std::vector<Snp*> *m_snpList;
 		size_t m_thread;
         double m_maf;
+        double m_effective;
         bool m_correction;
 };
 

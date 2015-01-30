@@ -47,7 +47,6 @@ Command::Command(int argc, char* argv[], bool &error)
 	m_provideSampleSize = false;
     m_quantitative = false;
     m_caseControl = false;
-    m_provideSampleSize =false;
     m_maxBlockSet = false;
     m_thread = threadDefault;
     m_chrIndex = 0;
@@ -118,6 +117,7 @@ Command::Command(int argc, char* argv[], bool &error)
 				break;
 			case 's':
 				m_sampleSize= atoi(optarg);
+				m_provideSampleSize = true;
 				break;
             case 'a':
 				m_cIndex= atoi(optarg)-1;
@@ -135,7 +135,6 @@ Command::Command(int argc, char* argv[], bool &error)
 				break;
 			case 'x':
 				m_sampleSizeIndex = atoi(optarg)-1;
-				m_provideSampleSize = true;
 				break;
 			case 'k':
 				m_prevalence = atof(optarg);
@@ -191,6 +190,7 @@ Command::Command(int argc, char* argv[], bool &error)
         std::cerr << "Minimum block size: " << m_minBlock << std::endl;
         std::cerr << "Maximum block size: " << m_maxBlock << std::endl;
     }
+
     if(m_maxBlockSet && m_maxBlock == 0){
 		error = true;
         std::cerr << "Maximum block size enabled. The maximum block size must be bigger than 0" << std::endl;
@@ -259,6 +259,14 @@ Command::Command(int argc, char* argv[], bool &error)
     if(m_ldFilePrefix.empty()){
         error = true;
         std::cerr << "Genotype files must be provided for ld calculation" << std::endl;
+    }
+    if(!error && m_maxBlockSet && m_maxBlock%3 != 0){
+        std::cerr << "We prefer a blockSize that can be divided by 3. Will change the max block size to " << m_maxBlock+3-m_maxBlock%3 << std::endl;
+        m_maxBlock = m_maxBlock+m_maxBlock%3;
+    }
+	if(!error && m_minBlock > 0 && m_minBlock%3 != 0){
+        std::cerr << "We prefer a blockSize that can be divided by 3. Will change the min block size to " << m_minBlock+3-m_minBlock%3 << std::endl;
+        m_minBlock = m_minBlock+m_minBlock%3;
     }
 
 	if(error){

@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <string.h>
 #include <iostream>
+#include <deque>
 
 class Genotype
 {
@@ -15,7 +16,7 @@ class Genotype
         void Setmean(double mean);
         void SetstandardDeviation(double standardDeviation);
         void AddsampleGenotype(int genotype, size_t sampleIndex);
-
+        static void clean(std::deque<Genotype*> &genotype, size_t remaining);
 	protected:
 	private:
         unsigned long long *m_genotypeA;

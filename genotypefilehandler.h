@@ -22,7 +22,7 @@ class GenotypeFileHandler
 	public:
 		GenotypeFileHandler(std::string genotypeFilePrefix, SnpIndex *snpIndex, std::vector<Snp*> &snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock, size_t thread);
 		virtual ~GenotypeFileHandler();
-        ProcessCode getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> snpLoc, std::vector<Snp*> &snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &prevResidual, size_t &blockSize);
+        ProcessCode getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> &snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &prevResidual, size_t &blockSize);
         size_t GetsampleSize() const;
 	protected:
 	private:

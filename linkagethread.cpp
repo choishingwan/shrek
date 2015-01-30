@@ -31,6 +31,7 @@ LinkageThread::~LinkageThread()
 
 
 void *LinkageThread::triangularProcess(void *in){
+    mtx.lock();
     struct LinkageThread *input = (LinkageThread *) in;
     bool correction = input->Getcorrection();
     size_t endOfProcess = input->GetboundEnd();
@@ -38,25 +39,22 @@ void *LinkageThread::triangularProcess(void *in){
     std::deque<Genotype*> *geno = input->Getgenotype();
 
     size_t sizeOfItem = input->GetsizeOfStart();
-    double effectiveNumber=0.0;
+    double effective=0.0;
     for(size_t i = 0; i < sizeOfItem; ++i){
         size_t j = input->GetstartLoc(i);
         (*matrix)(j,j) = 1.0;
-        effectiveNumber+= 1;
+        effective+= 1.0;
         for(size_t k = j+1; k < endOfProcess; ++k){
             double rSquare=(*geno)[j]->Getr( (*geno)[k], correction);
-            if(rSquare > 1.0) rSquare = 1.0;
-			else if(rSquare < 0.0) rSquare = 0.0;
-
             (*matrix)(j, k) = rSquare;
             (*matrix)(k,j) = rSquare;
-            effectiveNumber += 2*rSquare;
+            effective += 2.0*rSquare;
         }
     }
-
+    mtx.unlock();
 
     mtx.lock();
-	input->Seteffective(effectiveNumber);
+	input->Seteffective(effective);
     mtx.unlock();
     return nullptr;
 }
@@ -65,26 +63,21 @@ void *LinkageThread::triangularProcess(void *in){
 
 void *LinkageThread::rectangularProcess(void *in){
     struct LinkageThread *input = (LinkageThread *) in;
+
     bool correction = input->Getcorrection();
     size_t snpStart = input->GetsnpStart();
     size_t snpEnd = input->GetsnpEnd();
     size_t boundStart = input->GetboundStart();
     size_t boundEnd = input->GetboundEnd();
     Eigen::MatrixXd *matrix = input->Getld();
-    //mtx.lock();
-    //std::cerr << "Process snp from: " << snpStart << " to " <<  snpEnd << std::endl;
-    //std::cerr << "Bounded within " << boundStart << " to " << boundEnd << std::endl;
     std::deque<Genotype* > *geno = input->Getgenotype();
     double effective = 0.0;
 
     for(size_t i = snpStart; i < snpEnd; ++i){
-        //(*matrix)(i,i) = 1.0;
         for(size_t j = boundStart; j < boundEnd; ++j){
-            if(j == i) (*matrix)(i,i) = 1.0; //Let's just assumn that it is duplicated
+            if(j == i) (*matrix)(i,i) = 1.0; //Let's just assume that it is duplicated
             else{
                 double rSquare = (*geno)[i]->Getr((*geno)[j],correction);
-                if(rSquare > 1.0) rSquare = 1.0;
-                else if(rSquare < 0.0) rSquare = 0.0;
 				(*matrix)(i,j) = rSquare;
 				(*matrix)(j,i) = rSquare;
 				effective += 2.0*rSquare;
