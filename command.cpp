@@ -262,11 +262,11 @@ Command::Command(int argc, char* argv[], bool &error)
     }
     if(!error && m_maxBlockSet && m_maxBlock%3 != 0){
         std::cerr << "We prefer a blockSize that can be divided by 3. Will change the max block size to " << m_maxBlock+3-m_maxBlock%3 << std::endl;
-        m_maxBlock = m_maxBlock+m_maxBlock%3;
+        m_maxBlock = m_maxBlock+3-m_maxBlock%3;
     }
 	if(!error && m_minBlock > 0 && m_minBlock%3 != 0){
         std::cerr << "We prefer a blockSize that can be divided by 3. Will change the min block size to " << m_minBlock+3-m_minBlock%3 << std::endl;
-        m_minBlock = m_minBlock+m_minBlock%3;
+        m_minBlock = m_minBlock+3-m_minBlock%3;
     }
 
 	if(error){

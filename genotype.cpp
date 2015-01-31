@@ -29,7 +29,7 @@ double Genotype::Getr(Genotype* snpB, bool correction){
 	if(remainSample > 0){
 		rSquare += (__builtin_popcountll(m_genotypeA[i] & snpB->m_genotypeB[i] )- remainSample*m_mean*snpB->m_mean)/(m_standardDeviation *snpB->m_standardDeviation);
     }
-    rSquare *= 1/(m_sampleNum-1);
+    rSquare *= 1.0/(m_sampleNum-1.0);
 	rSquare *= rSquare;
 	if(correction){
         return 1.0-((m_sampleNum-3.0)/(m_sampleNum-2.0))*(1.0-rSquare)*(1.0+(2.0*(1.0-rSquare))/(m_sampleNum-3.3));

@@ -15,7 +15,6 @@ void SnpEstimation::Estimate(){
     Decomposition *decompositionHandler = new Decomposition( m_snpIndex, m_snpList, linkageMatrix, m_thread);
 	while(process != completed && process != fatalError){
 		process = m_genotypeFileHandler->getSnps(genotype, snpLoc, *m_snpList, chromosomeStart, chromosomeEnd, m_maf,prevResidual, blockSize);
-		std::cerr << "PrevResidual: " << prevResidual << std::endl;
 		if(process == fatalError){
             exit(-1);
 		}

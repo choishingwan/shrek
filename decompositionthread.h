@@ -5,13 +5,14 @@
 #include <Eigen/Dense>
 #include <deque>
 #include <vector>
+#include <iostream>
 #include "linkage.h"
 #include "snp.h"
 
 class DecompositionThread
 {
 	public:
-		DecompositionThread(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, bool chrEnd);
+		DecompositionThread(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, bool lastOfBlock);
 		virtual ~DecompositionThread();
 		static void *ThreadProcesser(void *in);
 		void solve();
@@ -24,7 +25,7 @@ class DecompositionThread
 		std::deque<size_t> const *m_snpLoc;
         std::vector<Snp*> *m_snpList;
         bool m_chrStart;
-        bool m_chrEnd;
+        bool m_lastOfBlock;
         static std::mutex decomposeMtx;
 };
 

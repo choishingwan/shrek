@@ -31,7 +31,7 @@ LinkageThread::~LinkageThread()
 
 
 void *LinkageThread::triangularProcess(void *in){
-    mtx.lock();
+
     struct LinkageThread *input = (LinkageThread *) in;
     bool correction = input->Getcorrection();
     size_t endOfProcess = input->GetboundEnd();
@@ -51,7 +51,7 @@ void *LinkageThread::triangularProcess(void *in){
             effective += 2.0*rSquare;
         }
     }
-    mtx.unlock();
+
 
     mtx.lock();
 	input->Seteffective(effective);

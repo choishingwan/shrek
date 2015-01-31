@@ -125,7 +125,6 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
         m_linkage = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
     }
     else{
-        std::cerr << prevResiduals << "\t" << m_linkage.rows() << "\t" << m_linkage.cols() << std::endl;
 		Eigen::MatrixXd temp = m_linkage.bottomRightCorner(prevResiduals,prevResiduals);
 		m_linkage= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
 		m_linkage.topLeftCorner(prevResiduals, prevResiduals) = temp;
@@ -204,29 +203,33 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
 }
 
 Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate){
-
 	Eigen::JacobiSVD<Eigen::MatrixXd> svd(m_linkage.block(start, start, length, length), Eigen::ComputeThinU);
 
     Eigen::MatrixXd rInvert = svd.matrixU()*(svd.singularValues().array().abs() > svd.threshold()).select(svd.singularValues().array().inverse(), 0).matrix().asDiagonal() * svd.matrixU().transpose();
     Eigen::VectorXd result = rInvert*(*betaEstimate).segment(start, length);
 	double relative_error = 0.0;
-	Eigen::VectorXd error =-(m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length));
-    for(size_t i = 0; i < length; ++i){
+	Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);
+    relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
+/*    for(size_t i = 0; i < length; ++i){
         relative_error += std::fabs(error(i));
-    }
+    }*/
     double prev_error = relative_error+1;
     Eigen::VectorXd update = result;
+    Eigen::VectorXd epsilonError = error;
     while(relative_error < prev_error){
         prev_error = relative_error;
-        update =rInvert*(error);
+        update =rInvert*(-(epsilonError));
         relative_error = 0.0;
-        error= -(m_linkage.block(start, start, length, length)*(result+update) - (*betaEstimate).segment(start, length));
+        error= m_linkage.block(start, start, length, length)*(result+update) - (*betaEstimate).segment(start, length);
         for(size_t i = 0; i < length; ++i){
             relative_error += std::fabs(error(i));
         }
+        //epsilonError = m_linkage.block(start, start, length, length)*(update) - (-epsilonError);
+        epsilonError = error;
         if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
+
     return result;
 }
 

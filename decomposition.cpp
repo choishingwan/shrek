@@ -32,7 +32,9 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 	if(stepSize == 0 || currentBlockSize==genotype.size()){ //no multithreading is required
 		//The Block size is only 3. so We can finish it anyway
 		Eigen::VectorXd result = m_linkage->solve(0, currentBlockSize, &betaEstimate);
-        for(size_t i; i < snpLoc.size(); ++i){
+		size_t copyStart = 0;
+		if(!chromosomeStart) copyStart = snpLoc.size()/3;
+        for(size_t i=copyStart; i < snpLoc.size(); ++i){
 			(*m_snpList)[snpLoc[i]]->Setheritability(result(i));
         }
 
@@ -56,10 +58,10 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 		}
 		for(size_t i = 0; i < startLoc.size(); ++i){
 			if(i == startLoc.size()-1){
-				garbageCollection.push_back(new DecompositionThread(startLoc[i], genotype.size()-startLoc[i], &betaEstimate, m_linkage, &snpLoc, m_snpList, chromosomeStart, chromosomeEnd));
+				garbageCollection.push_back(new DecompositionThread(startLoc[i], genotype.size()-startLoc[i], &betaEstimate, m_linkage, &snpLoc, m_snpList, chromosomeStart, true));
 			}
 			else{
-				garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, m_linkage, &snpLoc, m_snpList, chromosomeStart, chromosomeEnd));
+				garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
 			}
 			pthread_t *thread1 = new pthread_t();
 			threadList.push_back(thread1);

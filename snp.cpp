@@ -1,6 +1,8 @@
 #include "snp.h"
 
-Snp::Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, double original, double beta):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original), m_beta(beta){}
+Snp::Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, double original, double beta):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original), m_beta(beta){
+	m_heritability = 0.0;
+}
 
 std::string Snp::Getchr() const { return m_chr; }
 std::string Snp::GetrsId() const { return m_rs; }
@@ -149,7 +151,7 @@ void Snp::computeVarianceExplained(bool isPvalue){
     }
     m_beta = m_beta*m_beta;
 	m_beta = (m_beta/(m_sampleSize-2.0+m_beta))-1.0/(m_sampleSize-1.0);
-	m_heritability = m_beta;
+
 }
 
 void Snp::computeVarianceExplained(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue){
@@ -165,7 +167,7 @@ void Snp::computeVarianceExplained(const size_t &caseSize, const size_t &control
 	i2 = i2*i2;
 	m_sampleSize =((1-prevalence)*(1-prevalence))/(i2*portionCase*(1-portionCase)*(totalSampleSize));
 	m_beta = m_sampleSize*ncp;
-    m_heritability = m_beta;
+
 }
 
 void Snp::setFlag(size_t index, bool value){
