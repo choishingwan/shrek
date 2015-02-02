@@ -14,7 +14,7 @@ void SnpEstimation::Estimate(){
     Linkage *linkageMatrix = new Linkage(m_thread);
     Decomposition *decompositionHandler = new Decomposition( m_snpIndex, m_snpList, linkageMatrix, m_thread);
 	while(process != completed && process != fatalError){
-		std::cerr << "Getting Snps" << std::endl;
+		/** Will have terrible problem if the input is corrupted */
 		process = m_genotypeFileHandler->getSnps(genotype, snpLoc, *m_snpList, chromosomeStart, chromosomeEnd, m_maf,prevResidual, blockSize);
 		if(process == fatalError){
             exit(-1);
@@ -25,13 +25,13 @@ void SnpEstimation::Estimate(){
 		}
 		else{
 			//Now calculate the LD matrix
-			std::cerr << "Compute LD" << std::endl;
 			ProcessCode linkageProcess = linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction);
 			if(linkageProcess == fatalError){
                 exit(-1);
             }
+            //Trying to remove the perfect LD using my method?
+
             //Now we can perform the decomposition on the data
-            std::cerr << "Decompose" << std::endl;
             decompositionHandler->Decompose(blockSize, snpLoc, genotype, chromosomeStart, chromosomeEnd);
             if(blockSize > genotype.size()) blockSize= genotype.size();
             Genotype::clean(genotype, blockSize);
@@ -49,7 +49,6 @@ void SnpEstimation::Estimate(){
         }
 	}
 	m_effective = linkageMatrix->Geteffective();
-	m_bug = linkageMatrix->Getbug();//DEBUG
 	delete linkageMatrix;
 	delete decompositionHandler;
     Genotype::clean(genotype, 0);
@@ -84,11 +83,9 @@ void SnpEstimation::Getresult(std::string outputPrefix){
         }
 
     }
-    std::cerr << "Effective Number: " << (m_effective) << std::endl; //DEBUG
-    std::cerr << "Effective Number3: " <<m_bug << std::endl; //DEBUG
 	if(outputPrefix.empty()){
         std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
-        std::cout << "With LD\t" << regionEstimate[0] << "\t" << totalSum-regionEstimate[0] << "\t" << (2.0*(nSnp*nSnp/m_effective)+4.0*m_snpList->front()->GetsampleSize()*regionEstimate[0])/(m_snpList->front()->GetsampleSize()*m_snpList->front()->GetsampleSize()*1.0) << std::endl;
+        std::cout << "With LD\t" << regionEstimate[0] << "\t" << totalSum-regionEstimate[0] << "\t" << (2.0*(m_effective)+4.0*m_snpList->front()->GetsampleSize()*regionEstimate[0])/(m_snpList->front()->GetsampleSize()*m_snpList->front()->GetsampleSize()*1.0) << std::endl;
         for(size_t i =1; i < regionEstimate.size(); ++i){
             std::cout << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\tNA" << std::endl;
         }
@@ -121,16 +118,16 @@ void SnpEstimation::Getresult(std::string outputPrefix){
             std::cerr << "Cannot open summary file: " << resSumName << " for write" << std::endl;
             std::cerr << "Will display on screen" << std::endl;
             std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
-            std::cout << "With LD\t" << regionEstimate[0] << "\t" << totalSum-regionEstimate[0] << "\t" << (2.0*(nSnp*nSnp/m_effective)+4.0*m_snpList->front()->GetsampleSize()*regionEstimate[0])/(m_snpList->front()->GetsampleSize()*m_snpList->front()->GetsampleSize()*1.0) << std::endl;
+            std::cout << "With LD\t" << regionEstimate[0] << "\t" << totalSum-regionEstimate[0] << "\t" << (2.0*(m_effective)+4.0*m_snpList->front()->GetsampleSize()*regionEstimate[0])/(m_snpList->front()->GetsampleSize()*m_snpList->front()->GetsampleSize()*1.0) << std::endl;
 			for(size_t i =1; i < regionEstimate.size(); ++i){
 				std::cout << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\tNA" << std::endl;
 			}
         }
         else{
             resSum << "Category\tPositive\tNegative\tVariance" << std::endl;
-            resSum << "With LD\t" << regionEstimate[0] << "\t" << totalSum-regionEstimate[0] << "\t" << (2.0*(nSnp*nSnp/m_effective)+4.0*m_snpList->front()->GetsampleSize()*regionEstimate[0])/(m_snpList->front()->GetsampleSize()*m_snpList->front()->GetsampleSize()*1.0) << std::endl;
+            resSum << "With LD\t" << regionEstimate[0] << "\t" << totalSum-regionEstimate[0] << "\t" << (2.0*(m_effective)+4.0*m_snpList->front()->GetsampleSize()*regionEstimate[0])/(m_snpList->front()->GetsampleSize()*m_snpList->front()->GetsampleSize()*1.0) << std::endl;
             std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
-            std::cout << "With LD\t" << regionEstimate[0] << "\t" << totalSum-regionEstimate[0] << "\t" << (2.0*(nSnp*nSnp/m_effective)+4.0*m_snpList->front()->GetsampleSize()*regionEstimate[0])/(m_snpList->front()->GetsampleSize()*m_snpList->front()->GetsampleSize()*1.0) << std::endl;
+            std::cout << "With LD\t" << regionEstimate[0] << "\t" << totalSum-regionEstimate[0] << "\t" << (2.0*(m_effective)+4.0*m_snpList->front()->GetsampleSize()*regionEstimate[0])/(m_snpList->front()->GetsampleSize()*m_snpList->front()->GetsampleSize()*1.0) << std::endl;
             for(size_t i =1; i < regionEstimate.size(); ++i){
 				resSum << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\tNA" << std::endl;
 				std::cout << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\tNA" << std::endl;

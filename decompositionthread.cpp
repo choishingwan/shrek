@@ -17,7 +17,7 @@ void *DecompositionThread::ThreadProcesser(void *in){
 }
 
 void DecompositionThread::solve(){
-	Eigen::VectorXd effective = Eigen::VectorXd::Constant(m_length, 1.0);//DEBUG
+	Eigen::VectorXd effective = Eigen::VectorXd::Constant(m_length, 1.0);
 	Eigen::VectorXd result = m_linkage->solve(m_start, m_length, m_betaEstimate, &effective);
 	size_t copyStart = m_length/3;
 	size_t copyEnd = m_length/3;
@@ -28,12 +28,11 @@ void DecompositionThread::solve(){
 	if(m_lastOfBlock && m_start+m_length >= m_snpLoc->size()) copyEnd += m_length/3;
 
 	DecompositionThread::decomposeMtx.lock();
-	double e = 0.0;//DEBUG
+	double effectiveNumber = 0.0;
 	for(size_t i = copyStart; i < copyStart+copyEnd; ++i){
 		(*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability(result(i));
-		e+=effective(i);//DEBUG
+		effectiveNumber+=effective(i);
 	}
-	m_linkage->Setbug(e);
-	std::cerr << "Effective Number?: " << e << std::endl;
+	m_linkage->Seteffective(effectiveNumber);
 	DecompositionThread::decomposeMtx.unlock();
 }

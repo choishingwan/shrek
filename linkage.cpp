@@ -3,7 +3,7 @@
 Linkage::Linkage(size_t thread):m_thread(thread){
 	m_numItem= 0;
     m_effectiveNumber=0.0;
-    m_bug=0.0; //DEBUG
+
 }
 
 Linkage::~Linkage()
@@ -14,7 +14,7 @@ Linkage::~Linkage()
 size_t Linkage::rows() const { return m_linkage.rows(); }
 size_t Linkage::cols() const { return m_linkage.cols(); }
 double Linkage::Geteffective() const { return m_effectiveNumber; }
-double Linkage::Getbug() const { return m_bug; } //DEBUG
+void Linkage::Seteffective(double i) { m_effectiveNumber+= i; }
 Eigen::MatrixXd Linkage::block(size_t blockStart, size_t lengthOfBlock){ return m_linkage.block(blockStart, blockStart, lengthOfBlock, lengthOfBlock); }
 
 void Linkage::triangularThread( const size_t startBlock, const size_t endBlock, bool correction, std::deque<Genotype*> &genotype){
@@ -128,7 +128,7 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
 		Eigen::MatrixXd temp = m_linkage.bottomRightCorner(prevResiduals,prevResiduals);
 		m_linkage= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
 		m_linkage.topLeftCorner(prevResiduals, prevResiduals) = temp;
-        m_effectiveNumber-=temp.sum(); //DEBUG
+
     }
     //Construct the LD
 	std::vector<int> startLoc;
@@ -199,7 +199,6 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
         std::cerr << "Undefined behaviour! Step size should never be negative as block size is positive" << std::endl;
         return fatalError;
 	}
-	m_effectiveNumber += m_linkage.sum(); //DEBUG
 	return completed;
 }
 
@@ -220,10 +219,10 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *bet
         relative_error = 0.0;
         error= m_linkage.block(start, start, length, length)*(result+update) - (*betaEstimate).segment(start, length);
         relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
-        if(relative_error < 1e-300) relative_error = 0;
+        //if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
-    //DEBUG
+
     Eigen::VectorXd ones = Eigen::VectorXd::Constant(length, 1.0);
     (*effective) = rInvert*ones;
     error =m_linkage.block(start, start, length, length)*(*effective) - ones;
@@ -235,10 +234,10 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *bet
         relative_error = 0.0;
         error= m_linkage.block(start, start, length, length)*((*effective)+update) - ones;
         relative_error = error.norm() / ones.norm();
-        if(relative_error < 1e-300) relative_error = 0;
+        //if(relative_error < 1e-300) relative_error = 0;
         (*effective) = (*effective)+update;
     }
-    //DEBUG
+
     return result;
 }
 
