@@ -7,6 +7,7 @@
 #include <fstream>
 #include <cmath>
 #include <algorithm>
+#include <memory>
 #include "snpindex.h"
 #include "usefulTools.h"
 #include "region.h"
@@ -40,8 +41,10 @@ class Snp
 		size_t m_bp;
 		size_t m_sampleSize;
         double m_original;
-        double m_beta;
-        double m_heritability;
+        double m_oriBeta;
+        std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD
+        std::shared_ptr<double> m_heritability; //The master heritability
+        std::weak_ptr<double> m_shareHeritability; //The shared heritability, only use for perfect LD snps
         std::vector<bool> m_regionFlag;
         static bool sortSnp (Snp* i, Snp* j);
         void computeVarianceExplained(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue);

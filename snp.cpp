@@ -1,7 +1,8 @@
 #include "snp.h"
 
-Snp::Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, double original, double beta):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original), m_beta(beta){
-	m_heritability = 0.0;
+Snp::Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, double original, double beta):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original), m_oriBeta(beta){
+	(*m_heritability) = 0.0;
+	(*m_beta) = beta;
 }
 
 std::string Snp::Getchr() const { return m_chr; }
@@ -10,13 +11,20 @@ size_t Snp::Getbp() const { return m_bp; }
 size_t Snp::GetsampleSize() const { return m_sampleSize; }
 size_t Snp::GetregionSize() const {return m_regionFlag.size(); }
 double Snp::Getoriginal() const { return m_original; }
-double Snp::Getbeta() const { return m_beta; }
-double Snp::Getheritability() const { return m_heritability; }
-void Snp::Setheritability(double heritability ) { m_heritability = heritability; }
+double Snp::Getbeta() const { return (*m_beta); }
+void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability; }
+
+double Snp::Getheritability() const {
+	if(!m_shareHeritability.expired()){
+        return (*(m_shareHeritability.lock()));
+	}
+	else return *(m_heritability);
+}
 bool Snp::GetFlag(size_t index) const {
 	if(index>= m_regionFlag.size()) return false;
 	return m_regionFlag[index];
 }
+
 
 Snp::~Snp()
 {
@@ -146,27 +154,29 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const
 
 void Snp::computeVarianceExplained(bool isPvalue){
     if(isPvalue){
-        m_beta = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
-        if(!std::isfinite(m_beta)) m_beta = usefulTools::qnorm(((m_original+0.0)/2.0));
+        (*m_beta) = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
+        if(!std::isfinite((*m_beta))) (*m_beta) = usefulTools::qnorm(((m_original+0.0)/2.0));
     }
-    m_beta = m_beta*m_beta;
-	m_beta = (m_beta/(m_sampleSize-2.0+m_beta))-1.0/(m_sampleSize-1.0);
+    (*m_beta) = (*m_beta)*(*m_beta);
+	(*m_beta) = ((*m_beta)/(m_sampleSize-2.0+(*m_beta)))-1.0/(m_sampleSize-1.0);
+	m_oriBeta =(*m_beta);
 
 }
 
 void Snp::computeVarianceExplained(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue){
     if(isPvalue){
-        m_beta = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
-        if(!std::isfinite(m_beta)) m_beta =usefulTools::qnorm(((m_original+0.0)/2.0));
-        m_beta = m_beta*m_beta;
+        (*m_beta) = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
+        if(!std::isfinite((*m_beta))) (*m_beta) =usefulTools::qnorm(((m_original+0.0)/2.0));
+        (*m_beta) = (*m_beta)*(*m_beta);
     }
-    double ncp = (m_beta -1.0);
+    double ncp = ((*m_beta) -1.0);
 	int totalSampleSize = caseSize + controlSize;
 	double portionCase = (caseSize+0.0) / (totalSampleSize+0.0);
 	double i2 = usefulTools::dnorm(usefulTools::qnorm(prevalence))/(prevalence);
 	i2 = i2*i2;
 	m_sampleSize =((1-prevalence)*(1-prevalence))/(i2*portionCase*(1-portionCase)*(totalSampleSize));
-	m_beta = m_sampleSize*ncp;
+	(*m_beta) = m_sampleSize*ncp;
+	m_oriBeta =(*m_beta);
 
 }
 
