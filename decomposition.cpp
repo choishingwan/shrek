@@ -31,12 +31,16 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 	size_t stepSize = currentBlockSize/3;
 	if(stepSize == 0 || currentBlockSize==genotype.size()){ //no multithreading is required
 		//The Block size is only 3. so We can finish it anyway
-		Eigen::VectorXd result = m_linkage->solve(0, currentBlockSize, &betaEstimate);
+		Eigen::VectorXd effective = Eigen::VectorXd::Constant(currentBlockSize, 1.0);
+		Eigen::VectorXd result = m_linkage->solve(0, currentBlockSize, &betaEstimate, &effective); //DEBUG
 		size_t copyStart = 0;
 		if(!chromosomeStart) copyStart = snpLoc.size()/3;
+        double effectiveNum = 0.0;//DEBUG
         for(size_t i=copyStart; i < snpLoc.size(); ++i){
 			(*m_snpList)[snpLoc[i]]->Setheritability(result(i));
+            effectiveNum += effective(i); //DEBUG
         }
+        m_linkage->Setbug(effectiveNum);//DEBUG
 
 	}
 	else if(stepSize > 0){

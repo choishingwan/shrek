@@ -24,6 +24,8 @@ class SnpEstimation
 		SnpIndex *m_snpIndex;
 		std::vector<Snp*> *m_snpList;
 		size_t m_thread;
+		double m_check; //DEBUG
+		double m_bug; //DEBUG
         double m_maf;
         double m_effective;
         bool m_correction;

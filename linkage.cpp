@@ -1,10 +1,9 @@
 #include "linkage.h"
 
-Linkage::Linkage(size_t thread):m_thread(thread)
-{
-	//ctor
+Linkage::Linkage(size_t thread):m_thread(thread){
 	m_numItem= 0;
     m_effectiveNumber=0.0;
+    m_bug=0.0; //DEBUG
 }
 
 Linkage::~Linkage()
@@ -15,6 +14,7 @@ Linkage::~Linkage()
 size_t Linkage::rows() const { return m_linkage.rows(); }
 size_t Linkage::cols() const { return m_linkage.cols(); }
 double Linkage::Geteffective() const { return m_effectiveNumber; }
+double Linkage::Getbug() const { return m_bug; } //DEBUG
 Eigen::MatrixXd Linkage::block(size_t blockStart, size_t lengthOfBlock){ return m_linkage.block(blockStart, blockStart, lengthOfBlock, lengthOfBlock); }
 
 void Linkage::triangularThread( const size_t startBlock, const size_t endBlock, bool correction, std::deque<Genotype*> &genotype){
@@ -24,7 +24,7 @@ void Linkage::triangularThread( const size_t startBlock, const size_t endBlock, 
     if(maxThread >=1) maxThread = m_thread;
     else maxThread =(endBlock-startBlock)%m_thread;
     for(size_t i = 0; i < maxThread; ++i){
-        garbageCollection.push_back(new LinkageThread(correction, endBlock, &m_effectiveNumber, &m_linkage, &genotype));
+        garbageCollection.push_back(new LinkageThread(correction, endBlock, &m_linkage, &genotype));
     }
 
     for(size_t i = startBlock; i < endBlock; ++i){
@@ -63,7 +63,7 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
     if(m_thread > (snpEnd-snpStart)){
         //if there are more threads than items, each will do one horizontal row
         for(size_t i = snpStart; i < snpEnd; ++i){
-            garbageCollection.push_back(new LinkageThread(correction, i, i+1, start, width, &m_effectiveNumber, &m_linkage, &genotype));
+            garbageCollection.push_back(new LinkageThread(correction, i, i+1, start, width, &m_linkage, &genotype));
             pthread_t *thread1 = new pthread_t();
             threadList.push_back(thread1);
             int threadStatus = pthread_create( thread1, NULL, &LinkageThread::rectangularProcess, garbageCollection.back());
@@ -82,12 +82,12 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
         size_t current = snpStart;
         for(size_t i = 0; i < maxThread; ++i){
             if(remaining > 0){
-                garbageCollection.push_back(new LinkageThread(correction, current, current+step+1, start, width, &m_effectiveNumber, &m_linkage, &genotype));
+                garbageCollection.push_back(new LinkageThread(correction, current, current+step+1, start, width, &m_linkage, &genotype));
                 remaining--;
                 current++;
             }
             else{
-                garbageCollection.push_back(new LinkageThread(correction, current, current+step, start, width,&m_effectiveNumber, &m_linkage, &genotype));
+                garbageCollection.push_back(new LinkageThread(correction, current, current+step, start, width, &m_linkage, &genotype));
             }
             pthread_t *thread1 = new pthread_t();
             threadList.push_back(thread1);
@@ -128,6 +128,7 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
 		Eigen::MatrixXd temp = m_linkage.bottomRightCorner(prevResiduals,prevResiduals);
 		m_linkage= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
 		m_linkage.topLeftCorner(prevResiduals, prevResiduals) = temp;
+        m_effectiveNumber-=temp.sum(); //DEBUG
     }
     //Construct the LD
 	std::vector<int> startLoc;
@@ -141,12 +142,11 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
     if(stepSize == 0){
         for(size_t i = 0; i < genotype.size(); ++i){
             m_linkage(i,i) = 1.0;
-            m_effectiveNumber += 1.0;
             for(size_t j = i+1; j < genotype.size(); ++j){
                 double rSquare = genotype[i]->Getr(genotype[j], correction);
                 m_linkage(i,j) = rSquare;
                 m_linkage(j,i) = rSquare;
-                m_effectiveNumber += 2.0*rSquare;
+
             }
         }
     }
@@ -199,10 +199,11 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
         std::cerr << "Undefined behaviour! Step size should never be negative as block size is positive" << std::endl;
         return fatalError;
 	}
+	m_effectiveNumber += m_linkage.sum(); //DEBUG
 	return completed;
 }
 
-Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate){
+Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective){
 	Eigen::JacobiSVD<Eigen::MatrixXd> svd(m_linkage.block(start, start, length, length), Eigen::ComputeThinU);
 
     Eigen::MatrixXd rInvert = svd.matrixU()*(svd.singularValues().array().abs() > svd.threshold()).select(svd.singularValues().array().inverse(), 0).matrix().asDiagonal() * svd.matrixU().transpose();
@@ -210,26 +211,34 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *bet
 	double relative_error = 0.0;
 	Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);
     relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
-/*    for(size_t i = 0; i < length; ++i){
-        relative_error += std::fabs(error(i));
-    }*/
+
     double prev_error = relative_error+1;
     Eigen::VectorXd update = result;
-    Eigen::VectorXd epsilonError = error;
     while(relative_error < prev_error){
         prev_error = relative_error;
-        update =rInvert*(-(epsilonError));
+        update =rInvert*(-(error));
         relative_error = 0.0;
         error= m_linkage.block(start, start, length, length)*(result+update) - (*betaEstimate).segment(start, length);
-        for(size_t i = 0; i < length; ++i){
-            relative_error += std::fabs(error(i));
-        }
-        //epsilonError = m_linkage.block(start, start, length, length)*(update) - (-epsilonError);
-        epsilonError = error;
+        relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
         if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
-
+    //DEBUG
+    Eigen::VectorXd ones = Eigen::VectorXd::Constant(length, 1.0);
+    (*effective) = rInvert*ones;
+    error =m_linkage.block(start, start, length, length)*(*effective) - ones;
+    relative_error = error.norm()/ones.norm();
+    prev_error = relative_error+1;
+    while(relative_error < prev_error){
+        prev_error = relative_error;
+        update =rInvert*(-(error));
+        relative_error = 0.0;
+        error= m_linkage.block(start, start, length, length)*((*effective)+update) - ones;
+        relative_error = error.norm() / ones.norm();
+        if(relative_error < 1e-300) relative_error = 0;
+        (*effective) = (*effective)+update;
+    }
+    //DEBUG
     return result;
 }
 
