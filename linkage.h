@@ -5,6 +5,7 @@ class LinkageThread;
 #include <deque>
 #include <Eigen/Dense>
 #include <Eigen/SVD>
+#include <algorithm>
 #include "genotype.h"
 #include "linkagethread.h"
 #include "processcode.h"

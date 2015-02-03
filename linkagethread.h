@@ -37,6 +37,8 @@ class LinkageThread
         Eigen::MatrixXd *m_ldMatrix;
         std::deque<Genotype*> *m_genotype;
         std::vector<size_t> m_startLoc;
+		void triangularProcess();
+        void rectangularProcess();
 };
 
 #endif // LINKAGETHREAD_H

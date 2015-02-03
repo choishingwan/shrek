@@ -120,6 +120,9 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
         //Doesn't have to build the LD matrix when the block size is 0
         return continueProcess;
 	}
+
+	std::vector<size_t> perfectLd; //DEBUG
+
 	//Use previous informations
     if(prevResiduals == 0){
         m_linkage = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
@@ -142,11 +145,14 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
     if(stepSize == 0){
         for(size_t i = 0; i < genotype.size(); ++i){
             m_linkage(i,i) = 1.0;
-            for(size_t j = i+1; j < genotype.size(); ++j){
-                double rSquare = genotype[i]->Getr(genotype[j], correction);
-                m_linkage(i,j) = rSquare;
-                m_linkage(j,i) = rSquare;
-
+            for(size_t j = genotype.size()-1; j > i; --j){ //invert the direction
+                if(m_linkage(i,j) == 0.0){
+                    double rSquare = genotype[i]->Getr(genotype[j], correction);
+                    if(i != j && rSquare >= 1.0) perfectLd.push_back(j);
+                    m_linkage(i,j) = rSquare;
+                    m_linkage(j,i) = rSquare;
+                }
+                else break; //Already calculated before
             }
         }
     }
@@ -199,6 +205,12 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
         std::cerr << "Undefined behaviour! Step size should never be negative as block size is positive" << std::endl;
         return fatalError;
 	}
+    std::sort(perfectLd.begin(), perfectLd.end();
+    perfectLd.erase( std::unique( perfectLd.begin(), perfectLd.end() ), perfectLd.end() );
+    for(size_t i = 0; i < perfectLd.size(); ++i){
+        std::cerr << "Perfect LD: " << perfectLd[i] << std::endl;
+    }
+
 	return completed;
 }
 
