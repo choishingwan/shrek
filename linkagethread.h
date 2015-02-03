@@ -10,8 +10,8 @@ class LinkageThread
 {
 	public:
 		/** Default constructor */
-		LinkageThread(bool correction, const size_t blockEnd, Eigen::MatrixXd *ldMatrix, std::deque<Genotype* > *genotype);
-		LinkageThread(bool correction, const size_t snpStart, const size_t snpEnd, const size_t boundStart, const size_t boundEnd, Eigen::MatrixXd *ldMatrix, std::deque<Genotype* > *genotype);
+		LinkageThread(bool correction, const size_t blockEnd, Eigen::MatrixXd *ldMatrix, std::deque<Genotype* > *genotype, std::vector<size_t> *perfectLd);
+		LinkageThread(bool correction, const size_t snpStart, const size_t snpEnd, const size_t boundStart, const size_t boundEnd, Eigen::MatrixXd *ldMatrix, std::deque<Genotype* > *genotype, std::vector<size_t> *perfectLd);
 		/** Default destructor */
 		virtual ~LinkageThread();
 
@@ -37,8 +37,10 @@ class LinkageThread
         Eigen::MatrixXd *m_ldMatrix;
         std::deque<Genotype*> *m_genotype;
         std::vector<size_t> m_startLoc;
+        std::vector<size_t> *m_perfectLd;
 		void triangularProcess();
         void rectangularProcess();
+        static std::mutex mtx;
 };
 
 #endif // LINKAGETHREAD_H

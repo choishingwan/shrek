@@ -29,6 +29,7 @@ class Linkage
         double m_effectiveNumber;
         size_t m_numItem;
         size_t m_thread;
+        std::vector<size_t> m_perfectLd;
         void triangularThread(const size_t startBlock, const size_t endBlock, bool correction, std::deque<Genotype*> &genotype);
 		void rectangularThread(const size_t start, const size_t width, const size_t height, bool correction, std::deque<Genotype*> &genotype);
 };

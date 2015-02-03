@@ -3,7 +3,6 @@
 Linkage::Linkage(size_t thread):m_thread(thread){
 	m_numItem= 0;
     m_effectiveNumber=0.0;
-
 }
 
 Linkage::~Linkage()
@@ -24,7 +23,7 @@ void Linkage::triangularThread( const size_t startBlock, const size_t endBlock, 
     if(maxThread >=1) maxThread = m_thread;
     else maxThread =(endBlock-startBlock)%m_thread;
     for(size_t i = 0; i < maxThread; ++i){
-        garbageCollection.push_back(new LinkageThread(correction, endBlock, &m_linkage, &genotype));
+        garbageCollection.push_back(new LinkageThread(correction, endBlock, &m_linkage, &genotype, &m_perfectLd));
     }
 
     for(size_t i = startBlock; i < endBlock; ++i){
@@ -63,7 +62,7 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
     if(m_thread > (snpEnd-snpStart)){
         //if there are more threads than items, each will do one horizontal row
         for(size_t i = snpStart; i < snpEnd; ++i){
-            garbageCollection.push_back(new LinkageThread(correction, i, i+1, start, width, &m_linkage, &genotype));
+            garbageCollection.push_back(new LinkageThread(correction, i, i+1, start, width, &m_linkage, &genotype, &m_perfectLd));
             pthread_t *thread1 = new pthread_t();
             threadList.push_back(thread1);
             int threadStatus = pthread_create( thread1, NULL, &LinkageThread::rectangularProcess, garbageCollection.back());
@@ -82,12 +81,12 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
         size_t current = snpStart;
         for(size_t i = 0; i < maxThread; ++i){
             if(remaining > 0){
-                garbageCollection.push_back(new LinkageThread(correction, current, current+step+1, start, width, &m_linkage, &genotype));
+                garbageCollection.push_back(new LinkageThread(correction, current, current+step+1, start, width, &m_linkage, &genotype, &m_perfectLd));
                 remaining--;
                 current++;
             }
             else{
-                garbageCollection.push_back(new LinkageThread(correction, current, current+step, start, width, &m_linkage, &genotype));
+                garbageCollection.push_back(new LinkageThread(correction, current, current+step, start, width, &m_linkage, &genotype, &m_perfectLd));
             }
             pthread_t *thread1 = new pthread_t();
             threadList.push_back(thread1);
@@ -121,7 +120,6 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
         return continueProcess;
 	}
 
-	std::vector<size_t> perfectLd; //DEBUG
 
 	//Use previous informations
     if(prevResiduals == 0){
@@ -147,8 +145,9 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
             m_linkage(i,i) = 1.0;
             for(size_t j = genotype.size()-1; j > i; --j){ //invert the direction
                 if(m_linkage(i,j) == 0.0){
+                        std::cerr << j << "\t" << i << std::endl;
                     double rSquare = genotype[i]->Getr(genotype[j], correction);
-                    if(i != j && rSquare >= 1.0) perfectLd.push_back(j);
+                    if(i != j && rSquare >= 1.0) m_perfectLd.push_back(j);
                     m_linkage(i,j) = rSquare;
                     m_linkage(j,i) = rSquare;
                 }
@@ -205,10 +204,12 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
         std::cerr << "Undefined behaviour! Step size should never be negative as block size is positive" << std::endl;
         return fatalError;
 	}
-    std::sort(perfectLd.begin(), perfectLd.end();
-    perfectLd.erase( std::unique( perfectLd.begin(), perfectLd.end() ), perfectLd.end() );
-    for(size_t i = 0; i < perfectLd.size(); ++i){
-        std::cerr << "Perfect LD: " << perfectLd[i] << std::endl;
+
+    std::sort(m_perfectLd.begin(), m_perfectLd.end());
+    m_perfectLd.erase( std::unique( m_perfectLd.begin(), m_perfectLd.end() ), m_perfectLd.end() );
+    std::cerr << "Going to print index with perfectLD" << std::endl;
+    for(size_t i = 0; i < m_perfectLd.size(); ++i){
+        std::cerr << "Perfect LD: " << m_perfectLd[i] << std::endl;
     }
 
 	return completed;
