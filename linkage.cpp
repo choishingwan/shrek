@@ -243,10 +243,53 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *bet
         //if(relative_error < 1e-300) relative_error = 0;
         (*effective) = (*effective)+update;
     }
-
     return result;
 }
 
-bool Linkage::Remove(){
-    return false;
+size_t Linkage::Remove(){
+    if(m_perfectLd.empty()) return 0;
+    else{
+            //Do something stupid first to make it easier for me for now
+        std::map<size_t, bool> requireRemove;
+        for(size_t i=0; i < m_perfectLd.size(); ++i){
+            requireRemove[m_perfectLd[i]] = true;
+        }
+        //Eigen::Matrix(row, col)
+        size_t rowIndex = 0;
+        size_t colIndex = 0;
+        size_t numRow = m_linkage.rows();
+        size_t numCol = m_linkage.cols();
+
+        for(size_t i = 0; i < numRow; ++i){
+            if(requireRemove.find(i)==requireRemove.end()){ //We need this column
+                colIndex= i;
+                for(size_t j = i; j < numCol; ++j){
+                    if(requireRemove.find(j)==requireRemove.end()){ //We need this row
+                        m_linkage(rowIndex, colIndex) = m_linkage(i,j);
+                        m_linkage(colIndex, rowIndex) = m_linkage(j,i);
+                        colIndex++;
+                    }
+                }
+                for(size_t j = colIndex; j < numCol; ++j){
+                    m_linkage(rowIndex, j) = 0.0;
+                    m_linkage(j, rowIndex) = 0.0;
+                }
+                colIndex++;
+            }
+        }
+        for(size_t i = rowIndex; i < numRow; ++i){
+            for(size_t j = i; j < numCol; ++j){
+                m_linkage(i, j) = 0.0;
+                m_linkage(j, i) = 0.0;
+            }
+        }
+        return m_perfectLd.size();
+    }
 }
+
+//Updating the two corresponding structures
+void Linkage::Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc){
+
+}
+
+

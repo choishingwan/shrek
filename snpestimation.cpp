@@ -33,6 +33,10 @@ void SnpEstimation::Estimate(){
             }
             //Trying to remove the perfect LD using my method?
 
+            while(linkageMatrix->Remove()!=0){ //We still have some perfect LD to remove
+                //Update snpLoc and genotype
+
+            }
             //Now we can perform the decomposition on the data
             std::cerr << "Decompose" << std::endl;
             decompositionHandler->Decompose(blockSize, snpLoc, genotype, chromosomeStart, chromosomeEnd);

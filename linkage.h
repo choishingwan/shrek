@@ -7,6 +7,7 @@ class LinkageThread;
 #include <Eigen/SVD>
 #include <algorithm>
 #include <limits>
+#include <map>
 #include "configure.h"
 #include "genotype.h"
 #include "linkagethread.h"
@@ -24,7 +25,8 @@ class Linkage
 		Eigen::MatrixXd block(size_t blockStart, size_t lengthOfBlock);
 		Eigen::VectorXd solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective);
 		double Geteffective() const;
-        bool Remove();
+        size_t Remove();
+        void Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc);
 		void Seteffective(double i);
 	protected:
 	private:
