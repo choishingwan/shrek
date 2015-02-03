@@ -27,7 +27,7 @@ int main(int argc, char *argv[]){
 	}
 
 	//From now on, we are only allow to iterate through snpList through snpIndex
-	GenotypeFileHandler *genotypeFileHandler = new GenotypeFileHandler(commander->GetldFilePrefix(), snpIndex, snpList, commander->validate(), commander->maxBlockSet(), commander->GetmaxBlock(), commander->GetminBlock(), commander->Getthread());
+	GenotypeFileHandler *genotypeFileHandler = new GenotypeFileHandler(commander->GetldFilePrefix(), snpIndex, &snpList, commander->validate(), commander->maxBlockSet(), commander->GetmaxBlock(), commander->GetminBlock(), commander->Getthread());
 	SnpEstimation *snpEstimation = new SnpEstimation(genotypeFileHandler, snpIndex, &snpList, commander->Getthread(), commander->Getmaf(), commander->ldCorrect());
 	snpEstimation->Estimate();
     snpEstimation->Getresult(commander->GetoutputPrefix());

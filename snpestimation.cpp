@@ -15,7 +15,7 @@ void SnpEstimation::Estimate(){
     Decomposition *decompositionHandler = new Decomposition( m_snpIndex, m_snpList, linkageMatrix, m_thread);
 	while(process != completed && process != fatalError){
 		/** Will have terrible problem if the input is corrupted */
-		process = m_genotypeFileHandler->getSnps(genotype, snpLoc, *m_snpList, chromosomeStart, chromosomeEnd, m_maf,prevResidual, blockSize);
+		process = m_genotypeFileHandler->getSnps(genotype, snpLoc, m_snpList, chromosomeStart, chromosomeEnd, m_maf,prevResidual, blockSize);
 
 		if(process == fatalError){
             exit(-1);
@@ -32,9 +32,20 @@ void SnpEstimation::Estimate(){
                 exit(-1);
             }
             //Trying to remove the perfect LD using my method?
-
-            while(linkageMatrix->Remove()!=0){ //We still have some perfect LD to remove
+			size_t numRemove =0;
+            while(numRemove =linkageMatrix->Remove(), numRemove!=0){ //We still have some perfect LD to remove
                 //Update snpLoc and genotype
+				linkageMatrix->Update(genotype, snpLoc, m_snpList);
+				process = m_genotypeFileHandler->getSnps(genotype, snpLoc, m_snpList, chromosomeStart,chromosomeEnd, m_maf, numRemove);
+                if(process == fatalError){
+                    exit(-1);
+                }
+                linkageProcess = linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction);
+                if(linkageProcess == fatalError || linkageProcess == continueProcess){
+                    std::cerr << "Something abnormal happened where some of my assumption are violated. Please contact the author with the input"<<std::endl;
+                    std::cerr << "Perfect LD removable, blockSize == 0 or no genotype" << std::endl;
+                    exit(-1);
+                }
 
             }
             //Now we can perform the decomposition on the data

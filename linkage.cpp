@@ -112,6 +112,7 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
 
 
 ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResiduals, const size_t &blockSize, bool correction){
+    m_perfectLd.clear();
 	if(genotype.empty()){
         return continueProcess;
 	}
@@ -208,6 +209,7 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
 	return completed;
 }
 
+
 Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective){
 	Eigen::JacobiSVD<Eigen::MatrixXd> svd(m_linkage.block(start, start, length, length), Eigen::ComputeThinU);
 
@@ -288,8 +290,17 @@ size_t Linkage::Remove(){
 }
 
 //Updating the two corresponding structures
-void Linkage::Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc){
+void Linkage::Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList){
+    size_t offset = 0;
+    for(size_t i = 0; i < m_perfectLd.size(); ++i){
+        genotype.erase(genotype.begin() + (m_perfectLd[i]-offset));
+        snpLoc.erase(snpLoc.begin() + (m_perfectLd[i]-offset));
+        offset++;
+    }
 
 }
 
 
+void Linkage::print(){
+    std::cout << m_linkage << std::endl;
+}

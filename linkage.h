@@ -12,6 +12,7 @@ class LinkageThread;
 #include "genotype.h"
 #include "linkagethread.h"
 #include "processcode.h"
+#include "snp.h"
 
 
 class Linkage
@@ -26,8 +27,9 @@ class Linkage
 		Eigen::VectorXd solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective);
 		double Geteffective() const;
         size_t Remove();
-        void Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc);
+        void Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList);
 		void Seteffective(double i);
+		void print();
 	protected:
 	private:
         Eigen::MatrixXd m_linkage;
