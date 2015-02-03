@@ -18,7 +18,7 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 			std::cerr << "ERROR! Undefined behaviour. The location index is negative!" << std::endl;
 			return fatalError;
         }
-        else betaEstimate(i) = (*m_snpList)[snpLoc[i]]->Getbeta();
+        else betaEstimate(i) = (*m_snpList)[snpLoc[i]]->GetDecomposeBeta();
     }
 
     //Now we can perform decomposition using the beta and Linkage

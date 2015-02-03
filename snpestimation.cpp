@@ -11,11 +11,12 @@ void SnpEstimation::Estimate(){
     bool chromosomeEnd = false;
     size_t prevResidual;
     size_t blockSize;
-    Linkage *linkageMatrix = new Linkage(m_thread);
+    Linkage *linkageMatrix = new Linkage(m_snpList, m_thread);
     Decomposition *decompositionHandler = new Decomposition( m_snpIndex, m_snpList, linkageMatrix, m_thread);
 	while(process != completed && process != fatalError){
 		/** Will have terrible problem if the input is corrupted */
 		process = m_genotypeFileHandler->getSnps(genotype, snpLoc, *m_snpList, chromosomeStart, chromosomeEnd, m_maf,prevResidual, blockSize);
+		std::cerr << "got snps" << std::endl;
 		if(process == fatalError){
             exit(-1);
 		}
@@ -25,14 +26,54 @@ void SnpEstimation::Estimate(){
 		}
 		else{
 			//Now calculate the LD matrix
-			ProcessCode linkageProcess = linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction);
-			if(linkageProcess == fatalError){
+			std::cerr << "Initialize linkage " << std::endl;
+			ProcessCode linkageProcess = linkageMatrix->Initialize(genotype, prevResidual, blockSize);
+			if(linkageProcess ==fatalError){
                 exit(-1);
-            }
-            //Trying to remove the perfect LD using my method?
+			}
+			std::cerr << "Construct ld" << std::endl;
+			std::vector<size_t> perfectLd; //Use to indicate which snps has to be removed.
+			linkageProcess = linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction, perfectLd, snpLoc);
+			std::cerr << "Ld computed" << std::endl;
+			if(linkageProcess == fatalError){
+				exit(-1);
+			}
+			/*
+			std::sort( perfectLd.begin(), perfectLd.end() );
+			perfectLd.erase( std::unique( perfectLd.begin(), perfectLd.end() ), perfectLd.end() );
+			size_t numRemove = perfectLd.size();
+			std::cerr << "A total of : " << numRemove << " perfect LD" << std::endl;
+			for(size_t i = 0; i < perfectLd.size(); ++i){
+                std::cerr << "Perfect LD: " << perfectLd[i] << std::endl;
+			}
+			exit(-1);
+            while(numRemove > 0){
+                //Remove the snps
+                std::cerr << "Get into remove" << std::endl;
+				linkageMatrix->Remove(perfectLd, genotype, snpLoc);
+                //Get new snps
+                std::cerr<< "Ld matrix restructured" << std::endl;
+                process = m_genotypeFileHandler->getSnps(genotype, snpLoc, *m_snpList, chromosomeStart, chromosomeEnd, m_maf, numRemove);
+                std::cerr <<"Added snps" << std::endl;
+                //Reconstruct LD matrix
+                linkageMatrix->Reinitialize(genotype.size());
+                perfectLd.clear();
+                std::cerr << "start performing ld computation again" << std::endl;
+                linkageProcess = linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction, perfectLd, snpLoc);
+                //Get new number of required
+                std::sort( perfectLd.begin(), perfectLd.end() );
+				perfectLd.erase( std::unique( perfectLd.begin(), perfectLd.end() ), perfectLd.end() );
+				numRemove = perfectLd.size();
 
+                std::cerr << "Continue to remove " << numRemove << std::endl;
+            }
+
+			*/
+			linkageMatrix->print(); //DEBUG
             //Now we can perform the decomposition on the data
+            std::cerr << "Start decompose" << std::endl;
             decompositionHandler->Decompose(blockSize, snpLoc, genotype, chromosomeStart, chromosomeEnd);
+            std::cerr << "Done" << std::endl;
             if(blockSize > genotype.size()) blockSize= genotype.size();
             Genotype::clean(genotype, blockSize);
             size_t removeCount = snpLoc.size() - blockSize;
@@ -136,3 +177,5 @@ void SnpEstimation::Getresult(std::string outputPrefix){
         }
     }
 }
+
+

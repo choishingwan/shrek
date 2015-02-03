@@ -5,13 +5,13 @@
 #include <mutex>
 #include "linkage.h"
 #include "genotype.h"
-
+#include "snp.h"
 class LinkageThread
 {
 	public:
 		/** Default constructor */
-		LinkageThread(bool correction, const size_t blockEnd, Eigen::MatrixXd *ldMatrix, std::deque<Genotype* > *genotype);
-		LinkageThread(bool correction, const size_t snpStart, const size_t snpEnd, const size_t boundStart, const size_t boundEnd, Eigen::MatrixXd *ldMatrix, std::deque<Genotype* > *genotype);
+		LinkageThread(bool correction, const size_t blockEnd, Eigen::MatrixXd *ldMatrix, std::deque<Genotype* > *genotype, std::deque<size_t> *snpLoc, std::vector<Snp*> *snpList, std::vector<size_t> *perfectLd);
+		LinkageThread(bool correction, const size_t snpStart, const size_t snpEnd, const size_t boundStart, const size_t boundEnd, Eigen::MatrixXd *ldMatrix, std::deque<Genotype* > *genotype, std::deque<size_t> *snpLoc, std::vector<Snp*> *snpList, std::vector<size_t> *perfectLd);
 		/** Default destructor */
 		virtual ~LinkageThread();
 
@@ -36,7 +36,12 @@ class LinkageThread
         size_t m_boundEnd;
         Eigen::MatrixXd *m_ldMatrix;
         std::deque<Genotype*> *m_genotype;
+        std::deque<size_t> *m_snpLoc;
+        std::vector<Snp*> *m_snpList;
+        std::vector<size_t> *m_perfectLd;
         std::vector<size_t> m_startLoc;
+        void triangularProcess();
+        void rectangularProcess();
 };
 
 #endif // LINKAGETHREAD_H

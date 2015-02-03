@@ -1,6 +1,7 @@
 #ifndef SNPESTIMATION_H
 #define SNPESTIMATION_H
 
+#include <algorithm>
 #include <vector>
 #include <deque>
 #include <fstream>
