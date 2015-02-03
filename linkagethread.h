@@ -3,7 +3,9 @@
 
 #include <deque>
 #include <mutex>
+#include <limits>
 #include "linkage.h"
+#include "configure.h"
 #include "genotype.h"
 
 class LinkageThread

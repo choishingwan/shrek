@@ -70,9 +70,9 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpInde
 								locList.push_back(bp);
 							}
 							else if(prevChr.compare(chr) == 0){
-								if(std::fabs(bp-locList.front()) > 1000000){
+								if(bp-locList.front() > 1000000){
 									if(currentMaxBlock < locList.size()*2) currentMaxBlock = locList.size()*2;
-									while(std::fabs(bp-locList.front()) > 1000000 && !locList.empty()){
+									while(bp-locList.front() > 1000000 && !locList.empty()){
 										locList.pop_front();
 									}
 									locList.push_back(bp);

@@ -120,7 +120,6 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
         return continueProcess;
 	}
 
-
 	//Use previous informations
     if(prevResiduals == 0){
         m_linkage = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
@@ -145,9 +144,8 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
             m_linkage(i,i) = 1.0;
             for(size_t j = genotype.size()-1; j > i; --j){ //invert the direction
                 if(m_linkage(i,j) == 0.0){
-                        std::cerr << j << "\t" << i << std::endl;
                     double rSquare = genotype[i]->Getr(genotype[j], correction);
-                    if(i != j && rSquare >= 1.0) m_perfectLd.push_back(j);
+                    if(i != j && std::fabs(rSquare-1.0) < G_EPSILON_DBL) m_perfectLd.push_back(j);
                     m_linkage(i,j) = rSquare;
                     m_linkage(j,i) = rSquare;
                 }
@@ -207,11 +205,6 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
 
     std::sort(m_perfectLd.begin(), m_perfectLd.end());
     m_perfectLd.erase( std::unique( m_perfectLd.begin(), m_perfectLd.end() ), m_perfectLd.end() );
-    std::cerr << "Going to print index with perfectLD" << std::endl;
-    for(size_t i = 0; i < m_perfectLd.size(); ++i){
-        std::cerr << "Perfect LD: " << m_perfectLd[i] << std::endl;
-    }
-
 	return completed;
 }
 
@@ -254,4 +247,6 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *bet
     return result;
 }
 
-
+bool Linkage::Remove(){
+    return false;
+}

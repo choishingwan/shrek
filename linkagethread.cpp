@@ -24,13 +24,14 @@ LinkageThread::~LinkageThread(){}
 void LinkageThread::triangularProcess(){
     size_t sizeOfItem = m_startLoc.size();
     std::vector<size_t> perfectLd; //DEBUG
+
     for(size_t i = 0; i < sizeOfItem; ++i){
         size_t j = m_startLoc[i];
         (*m_ldMatrix)(j,j) = 1.0;
         for(size_t k = m_boundEnd-1; k > j; --k){
             if((*m_ldMatrix)(j,k) == 0.0){
                 double rSquare=(*m_genotype)[j]->Getr( (*m_genotype)[k], m_correction);
-                if(rSquare >1.0) perfectLd.push_back(k); //DEBUG
+                if(std::fabs(rSquare-1.0) < G_EPSILON_DBL ) perfectLd.push_back(k); //DEBUG
                 (*m_ldMatrix)(j, k) = rSquare;
                 (*m_ldMatrix)(k,j) = rSquare;
             }
@@ -43,6 +44,7 @@ void LinkageThread::triangularProcess(){
 }
 
 void LinkageThread::rectangularProcess(){
+
     std::vector<size_t> perfectLd; //DEBUG
     for(size_t i = m_snpStart; i < m_snpEnd; ++i){
         for(size_t j = m_boundEnd-1; j >= m_boundStart; --j){
@@ -51,14 +53,14 @@ void LinkageThread::rectangularProcess(){
             }
             else if((*m_ldMatrix)(i,j) == 0.0){
                 double rSquare = (*m_genotype)[i]->Getr((*m_genotype)[j],m_correction);
-                if(rSquare >1.0) perfectLd.push_back(j); //DEBUG
+                if(std::fabs(rSquare-1.0) < G_EPSILON_DBL) perfectLd.push_back(j); //DEBUG
 				(*m_ldMatrix)(i,j) = rSquare;
 				(*m_ldMatrix)(j,i) = rSquare;
+
             }
             else break;
         }
     }
-
     LinkageThread::mtx.lock();//DEBUG
     (*m_perfectLd).insert((*m_perfectLd).end(), perfectLd.begin(), perfectLd.end());
     LinkageThread::mtx.unlock();

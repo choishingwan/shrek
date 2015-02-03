@@ -99,7 +99,7 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, std::
                        regionList[j][k]->Getend() >= snpList[i]->Getbp()){
                         //std::cerr << snpList[i]->GetrsId() << "\tWithin region" << std::endl;
                         regionIncrementationIndex[j] = k;
-                        snpList[i]->m_regionFlag[j+1]=true;
+                        snpList[i]->setFlag(j+1, true);
                         break;
                        }
                 }
@@ -134,7 +134,7 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const
                        regionList[j][k]->Getend() >= snpList[i]->Getbp()){
                         //std::cerr << snpList[i]->GetrsId() << "\tWithin region" << std::endl;
                         regionIncrementationIndex[j] = k;
-                        snpList[i]->m_regionFlag[j+1]=true;
+                        snpList[i]->setFlag(j+1, true);
                         break;
                        }
                 }
@@ -181,6 +181,7 @@ void Snp::computeVarianceExplained(const size_t &caseSize, const size_t &control
 void Snp::setFlag(size_t index, bool value){
 	if(index >= m_regionFlag.size()){
 		std::cerr << "Error: region flag out of bound!" << std::endl;
+		exit(-1);
 	}
     m_regionFlag[index] = value;
 }
