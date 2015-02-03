@@ -1,8 +1,9 @@
 #include "snp.h"
 
 Snp::Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, double original, double beta):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original), m_oriBeta(beta){
-	(*m_heritability) = 0.0;
-	(*m_beta) = beta;
+	m_beta = std::make_shared<double>(beta);
+	m_heritability = std::make_shared<double>(0.0);
+    m_betaCount = std::make_shared<size_t>(1);
 }
 
 std::string Snp::Getchr() const { return m_chr; }
@@ -15,10 +16,7 @@ double Snp::Getbeta() const { return (*m_beta); }
 void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability; }
 
 double Snp::Getheritability() const {
-	if(!m_shareHeritability.expired()){
-        return (*(m_shareHeritability.lock()));
-	}
-	else return *(m_heritability);
+	return *(m_heritability);
 }
 bool Snp::GetFlag(size_t index) const {
 	if(index>= m_regionFlag.size()) return false;

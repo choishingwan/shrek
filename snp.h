@@ -43,8 +43,8 @@ class Snp
         double m_original;
         double m_oriBeta;
         std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD
+        std::shared_ptr<size_t> m_betaCount;
         std::shared_ptr<double> m_heritability; //The master heritability
-        std::weak_ptr<double> m_shareHeritability; //The shared heritability, only use for perfect LD snps
         std::vector<bool> m_regionFlag;
         static bool sortSnp (Snp* i, Snp* j);
         void computeVarianceExplained(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue);
