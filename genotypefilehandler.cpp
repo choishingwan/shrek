@@ -294,6 +294,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 			//remove snps with maf too low or that has 0 variance
 			if(std::sqrt(newS/(indx - 1.0))==0 ||
 				(maf >= 0.0 && maf < currentMaf)){
+				std::cerr << "Snp: " << (*snpList)[snpLoc.back()]->GetrsId() << " not included due to maf filtering or 0 variance" << std::endl;
 				Genotype *temp = genotype.back();
 				genotype.pop_back();
                 (*snpList)[snpLoc.back()]->setFlag(0, false);
@@ -398,11 +399,13 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 			//remove snps with maf too low or that has 0 variance
 			if(std::sqrt(newS/(indx - 1.0))==0 ||
 				(maf >= 0.0 && maf < currentMaf)){
+				std::cerr << "Snp: " << (*snpList)[snpLoc.back()]->GetrsId() << " not included due to maf filtering or 0 variance" << std::endl;
 				Genotype *temp = genotype.back();
 				genotype.pop_back();
                 (*snpList)[snpLoc.back()]->setFlag(0, false);
 				snpLoc.pop_back();
 				delete temp;
+
 			}
 			else{
 				processSize--;

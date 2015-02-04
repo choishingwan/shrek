@@ -25,14 +25,13 @@ void DecompositionThread::solve(){
 		copyStart = 0;
         copyEnd += m_length/3;
 	}
-	if(m_lastOfBlock && m_start+m_length >= m_snpLoc->size()) copyEnd += m_length/3;
+	if(m_lastOfBlock && m_start+m_length >= m_snpLoc->size()) copyEnd = m_snpLoc->size()-m_start-copyStart;
 
 	DecompositionThread::decomposeMtx.lock();
-	double effectiveNumber = 0.0;
+	std::cerr << "Copy from " << m_start+copyStart << "\t" << m_start+copyStart+copyEnd << std::endl;
 	for(size_t i = copyStart; i < copyStart+copyEnd; ++i){
 		(*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability(result(i));
-		effectiveNumber+=effective(i);
+		(*m_snpList)[(*m_snpLoc)[m_start+i]]->Seteffective(effective(i));
 	}
-	m_linkage->Seteffective(effectiveNumber);
 	DecompositionThread::decomposeMtx.unlock();
 }

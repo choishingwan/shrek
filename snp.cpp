@@ -3,7 +3,6 @@
 Snp::Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, double original, double beta):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original), m_oriBeta(beta){
 	m_beta = std::make_shared<double>(beta);
 	m_heritability = std::make_shared<double>(0.0);
-    m_betaCount = std::make_shared<size_t>(1);
 }
 
 std::string Snp::Getchr() const { return m_chr; }
@@ -12,22 +11,39 @@ size_t Snp::Getbp() const { return m_bp; }
 size_t Snp::GetsampleSize() const { return m_sampleSize; }
 size_t Snp::GetregionSize() const {return m_regionFlag.size(); }
 double Snp::Getoriginal() const { return m_original; }
-double Snp::Getbeta() const { return (*m_beta); }
-void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability; }
-
-double Snp::Getheritability() const {
-	return *(m_heritability);
+double Snp::Geteffective() const { return m_effectiveNumber; }
+double Snp::Getbeta() const {
+	return (*m_beta)/(double)(m_beta.use_count());
 }
+void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability; }
+void Snp::Seteffective(double i) { m_effectiveNumber = i; }
+double Snp::Getheritability() const {
+	return (*m_heritability)/(double)(m_beta.use_count()); //Equally spread among Snps that are in perfect LD
+}
+
+void Snp::shareHeritability( Snp* i ){
+	if(i->m_beta == m_beta){
+		return;
+	}
+	(*i->m_beta) += (*m_beta); //Add up the beta to get an average
+    m_beta = (i->m_beta); //They now share the same beta
+    if((*i->m_heritability) != 0.0){
+        (*m_heritability) = (*i->m_heritability); //Share the same heritability
+    }
+    else{
+        (*i->m_heritability) = (*m_heritability);
+    }
+    m_heritability = (i->m_heritability);
+}
+
+
 bool Snp::GetFlag(size_t index) const {
 	if(index>= m_regionFlag.size()) return false;
 	return m_regionFlag[index];
 }
 
 
-Snp::~Snp()
-{
-	//dtor
-}
+Snp::~Snp(){}
 
 
 void Snp::generateSnpList(std::vector<Snp*> &snpList, const std::string &pvalueFile, const size_t index, const size_t sampleSize, const size_t rsIndex, const size_t bpIndex, const size_t chrIndex, const size_t sampleIndex, bool sampleSizeProvided){

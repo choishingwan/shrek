@@ -1,37 +1,31 @@
 #include "linkagethread.h"
 std::mutex LinkageThread::mtx;
 
-bool LinkageThread::Getcorrection() const { return m_correction; }
-size_t LinkageThread::GetsnpStart() const { return m_snpStart; };
-size_t LinkageThread::GetsnpEnd() const { return m_snpEnd; };
-size_t LinkageThread::GetboundStart() const { return m_boundStart; }
-size_t LinkageThread::GetboundEnd() const { return m_boundEnd; }
-size_t LinkageThread::GetstartLoc(size_t i) const{ return m_startLoc[i]; }
-size_t LinkageThread::GetsizeOfStart() const { return m_startLoc.size(); }
-Eigen::MatrixXd *LinkageThread::Getld() { return m_ldMatrix; }
-std::deque<Genotype* > *LinkageThread::Getgenotype(){ return m_genotype; }
-
 void LinkageThread::Addstart(size_t i){
 	m_startLoc.push_back(i);
 }
 
-LinkageThread::LinkageThread(bool correction, const size_t blockEnd, Eigen::MatrixXd *ldMatrix, std::deque<Genotype* > *genotype, std::vector<size_t> *perfectLd):m_correction(correction), m_boundEnd(blockEnd), m_ldMatrix(ldMatrix), m_genotype(genotype), m_perfectLd(perfectLd){}
+LinkageThread::LinkageThread(bool correction, const size_t blockEnd, Eigen::MatrixXd *ldMatrix, std::deque<Genotype* > *genotype, std::deque<size_t> *snpLoc, std::vector<size_t> *perfectLd, std::vector<Snp*> *snpList):m_correction(correction), m_boundEnd(blockEnd), m_ldMatrix(ldMatrix), m_genotype(genotype), m_snpLoc(snpLoc), m_perfectLd(perfectLd), m_snpList(snpList){}
 
-LinkageThread::LinkageThread(bool correction, const size_t snpStart, const size_t snpEnd, const size_t boundStart, const size_t boundEnd, Eigen::MatrixXd *ldMatrix, std::deque<Genotype* > *genotype, std::vector<size_t> *perfectLd):m_correction(correction), m_snpStart(snpStart), m_snpEnd(snpEnd), m_boundStart(boundStart), m_boundEnd(boundEnd), m_ldMatrix(ldMatrix), m_genotype(genotype), m_perfectLd(perfectLd){}
+LinkageThread::LinkageThread(bool correction, const size_t snpStart, const size_t snpEnd, const size_t boundStart, const size_t boundEnd, Eigen::MatrixXd *ldMatrix, std::deque<Genotype* > *genotype, std::deque<size_t> *snpLoc, std::vector<size_t> *perfectLd, std::vector<Snp*> *snpList):m_correction(correction), m_snpStart(snpStart), m_snpEnd(snpEnd), m_boundStart(boundStart), m_boundEnd(boundEnd), m_ldMatrix(ldMatrix), m_genotype(genotype), m_snpLoc(snpLoc), m_perfectLd(perfectLd), m_snpList(snpList){}
 
 LinkageThread::~LinkageThread(){}
 
 void LinkageThread::triangularProcess(){
     size_t sizeOfItem = m_startLoc.size();
-    std::vector<size_t> perfectLd; //DEBUG
-
+    std::vector<size_t> perfectLd;
     for(size_t i = 0; i < sizeOfItem; ++i){
         size_t j = m_startLoc[i];
         (*m_ldMatrix)(j,j) = 1.0;
         for(size_t k = m_boundEnd-1; k > j; --k){
             if((*m_ldMatrix)(j,k) == 0.0){
                 double rSquare=(*m_genotype)[j]->Getr( (*m_genotype)[k], m_correction);
-                if(std::fabs(rSquare-1.0) < G_EPSILON_DBL ) perfectLd.push_back(k); //DEBUG
+                if(std::fabs(rSquare-1.0) < G_EPSILON_DBL ){
+                    perfectLd.push_back(k);
+                    LinkageThread::mtx.lock();
+                        (*m_snpList)[(*m_snpLoc)[k]]->shareHeritability((*m_snpList)[(*m_snpLoc)[j]]);
+                    LinkageThread::mtx.unlock();
+                }
                 (*m_ldMatrix)(j, k) = rSquare;
                 (*m_ldMatrix)(k,j) = rSquare;
             }
@@ -45,7 +39,7 @@ void LinkageThread::triangularProcess(){
 
 void LinkageThread::rectangularProcess(){
 
-    std::vector<size_t> perfectLd; //DEBUG
+    std::vector<size_t> perfectLd;
     for(size_t i = m_snpStart; i < m_snpEnd; ++i){
         for(size_t j = m_boundEnd-1; j >= m_boundStart; --j){
             if(j == i){
@@ -53,7 +47,12 @@ void LinkageThread::rectangularProcess(){
             }
             else if((*m_ldMatrix)(i,j) == 0.0){
                 double rSquare = (*m_genotype)[i]->Getr((*m_genotype)[j],m_correction);
-                if(std::fabs(rSquare-1.0) < G_EPSILON_DBL) perfectLd.push_back(j); //DEBUG
+                if(std::fabs(rSquare-1.0) < G_EPSILON_DBL){
+                    perfectLd.push_back(j);
+                    LinkageThread::mtx.lock();
+                        (*m_snpList)[(*m_snpLoc)[j]]->shareHeritability((*m_snpList)[(*m_snpLoc)[i]]);
+                    LinkageThread::mtx.unlock();
+                }
 				(*m_ldMatrix)(i,j) = rSquare;
 				(*m_ldMatrix)(j,i) = rSquare;
 
