@@ -30,11 +30,17 @@ class Snp
         double Getbeta() const;
         double GetDecomposeBeta() const;
         double Getheritability() const;
+        double Geteffective() const;
         bool Concordant(std::string chr, size_t bp, std::string rsId) const;
         bool GetFlag(size_t index) const;
         void Setheritability(double heritability);
         void setFlag(size_t index, bool value);
+<<<<<<< HEAD
         void shareHeritability(Snp* i);
+=======
+        void shareHeritability( Snp* i );
+        void Seteffective(double i );
+>>>>>>> perfectLd
         static void cleanSnp(std::vector<Snp*> &snpList);
 	protected:
 	private:
@@ -44,6 +50,7 @@ class Snp
 		size_t m_sampleSize;
         double m_original;
         double m_oriBeta;
+<<<<<<< HEAD
         /** Self note:
 				Normally we should also use the weak_ptr to prevent circular referencing. However, due to our algorithm, we should be able to avoid
 				circular referencing. Therefore it will be much easier if we just use one instance of the pointer
@@ -52,10 +59,16 @@ class Snp
         std::shared_ptr<size_t> m_betaCount; //The number of beta
         std::shared_ptr<double> m_heritability; //The master heritability
 
+=======
+        double m_effectiveNumber;
+        std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD
+        std::shared_ptr<double> m_heritability; //The master heritability
+>>>>>>> perfectLd
         std::vector<bool> m_regionFlag;
         static bool sortSnp (Snp* i, Snp* j);
         void computeVarianceExplained(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue);
         void computeVarianceExplained(bool isPvalue);
+
 
 };
 
