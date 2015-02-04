@@ -36,11 +36,16 @@ class Snp
         void Setheritability(double heritability);
         void setFlag(size_t index, bool value);
 <<<<<<< HEAD
+<<<<<<< HEAD
         void shareHeritability(Snp* i);
 =======
         void shareHeritability( Snp* i );
         void Seteffective(double i );
 >>>>>>> perfectLd
+=======
+        void shareHeritability( Snp* i );
+        void Seteffective(double i );
+>>>>>>> perfectLD
         static void cleanSnp(std::vector<Snp*> &snpList);
 	protected:
 	private:
@@ -50,6 +55,7 @@ class Snp
 		size_t m_sampleSize;
         double m_original;
         double m_oriBeta;
+<<<<<<< HEAD
 <<<<<<< HEAD
         /** Self note:
 				Normally we should also use the weak_ptr to prevent circular referencing. However, due to our algorithm, we should be able to avoid
@@ -64,6 +70,11 @@ class Snp
         std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD
         std::shared_ptr<double> m_heritability; //The master heritability
 >>>>>>> perfectLd
+=======
+        double m_effectiveNumber;
+        std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD
+        std::shared_ptr<double> m_heritability; //The master heritability
+>>>>>>> perfectLD
         std::vector<bool> m_regionFlag;
         static bool sortSnp (Snp* i, Snp* j);
         void computeVarianceExplained(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue);

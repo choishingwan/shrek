@@ -1,6 +1,7 @@
 #include "linkage.h"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 Linkage::Linkage(std::vector<Snp*> *snpList, size_t thread):m_snpList(snpList), m_thread(thread){
 	m_numItem= 0;
     m_effectiveNumber=0.0;
@@ -9,6 +10,9 @@ Linkage::Linkage(std::vector<Snp*> *snpList, size_t thread):m_snpList(snpList), 
 =======
 Linkage::Linkage(size_t thread, std::vector<Snp*> *snpList, std::deque<size_t> *snpLoc):m_thread(thread), m_snpList(snpList), m_snpLoc(snpLoc){}
 >>>>>>> perfectLd
+=======
+Linkage::Linkage(size_t thread, std::vector<Snp*> *snpList, std::deque<size_t> *snpLoc):m_thread(thread), m_snpList(snpList), m_snpLoc(snpLoc){}
+>>>>>>> perfectLD
 
 Linkage::~Linkage()
 {
@@ -27,10 +31,14 @@ void Linkage::triangularThread( const size_t startBlock, const size_t endBlock, 
     else maxThread =(endBlock-startBlock)%m_thread;
     for(size_t i = 0; i < maxThread; ++i){
 <<<<<<< HEAD
+<<<<<<< HEAD
         garbageCollection.push_back(new LinkageThread(correction, endBlock, &m_linkage, &genotype, &snpLoc, m_snpList, &perfectLd));
 =======
         garbageCollection.push_back(new LinkageThread(correction, endBlock, &m_linkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
 >>>>>>> perfectLd
+=======
+        garbageCollection.push_back(new LinkageThread(correction, endBlock, &m_linkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
+>>>>>>> perfectLD
     }
 
     for(size_t i = startBlock; i < endBlock; ++i){
@@ -71,10 +79,14 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
         //if there are more threads than items, each will do one horizontal row
         for(size_t i = snpStart; i < snpEnd; ++i){
 <<<<<<< HEAD
+<<<<<<< HEAD
             garbageCollection.push_back(new LinkageThread(correction, i, i+1, start, width, &m_linkage, &genotype, &snpLoc, m_snpList, &perfectLd));
 =======
             garbageCollection.push_back(new LinkageThread(correction, i, i+1, start, width, &m_linkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
 >>>>>>> perfectLd
+=======
+            garbageCollection.push_back(new LinkageThread(correction, i, i+1, start, width, &m_linkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
+>>>>>>> perfectLD
             pthread_t *thread1 = new pthread_t();
             threadList.push_back(thread1);
             int threadStatus = pthread_create( thread1, NULL, &LinkageThread::rectangularProcess, garbageCollection.back());
@@ -94,19 +106,27 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
         for(size_t i = 0; i < maxThread; ++i){
             if(remaining > 0){
 <<<<<<< HEAD
+<<<<<<< HEAD
                 garbageCollection.push_back(new LinkageThread(correction, current, current+step+1, start, width, &m_linkage, &genotype, &snpLoc, m_snpList, &perfectLd));
 =======
                 garbageCollection.push_back(new LinkageThread(correction, current, current+step+1, start, width, &m_linkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
 >>>>>>> perfectLd
+=======
+                garbageCollection.push_back(new LinkageThread(correction, current, current+step+1, start, width, &m_linkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
+>>>>>>> perfectLD
                 remaining--;
                 current++;
             }
             else{
 <<<<<<< HEAD
+<<<<<<< HEAD
                 garbageCollection.push_back(new LinkageThread(correction, current, current+step, start, width, &m_linkage, &genotype, &snpLoc, m_snpList, &perfectLd));
 =======
                 garbageCollection.push_back(new LinkageThread(correction, current, current+step, start, width, &m_linkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
 >>>>>>> perfectLd
+=======
+                garbageCollection.push_back(new LinkageThread(correction, current, current+step, start, width, &m_linkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
+>>>>>>> perfectLD
             }
             pthread_t *thread1 = new pthread_t();
             threadList.push_back(thread1);
@@ -130,6 +150,7 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
     }
 }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 
 void Linkage::Remove(std::vector<size_t> &perfectLd, std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc){
@@ -164,6 +185,10 @@ ProcessCode Linkage::Initialize(std::deque<Genotype*> &genotype, const size_t &p
 ProcessCode Linkage::Initialize(std::deque<Genotype*> &genotype, const size_t &prevResiduals, const size_t &blockSize){
     m_perfectLd.clear();
 >>>>>>> perfectLd
+=======
+ProcessCode Linkage::Initialize(std::deque<Genotype*> &genotype, const size_t &prevResiduals, const size_t &blockSize){
+    m_perfectLd.clear();
+>>>>>>> perfectLD
 	if(genotype.empty()){
         return continueProcess;
 	}
@@ -181,6 +206,7 @@ ProcessCode Linkage::Initialize(std::deque<Genotype*> &genotype, const size_t &p
 		m_linkage= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
 		m_linkage.topLeftCorner(prevResiduals, prevResiduals) = temp;
 <<<<<<< HEAD
+<<<<<<< HEAD
         return continueProcess;
     }
     else{
@@ -188,6 +214,8 @@ ProcessCode Linkage::Initialize(std::deque<Genotype*> &genotype, const size_t &p
         std::cerr << "Error message: prevResiduals larger than m_linkage size" << std::endl;
         return fatalError;
 =======
+=======
+>>>>>>> perfectLD
     }
     return continueProcess;
 }
@@ -199,6 +227,7 @@ ProcessCode Linkage::Reinitialize(size_t &genotypeSize){
         std::cerr << "This is not possible unless there are some complicated undetected bug. Please contact the author with the input" << std::endl;
         std::cerr << "No genotype left after removing perfect LDs" << std::endl;
         return fatalError;
+<<<<<<< HEAD
     }
     else if(genotypeSize < (unsigned) m_linkage.cols()){
         m_linkage.conservativeResize(genotypeSize, genotypeSize);
@@ -221,6 +250,17 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
 ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResiduals, const size_t &blockSize, bool correction){
     m_perfectLd.clear();
 >>>>>>> perfectLd
+=======
+    }
+    else if(genotypeSize < (unsigned) m_linkage.cols()){
+        m_linkage.conservativeResize(genotypeSize, genotypeSize);
+    }
+    return continueProcess;
+}
+
+ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResiduals, const size_t &blockSize, bool correction){
+    m_perfectLd.clear();
+>>>>>>> perfectLD
 	if(genotype.empty()){
         return continueProcess;
 	}
@@ -230,9 +270,13 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
 	}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> perfectLd
+=======
+
+>>>>>>> perfectLD
     //Construct the LD
 	std::vector<size_t> startLoc;
 	size_t currentBlockSize = blockSize;
@@ -246,6 +290,7 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
         for(size_t i = 0; i < genotype.size(); ++i){
             m_linkage(i,i) = 1.0;
 <<<<<<< HEAD
+<<<<<<< HEAD
             for(size_t j = genotype.size()-1 ; j >=i+1; --j){
                 if(m_linkage(i,j) == 0.0){
                     double rSquare = genotype[i]->Getr(genotype[j], correction);
@@ -253,22 +298,31 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
                         perfectLd.push_back(j); //It is possible that the perfectLD isn't unique
                         (*m_snpList)[snpLoc[j]]->shareHeritability((*m_snpList)[snpLoc[i]]);
 =======
+=======
+>>>>>>> perfectLD
             for(size_t j = genotype.size()-1; j > i; --j){ //invert the direction
                 if(m_linkage(i,j) == 0.0){
                     double rSquare = genotype[i]->Getr(genotype[j], correction);
                     if(i != j && std::fabs(rSquare-1.0) < G_EPSILON_DBL){
                         m_perfectLd.push_back(j);
                         (*m_snpList)[(*m_snpLoc)[j]]->shareHeritability((*m_snpList)[(*m_snpLoc)[i]]);
+<<<<<<< HEAD
 >>>>>>> perfectLd
+=======
+>>>>>>> perfectLD
                     }
                     m_linkage(i,j) = rSquare;
                     m_linkage(j,i) = rSquare;
                 }
 <<<<<<< HEAD
+<<<<<<< HEAD
                 else break;
 =======
                 else break; //Already calculated before
 >>>>>>> perfectLd
+=======
+                else break; //Already calculated before
+>>>>>>> perfectLD
             }
         }
     }
@@ -420,6 +474,7 @@ void Linkage::Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc
         snpLoc.erase(snpLoc.begin() + (m_perfectLd[i]-offset));
         offset++;
     }
+<<<<<<< HEAD
 
 }
 
@@ -429,5 +484,12 @@ void Linkage::print(){ //DEBUG
 
 void Linkage::print(){
 >>>>>>> perfectLd
+=======
+
+}
+
+
+void Linkage::print(){
+>>>>>>> perfectLD
     std::cout << m_linkage << std::endl;
 }

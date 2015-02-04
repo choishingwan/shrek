@@ -12,6 +12,7 @@ void SnpEstimation::Estimate(){
     size_t prevResidual;
     size_t blockSize;
 <<<<<<< HEAD
+<<<<<<< HEAD
     Linkage *linkageMatrix = new Linkage(m_snpList, m_thread);
     Decomposition *decompositionHandler = new Decomposition( m_snpIndex, m_snpList, linkageMatrix, m_thread);
 	while(process != completed && process != fatalError){
@@ -25,6 +26,13 @@ void SnpEstimation::Estimate(){
 		/** Will have terrible problem if the input is corrupted */
 		process = m_genotypeFileHandler->getSnps(genotype, snpLoc, m_snpList, chromosomeStart, chromosomeEnd, m_maf,prevResidual, blockSize);
 >>>>>>> perfectLd
+=======
+    Linkage *linkageMatrix = new Linkage(m_thread, m_snpList, &snpLoc);
+    Decomposition *decompositionHandler = new Decomposition( m_snpIndex, m_snpList, linkageMatrix, m_thread);
+	while(process != completed && process != fatalError){
+		/** Will have terrible problem if the input is corrupted */
+		process = m_genotypeFileHandler->getSnps(genotype, snpLoc, m_snpList, chromosomeStart, chromosomeEnd, m_maf,prevResidual, blockSize);
+>>>>>>> perfectLD
 		if(process == fatalError){
             exit(-1);
 		}
@@ -35,10 +43,13 @@ void SnpEstimation::Estimate(){
 		else{
 			//Now calculate the LD matrix
 <<<<<<< HEAD
+<<<<<<< HEAD
 			std::cerr << "Initialize linkage " << std::endl;
 			ProcessCode linkageProcess = linkageMatrix->Initialize(genotype, prevResidual, blockSize);
 			if(linkageProcess ==fatalError){
 =======
+=======
+>>>>>>> perfectLD
 			std::cerr << "Linkage" << std::endl;
 			ProcessCode linkageProcess = linkageMatrix->Initialize(genotype, prevResidual, blockSize);
 			linkageProcess = linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction);
@@ -110,7 +121,10 @@ void SnpEstimation::Estimate(){
             }
             //Now we can perform the decomposition on the data
             std::cerr << "Decompose" << std::endl;
+<<<<<<< HEAD
 >>>>>>> perfectLd
+=======
+>>>>>>> perfectLD
             decompositionHandler->Decompose(blockSize, snpLoc, genotype, chromosomeStart, chromosomeEnd);
             std::cerr << "Done" << std::endl;
             if(blockSize > genotype.size()) blockSize= genotype.size();
