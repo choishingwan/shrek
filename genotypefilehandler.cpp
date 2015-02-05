@@ -301,6 +301,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 				snpLoc.pop_back();
 				delete temp;
 			}
+			/* //only do the pop_front after the LD matrix is fully constructed DEBUG
 			else if(prevResidual > (blockSize/3)*2){
 				prevResidual--;
 				Genotype *temp = genotype.front();
@@ -309,6 +310,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 				delete temp;
 				processSize--;
 			}
+			*/
 			else{
 				processSize--;
 			}
@@ -330,105 +332,9 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 
 	}
 	return completed;
+
 }
 
-
-
-ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> &snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &numSnps){
-	//We will get snps according to the distance
-	//We want to use flanking distance, e.g. getting the 1mb flanking on the both side
-    size_t processSize = numSnps; //This is the expected number of snps to be processed
-
-	while (m_snpIter < m_inputSnp){ //While there are still Snps to read
-		bool snp = false;
-		if(m_inclusion[m_snpIter] != -1){//indicate whether if we need this snp
-			snp=true;
-		}
-		if(snp){
-            genotype.push_back(new Genotype());
-            snpLoc.push_back(m_inclusion[m_snpIter]);
-		}
-		size_t indx = 0; //The iterative count
-        double oldM, newM,oldS, newS;
-        size_t alleleCount=0;
-		while ( indx < m_ldSampleSize ){
-			std::bitset<8> b; //Initiate the bit array
-			char ch[1];
-			m_bedFile.read(ch,1); //Read the information
-			if (!m_bedFile){
-				std::cerr << "Problem with the BED file...has the FAM/BIM file been changed?" << std::endl;
-				return fatalError;
-			}
-			b = ch[0];
-			int c=0;
-			while (c<7 && indx < m_ldSampleSize ){ //Going through the bit flag. Stop when it have read all the samples as the end == NULL
-				//As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
-
-                ++indx; //so that we only need to modify the indx when adding samples but not in the mean and variance calculation
-				if (snp){
-					int first = b[c++];
-					int second = b[c++];
-					if(first == 1 && second == 0) first = 0; //We consider the missing value to be reference
-					genotype.back()->AddsampleGenotype(first+second, indx-1); //0 1 or 2
-					alleleCount += first+second;
-					double value = first+second+0.0;
-                    if(indx==1){
-                        oldM = newM = value;
-                        oldS = 0.0;
-                    }
-                    else{
-                        newM = oldM + (value-oldM)/(indx);
-                        newS = oldS + (value-oldM)*(value-newM);
-                        oldM = newM;
-                        oldS = newS;
-                    }
-
-				}
-				else{
-					c+=2;
-				}
-			}
-		}
-		if(snp){
-			indx > 0 ? genotype.back()->Setmean(newM) : genotype.back()->Setmean(0.0);
-			indx > 1 ? genotype.back()->SetstandardDeviation(std::sqrt(newS/(indx - 1.0))) : genotype.back()->SetstandardDeviation(0.0);
-
-			double currentMaf = (alleleCount+0.0)/(2*m_ldSampleSize*1.0);
-			currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
-			//remove snps with maf too low or that has 0 variance
-			if(std::sqrt(newS/(indx - 1.0))==0 ||
-				(maf >= 0.0 && maf < currentMaf)){
-				Genotype *temp = genotype.back();
-				genotype.pop_back();
-                snpList[snpLoc.back()]->setFlag(0, false);
-				snpLoc.pop_back();
-				delete temp;
-			}
-			else{
-				processSize--;
-			}
-		}
-		m_snpIter++;
-		m_processed++;
-		//Check if we have finished the chromosome
-        if(m_processed > m_chrCount->value()){
-			//finished one chromosome
-			chromosomeEnd = true;
-			m_processed = 0;
-			m_chrCount->next();
-			return continueProcess;
-        }
-        //check if we have used all the snps;
-        if(processSize == 0){
-			return continueProcess;
-        }
-
-	}
-	return completed;
-}
-
-<<<<<<< HEAD
-=======
 
 
 ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &numSnp){
@@ -526,4 +432,3 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 	return completed;
 
 }
->>>>>>> perfectLD

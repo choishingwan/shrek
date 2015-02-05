@@ -1,19 +1,8 @@
 #include "snp.h"
 
 Snp::Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, double original, double beta):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original), m_oriBeta(beta){
-<<<<<<< HEAD
-<<<<<<< HEAD
-	m_heritability = std::make_shared<double>(0.0);
-    m_betaCount = std::make_shared<size_t>(1);;
-    m_beta=std::make_shared<double>(beta);
-=======
 	m_beta = std::make_shared<double>(beta);
 	m_heritability = std::make_shared<double>(0.0);
->>>>>>> perfectLd
-=======
-	m_beta = std::make_shared<double>(beta);
-	m_heritability = std::make_shared<double>(0.0);
->>>>>>> perfectLD
 }
 
 std::string Snp::Getchr() const { return m_chr; }
@@ -22,22 +11,6 @@ size_t Snp::Getbp() const { return m_bp; }
 size_t Snp::GetsampleSize() const { return m_sampleSize; }
 size_t Snp::GetregionSize() const {return m_regionFlag.size(); }
 double Snp::Getoriginal() const { return m_original; }
-<<<<<<< HEAD
-<<<<<<< HEAD
-double Snp::Getbeta() const { return (*m_beta)/(*m_betaCount); }
-double Snp::GetDecomposeBeta() const { return (*m_beta); }
-void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability; }
-void Snp::shareHeritability(Snp* i){
-    m_heritability = i->m_heritability; //They should have the same heritability
-    (*i->m_beta)+=(*m_beta);
-    m_beta = i->m_beta;
-    (*i->m_betaCount) += (*m_betaCount);
-    i->m_betaCount = m_betaCount;
-}
-
-double Snp::Getheritability() const {
-	return *(m_heritability);
-=======
 double Snp::Geteffective() const { return m_effectiveNumber; }
 double Snp::Getbeta() const {
 	return (*m_beta)/(double)(m_beta.use_count());
@@ -45,16 +18,8 @@ double Snp::Getbeta() const {
 void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability; }
 void Snp::Seteffective(double i) { m_effectiveNumber = i; }
 double Snp::Getheritability() const {
-=======
-double Snp::Geteffective() const { return m_effectiveNumber; }
-double Snp::Getbeta() const {
-	return (*m_beta)/(double)(m_beta.use_count());
-}
-void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability; }
-void Snp::Seteffective(double i) { m_effectiveNumber = i; }
-double Snp::Getheritability() const {
->>>>>>> perfectLD
-	return (*m_heritability)/(double)(m_beta.use_count()); //Equally spread among Snps that are in perfect LD
+	return (*m_heritability);
+	//return (*m_heritability)/(double)(m_beta.use_count()); //Equally spread among Snps that are in perfect LD
 }
 
 void Snp::shareHeritability( Snp* i ){
@@ -70,10 +35,6 @@ void Snp::shareHeritability( Snp* i ){
         (*i->m_heritability) = (*m_heritability);
     }
     m_heritability = (i->m_heritability);
-<<<<<<< HEAD
->>>>>>> perfectLd
-=======
->>>>>>> perfectLD
 }
 
 

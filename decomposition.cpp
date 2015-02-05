@@ -19,8 +19,11 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 			std::cerr << "ERROR! Undefined behaviour. The location index is negative!" << std::endl;
 			return fatalError;
         }
-        else betaEstimate(i) = (*m_snpList)[snpLoc[i]]->GetDecomposeBeta();
+        else betaEstimate(i) = (*m_snpList)[snpLoc[i]]->Getbeta();
+		std::cerr << "Current snpLoc: " << snpLoc[i] << "\t" << betaEstimate(i) << std::endl;
     }
+    std::cerr << "Checking: " << std::endl;
+    std::cerr <<betaEstimate << std::endl;
     //Now we can perform decomposition using the beta and Linkage
 
 	size_t currentBlockSize = blockSize;
@@ -32,11 +35,12 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 	if(stepSize == 0 || currentBlockSize==genotype.size()){ //no multithreading is required
 		//The Block size is only 3. so We can finish it anyway
 		Eigen::VectorXd effective = Eigen::VectorXd::Constant(currentBlockSize, 1.0);
-		Eigen::VectorXd result = m_linkage->solve(0, currentBlockSize, &betaEstimate, &effective);
+		Eigen::VectorXd result = m_linkage->solve(0, snpLoc.size(), &betaEstimate, &effective);
 		size_t copyStart = 0;
-		if(!chromosomeStart) copyStart = snpLoc.size()/3;
+		if(!chromosomeStart) copyStart = blockSize/3;
 		std::cerr << "Copy from " << copyStart << " to " << snpLoc.size() <<std::endl;
         for(size_t i=copyStart; i < snpLoc.size(); ++i){
+				std::cerr << "Change from: " << snpLoc[i] << "\t" <<  (*m_snpList)[snpLoc[i]]->Getheritability() << " to " << result(i) << std::endl;
 			(*m_snpList)[snpLoc[i]]->Setheritability(result(i));
             (*m_snpList)[snpLoc[i]]->Seteffective(effective(i));
         }
