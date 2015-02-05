@@ -4,6 +4,7 @@
 #include <vector>
 #include <deque>
 #include <fstream>
+#include <iomanip>
 #include "processcode.h"
 #include "decomposition.h"
 #include "genotypefilehandler.h"
@@ -27,6 +28,7 @@ class SnpEstimation
         double m_maf;
         double m_effective;
         bool m_correction;
+        static inline void loadbar(size_t x, size_t n);
 };
 
 #endif // SNPESTIMATION_H

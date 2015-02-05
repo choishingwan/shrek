@@ -12,35 +12,34 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
     if(genotype.size() == 0){
 		return continueProcess;
     }
-    Eigen::VectorXd betaEstimate = Eigen::VectorXd::Zero(m_linkage->rows());
 
-    for(size_t i=0;i < snpLoc.size(); ++i){
+    size_t processSize = snpLoc.size();
+    if(!chromosomeEnd){ //We have not reached the end, so we need to remove the last two blocks from the processing
+        processSize = blockSize/3*m_thread+2*(blockSize/3);
+    }
+    Eigen::VectorXd betaEstimate = Eigen::VectorXd::Zero(processSize);
+    for(size_t i=0;i < processSize; ++i){
         if(snpLoc[i] < 0){
 			std::cerr << "ERROR! Undefined behaviour. The location index is negative!" << std::endl;
 			return fatalError;
         }
         else betaEstimate(i) = (*m_snpList)[snpLoc[i]]->Getbeta();
-		std::cerr << "Current snpLoc: " << snpLoc[i] << "\t" << betaEstimate(i) << std::endl;
     }
-    std::cerr << "Checking: " << std::endl;
-    std::cerr <<betaEstimate << std::endl;
     //Now we can perform decomposition using the beta and Linkage
 
 	size_t currentBlockSize = blockSize;
-	if(currentBlockSize > genotype.size()){
-        currentBlockSize = genotype.size();
+	if(currentBlockSize > processSize){
+        currentBlockSize = processSize;
 	}
     std::vector<size_t> startLoc;
 	size_t stepSize = currentBlockSize/3;
-	if(stepSize == 0 || currentBlockSize==genotype.size()){ //no multithreading is required
+	if(stepSize == 0 || currentBlockSize==processSize){ //no multithreading is required
 		//The Block size is only 3. so We can finish it anyway
 		Eigen::VectorXd effective = Eigen::VectorXd::Constant(currentBlockSize, 1.0);
-		Eigen::VectorXd result = m_linkage->solve(0, snpLoc.size(), &betaEstimate, &effective);
+		Eigen::VectorXd result = m_linkage->solve(0, processSize, &betaEstimate, &effective);
 		size_t copyStart = 0;
 		if(!chromosomeStart) copyStart = blockSize/3;
-		std::cerr << "Copy from " << copyStart << " to " << snpLoc.size() <<std::endl;
-        for(size_t i=copyStart; i < snpLoc.size(); ++i){
-				std::cerr << "Change from: " << snpLoc[i] << "\t" <<  (*m_snpList)[snpLoc[i]]->Getheritability() << " to " << result(i) << std::endl;
+        for(size_t i=copyStart; i < processSize; ++i){
 			(*m_snpList)[snpLoc[i]]->Setheritability(result(i));
             (*m_snpList)[snpLoc[i]]->Seteffective(effective(i));
         }
@@ -48,42 +47,74 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 	}
 	else if(stepSize > 0){
 		//Normal situation
-		for(size_t i = 0; i < snpLoc.size(); i+= stepSize){
-			if(i+currentBlockSize <= snpLoc.size()){
+		for(size_t i = 0; i < processSize; i+= stepSize){
+			if(i+currentBlockSize <= processSize){
 				startLoc.push_back(i);
 			}
 		}
-		if(!startLoc.empty() && snpLoc.size() - startLoc[startLoc.size()-1] < stepSize){
+		if(!startLoc.empty() && processSize - startLoc.back() < stepSize){
 			startLoc.pop_back();
 		}
 		std::vector<pthread_t*> threadList;
 		std::vector<DecompositionThread* > garbageCollection;
-		if(m_thread < startLoc.size()){
+		if(m_thread < startLoc.size() && !chromosomeEnd){ //we should be only using the first part, so there shouldn't be any problem
 			std::cerr << "Undefined behaviour! Don't worry, this should be the problem of the programmer instead of the user..." << std::endl;
 			std::cerr << startLoc.size() << "\t" << m_thread << std::endl;
 			return fatalError;
 		}
-		for(size_t i = 0; i < startLoc.size(); ++i){
-			if(i == startLoc.size()-1){
-				garbageCollection.push_back(new DecompositionThread(startLoc[i], genotype.size()-startLoc[i], &betaEstimate, m_linkage, &snpLoc, m_snpList, chromosomeStart, true));
-			}
-			else{
+		else if(m_thread < startLoc.size()){
+            //We will first do the appropriate amount, then do the remaining;
+            for(size_t i =0; i < m_thread; ++i){
 				garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
-			}
-			pthread_t *thread1 = new pthread_t();
-			threadList.push_back(thread1);
-			int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::ThreadProcesser, garbageCollection.back());
-			if(threadStatus != 0){
-				std::cerr << "Failed to spawn thread with status: " << threadStatus << std::endl;
-				return fatalError;
-			}
+				pthread_t *thread1 = new pthread_t();
+				threadList.push_back(thread1);
+				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::ThreadProcesser, garbageCollection.back());
+				if(threadStatus != 0){
+					std::cerr << "Failed to spawn thread with status: " << threadStatus << std::endl;
+					return fatalError;
+				}
+            }
+			for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter) pthread_join(*threadList[threadIter], NULL);
+			for(size_t i = 0; i < threadList.size(); ++i) delete threadList[i];
+            for(size_t i = 0; i < garbageCollection.size(); ++i) delete garbageCollection[i];
+			garbageCollection.clear();
+            threadList.clear();
+            //Now we do the extra job
+			for(size_t i=m_thread; i < startLoc.size(); ++i){
+				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], processSize-startLoc[i], &betaEstimate, m_linkage, &snpLoc, m_snpList, chromosomeStart, true));
+				else garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
+				pthread_t *thread1 = new pthread_t();
+				threadList.push_back(thread1);
+				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::ThreadProcesser, garbageCollection.back());
+				if(threadStatus != 0){
+					std::cerr << "Failed to spawn thread with status: " << threadStatus << std::endl;
+					return fatalError;
+				}
+            }
+            for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter) pthread_join(*threadList[threadIter], NULL);
+			for(size_t i = 0; i < threadList.size(); ++i) delete threadList[i];
+            for(size_t i = 0; i < garbageCollection.size(); ++i) delete garbageCollection[i];
+            threadList.clear();
+            garbageCollection.clear();
+
 		}
-		for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter){
-			pthread_join(*threadList[threadIter], NULL);
-		}
-		for(size_t i = 0; i < startLoc.size(); ++i){
-			delete garbageCollection[i];
-			delete threadList[i];
+		else{
+			for(size_t i = 0; i < startLoc.size(); ++i){
+				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], processSize-startLoc[i], &betaEstimate, m_linkage, &snpLoc, m_snpList, chromosomeStart, true));
+				else garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
+				pthread_t *thread1 = new pthread_t();
+				threadList.push_back(thread1);
+				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::ThreadProcesser, garbageCollection.back());
+				if(threadStatus != 0){
+					std::cerr << "Failed to spawn thread with status: " << threadStatus << std::endl;
+					return fatalError;
+				}
+			}
+			for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter) pthread_join(*threadList[threadIter], NULL);
+			for(size_t i = 0; i < threadList.size(); ++i) delete threadList[i];
+            for(size_t i = 0; i < garbageCollection.size(); ++i) delete garbageCollection[i];
+            threadList.clear();
+            garbageCollection.clear();
 		}
 	}
 	else{

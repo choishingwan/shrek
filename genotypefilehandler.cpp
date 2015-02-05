@@ -1,7 +1,7 @@
 #include "genotypefilehandler.h"
 
 size_t GenotypeFileHandler::GetsampleSize() const { return m_ldSampleSize; }
-
+size_t GenotypeFileHandler::GetestimateSnpTotal() const { return m_estimateTotal; }
 GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpIndex *snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock, size_t thread):m_genotypeFilePrefix(genotypeFilePrefix), m_thread(thread){
 	m_blockSizeTract = new SnpIndex();
 	m_chrCount = new SnpIndex();
@@ -9,7 +9,7 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpInde
 	m_expectedNumberOfSnp = 0;
     m_inputSnp =0;
 	m_snpIter =0;
-
+	m_estimateTotal=0;
     std::string famFileName = genotypeFilePrefix +".fam";
     std::ifstream famFile(famFileName.c_str(), std::ios::in);
     if(!famFile.is_open()){
@@ -94,6 +94,7 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpInde
 								locList.push_back(bp);
 							}
 							m_inclusion.back()=snpLoc;
+							m_estimateTotal++;
 							duplicateCheck[rs] = true;
 						}
                     }
@@ -149,10 +150,9 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpInde
 
 }
 
-GenotypeFileHandler::~GenotypeFileHandler()
-{
-	delete m_blockSizeTract;
-	delete m_chrCount;
+GenotypeFileHandler::~GenotypeFileHandler(){
+	if(m_blockSizeTract != nullptr) delete m_blockSizeTract;
+	if(m_chrCount != nullptr) delete m_chrCount;
 }
 
 
@@ -231,9 +231,11 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 	//We want to use flanking distance, e.g. getting the 1mb flanking on the both side
 	blockSize = m_blockSizeTract->value(m_chrExists.front());
     size_t processSize = blockSize/3*m_thread; //This is the expected number of snps to be processed
+
     prevResidual =genotype.size(); //default amount of residule
     if(chromosomeStart){
         processSize+= blockSize/3*2;
+        processSize+= blockSize; //DEBUG //This is to avoid problem with the perfect LD thingy, so that now we will have one extra block ahead of time //This extra part will stay until the end of chromosome
     }
 	while (m_snpIter < m_inputSnp){ //While there are still Snps to read
 		bool snp = false;
@@ -429,6 +431,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
         }
 
 	}
+    chromosomeEnd = true;
 	return completed;
 
 }

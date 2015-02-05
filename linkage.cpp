@@ -1,5 +1,5 @@
 #include "linkage.h"
-std::mutex Linkage::mtx;//DEBUG
+
 
 Linkage::Linkage(size_t thread, std::vector<Snp*> *snpList, std::deque<size_t> *snpLoc):m_thread(thread), m_snpList(snpList), m_snpLoc(snpLoc){}
 
@@ -255,14 +255,6 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *bet
         //if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
-
-    std::cerr << "Input matrix: " << std::endl;
-    std::cerr << m_linkage.block(start, start, length, length) << std::endl;
-/*    std::cerr << "Beta:" << std::endl;
-    std::cerr <<(*betaEstimate).segment(start, length) << std::endl;
-    std::cerr << "Result:"  << std::endl;
-    std::cerr << result << std::endl;
-*/
     Eigen::VectorXd ones = Eigen::VectorXd::Constant(length, 1.0);
     (*effective) = rInvert*ones;
     error =m_linkage.block(start, start, length, length)*(*effective) - ones;
@@ -343,20 +335,17 @@ void Linkage::Preparation(size_t const blockSize, std::deque<size_t> &snpLoc, st
     if(chromosomeStart) return; //This is the start of the chromosome, will not require to remove the front
     else{
         //Need to know how much we have to remove;
-        size_t requiredSize = blockSize/3*m_thread+blockSize/3*2;
-        size_t removeSize;
-        if(requiredSize > snpLoc.size()){ //The remaining is not enough for everything
-            size_t newSnps = snpLoc.size() -blockSize;
-            size_t newPartition = newSnps/(blockSize/3);
-            removeSize = newPartition*blockSize/3;
-            requiredSize = snpLoc.size()-removeSize;
+        size_t removeSize = blockSize/3;
+        size_t minimalSize = m_thread*blockSize/3+(blockSize/3)*2;
+        size_t requiredSize = snpLoc.size()-removeSize;
+        if(minimalSize+removeSize <= snpLoc.size()){}//We have more than enough
+        else{ //We don't have enough snps
+            std::cerr << "Error! We always have an additional block of Snps as buffer and that will be decomposed once we reached end of chromosome" << std::endl;
+            std::cerr << "Therefore it is unlikely, or at least for now I cannot think of any situation where this condition will arise." << std::endl;
+            std::cerr << "Please contact the author with your input such that we can find this bug" << std::endl;
+            exit(-1);
+        }
 
-        }
-        else{
-            removeSize = snpLoc.size()-requiredSize;
-            if(removeSize < blockSize/3) requiredSize+=removeSize;
-            removeSize = snpLoc.size()-requiredSize;
-        }
         for(size_t i = 0; i < removeSize; ++i){
             Genotype *temp = genotype.front();
             genotype.pop_front();

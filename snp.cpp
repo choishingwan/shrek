@@ -3,6 +3,7 @@
 Snp::Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, double original, double beta):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original), m_oriBeta(beta){
 	m_beta = std::make_shared<double>(beta);
 	m_heritability = std::make_shared<double>(0.0);
+	m_effectiveNumber=0.0;
 }
 
 std::string Snp::Getchr() const { return m_chr; }
@@ -17,10 +18,7 @@ double Snp::Getbeta() const {
 }
 void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability; }
 void Snp::Seteffective(double i) { m_effectiveNumber = i; }
-double Snp::Getheritability() const {
-	return (*m_heritability);
-	//return (*m_heritability)/(double)(m_beta.use_count()); //Equally spread among Snps that are in perfect LD
-}
+double Snp::Getheritability() const { return (*m_heritability)/(double)(m_beta.use_count()); }
 
 void Snp::shareHeritability( Snp* i ){
 	if(i->m_beta == m_beta){

@@ -35,7 +35,6 @@ class Linkage
 		void print();
 	protected:
 	private:
-		static std::mutex mtx;//DEBUG
         Eigen::MatrixXd m_linkage;
         size_t m_thread;
         std::vector<size_t> m_perfectLd; //Store the remove index of on matrix level

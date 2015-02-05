@@ -13,9 +13,16 @@ void SnpEstimation::Estimate(){
     size_t blockSize;
     Linkage *linkageMatrix = new Linkage(m_thread, m_snpList, &snpLoc);
     Decomposition *decompositionHandler = new Decomposition( m_snpIndex, m_snpList, linkageMatrix, m_thread);
+    size_t numProcessed = 0;
+    size_t totalNum = m_genotypeFileHandler->GetestimateSnpTotal();
 	while(process != completed && process != fatalError){
 		/** Will have terrible problem if the input is corrupted */
+        SnpEstimation::loadbar(numProcessed,totalNum);
 		process = m_genotypeFileHandler->getSnps(genotype, snpLoc, m_snpList, chromosomeStart, chromosomeEnd, m_maf,prevResidual, blockSize);
+		size_t workSize = blockSize/3*m_thread;
+		if(chromosomeStart) workSize +=2/3*blockSize+blockSize;
+		if(workSize > snpLoc.size()) workSize = snpLoc.size();
+		numProcessed+= workSize;
 		if(process == fatalError){
             exit(-1);
 		}
@@ -25,7 +32,7 @@ void SnpEstimation::Estimate(){
 		}
 		else{
 			//Now calculate the LD matrix
-			std::cerr << "Linkage" << std::endl;
+
 			ProcessCode linkageProcess = linkageMatrix->Initialize(genotype, prevResidual, blockSize);
 			linkageProcess = linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction);
 			if(linkageProcess == fatalError){
@@ -48,18 +55,21 @@ void SnpEstimation::Estimate(){
                     std::cerr << "Perfect LD removable, blockSize == 0 or no genotype" << std::endl;
                     exit(-1);
                 }
-
+				//numProcessed+=numRemove;
             }
-            //Now before we perform the decomposition, we perform the pop_front of Snp loc, genotype and ld matrix to make sure they are the one we need
-            linkageMatrix->Preparation(blockSize, snpLoc, genotype, chromosomeStart); //DEBUG
-            //Now we can perform the decomposition on the data
-            std::cerr << "Decompose" << std::endl;
-            decompositionHandler->Decompose(blockSize, snpLoc, genotype, chromosomeStart, chromosomeEnd);
-            std::cerr << "Done" << std::endl;
-            if(blockSize > genotype.size()) blockSize= genotype.size();
-            Genotype::clean(genotype, blockSize);
-            size_t removeCount = snpLoc.size() - blockSize;
-            for(size_t i = 0; i < removeCount; ++i)	snpLoc.pop_front();
+            ProcessCode decomposeProcess = decompositionHandler->Decompose(blockSize, snpLoc, genotype, chromosomeStart, chromosomeEnd);
+			if(decomposeProcess == fatalError) exit(-1);
+            if(!chromosomeEnd){
+				if(blockSize > genotype.size()) blockSize= genotype.size();
+				size_t retain = blockSize + (blockSize/3)*2;
+				Genotype::clean(genotype, retain);
+				size_t removeCount = snpLoc.size() - retain;
+				for(size_t i = 0; i < removeCount; ++i)	snpLoc.pop_front();
+            }
+            else{
+                Genotype::clean(genotype, genotype.size());
+                snpLoc.clear();
+            }
 
 		}
         if(chromosomeStart && !chromosomeEnd){
@@ -71,6 +81,8 @@ void SnpEstimation::Estimate(){
         }
 
 	}
+    SnpEstimation::loadbar(totalNum, totalNum);
+	std::cerr << std::endl;
 	delete linkageMatrix;
 	delete decompositionHandler;
     Genotype::clean(genotype, 0);
@@ -86,6 +98,7 @@ void SnpEstimation::Getresult(std::string outputPrefix){
     std::vector<double> regionEstimate(regionSize, 0.0);
     size_t nSnp = 0;
     m_snpIndex->init();
+    m_effective=0.0;
     size_t index;
     double totalSum = 0.0;
     while(m_snpIndex->valid()){
@@ -106,7 +119,6 @@ void SnpEstimation::Getresult(std::string outputPrefix){
         }
 
     }
-    std::cerr << "Effective number:" << m_effective << std::endl;
 	if(outputPrefix.empty()){
         std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
         std::cout << "With LD\t" << regionEstimate[0] << "\t" << totalSum-regionEstimate[0] << "\t" << (2.0*(m_effective)+4.0*m_snpList->front()->GetsampleSize()*regionEstimate[0])/(m_snpList->front()->GetsampleSize()*m_snpList->front()->GetsampleSize()*1.0) << std::endl;
@@ -159,4 +171,15 @@ void SnpEstimation::Getresult(std::string outputPrefix){
             resSum.close();
         }
     }
+}
+
+ void SnpEstimation::loadbar(size_t x, size_t n){
+ 	size_t w = 50;
+    if ( (x != n) && (x % (n/100+1) != 0) ) return;
+	double percent  =  x/(double)n;
+    size_t c = percent * w;
+    std::cerr << std::setw(3) << (size_t)(percent*100) << "% [";
+    for (size_t i=0; i<c; i++) std::cerr << "=";
+    for (size_t i=c; i<w; i++) std::cerr << " ";
+    std::cerr << "]\r" << std::flush;
 }

@@ -25,6 +25,7 @@ class GenotypeFileHandler
         ProcessCode getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &prevResidual, size_t &blockSize);
         ProcessCode getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &numSnp);
         size_t GetsampleSize() const;
+        size_t GetestimateSnpTotal() const;
 	protected:
 	private:
 		std::string m_genotypeFilePrefix;
@@ -36,6 +37,7 @@ class GenotypeFileHandler
         size_t m_inputSnp;
         size_t m_thread;
         size_t m_processed;
+        size_t m_estimateTotal;
         std::ifstream m_bedFile;
         bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
         std::deque<std::string> m_chrExists;

@@ -1,9 +1,7 @@
 #include "linkagethread.h"
 std::mutex LinkageThread::mtx;
 
-void LinkageThread::Addstart(size_t i){
-	m_startLoc.push_back(i);
-}
+void LinkageThread::Addstart(size_t i){ m_startLoc.push_back(i); }
 
 LinkageThread::LinkageThread(bool correction, const size_t blockEnd, Eigen::MatrixXd *ldMatrix, std::deque<Genotype* > *genotype, std::deque<size_t> *snpLoc, std::vector<size_t> *perfectLd, std::vector<Snp*> *snpList):m_correction(correction), m_boundEnd(blockEnd), m_ldMatrix(ldMatrix), m_genotype(genotype), m_snpLoc(snpLoc), m_perfectLd(perfectLd), m_snpList(snpList){}
 
@@ -60,7 +58,7 @@ void LinkageThread::rectangularProcess(){
             else break;
         }
     }
-    LinkageThread::mtx.lock();//DEBUG
+    LinkageThread::mtx.lock();
     (*m_perfectLd).insert((*m_perfectLd).end(), perfectLd.begin(), perfectLd.end());
     LinkageThread::mtx.unlock();
 
@@ -68,14 +66,12 @@ void LinkageThread::rectangularProcess(){
 
 
 void *LinkageThread::triangularProcess(void *in){
-    struct LinkageThread *input = (LinkageThread *) in;
-    input->triangularProcess();
+    ((LinkageThread *) in)->triangularProcess();
     return nullptr;
 }
 
 void *LinkageThread::rectangularProcess(void *in){
-    struct LinkageThread *input = (LinkageThread *) in;
-    input->rectangularProcess();
+    ((LinkageThread *) in)->rectangularProcess();
     return nullptr;
 }
 
