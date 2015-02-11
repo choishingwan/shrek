@@ -14,20 +14,24 @@ void *DecompositionThread::ThreadProcesser(void *in){
 }
 
 void DecompositionThread::solve(){
-	Eigen::VectorXd effective = Eigen::VectorXd::Constant(m_length, 1.0);
-	Eigen::VectorXd result = m_linkage->solve(m_start, m_length, m_betaEstimate, &effective);
+    size_t betaLength = (*m_betaEstimate).rows();
+    size_t processLength = m_length;
+    if(m_lastOfBlock) processLength=betaLength-m_start;
+	Eigen::VectorXd effective = Eigen::VectorXd::Constant(processLength, 1.0);
+	//Eigen::VectorXd result = m_linkage->solve(m_start, processLength, m_betaEstimate, &effective); //DEBUG
+	Eigen::VectorXd result = m_linkage->quickSolve(m_start, processLength, m_betaEstimate, &effective);
 	size_t copyStart = m_length/3;
 	size_t copyEnd = m_length/3;
 	if(m_chrStart && m_start == 0){
 		copyStart = 0;
         copyEnd += m_length/3;
 	}
-    size_t betaLength = (*m_betaEstimate).rows();
-	if(m_lastOfBlock && m_start+m_length >= betaLength) copyEnd = betaLength-m_start-copyStart;
-
+	if(m_lastOfBlock) copyEnd = processLength-copyStart;
+	//std::cerr << "Copy start: " << copyStart << "\t" << copyEnd << "\t" << m_start << "\t" << m_lastOfBlock << "\t" <<  betaLength << std::endl;
+	//DecompositionThread::decomposeMtx.unlock();
     for(size_t i = copyStart; i < copyStart+copyEnd; ++i){
 		(*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability(result(i));
 		(*m_snpList)[(*m_snpLoc)[m_start+i]]->Seteffective(effective(i));
 	}
-	DecompositionThread::decomposeMtx.unlock();
+	//DecompositionThread::decomposeMtx.unlock();
 }

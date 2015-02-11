@@ -25,7 +25,6 @@ int main(int argc, char *argv[]){
 		Snp::generateSnpList(snpList, commander->GetpValueFileName(), commander->GetcIndex(), commander->GetsampleSize(), commander->GetrsIndex(), commander->GetbpIndex(), commander->GetchrIndex(), commander->GetsampleSizeIndex(), commander->provideSampleSize());
 		 Snp::generateSnpIndex(snpIndex, snpList,commander->GetcaseSize(), commander->GetcontrolSize(), commander->Getprevalence(), regionList, commander->isPvalue() );
 	}
-
 	//From now on, we are only allow to iterate through snpList through snpIndex
 	GenotypeFileHandler *genotypeFileHandler = new GenotypeFileHandler(commander->GetldFilePrefix(), snpIndex, &snpList, commander->validate(), commander->maxBlockSet(), commander->GetmaxBlock(), commander->GetminBlock(), commander->Getthread());
 	SnpEstimation *snpEstimation = new SnpEstimation(genotypeFileHandler, snpIndex, &snpList, commander->Getthread(), commander->Getmaf(), commander->ldCorrect());

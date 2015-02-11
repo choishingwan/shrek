@@ -5,6 +5,7 @@ class LinkageThread;
 #include <deque>
 #include <Eigen/Dense>
 #include <Eigen/SVD>
+#include <Eigen/Eigenvalues>
 #include <algorithm>
 #include <limits>
 #include <map>
@@ -28,10 +29,10 @@ class Linkage
 		size_t cols() const;
 		Eigen::MatrixXd block(size_t blockStart, size_t lengthOfBlock);
 		Eigen::VectorXd solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective);
+		Eigen::VectorXd quickSolve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective);
 		double Geteffective() const;
         size_t Remove();
         void Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc);
-		void Preparation(size_t const blockSize, std::deque<size_t> &snpLoc, std::deque<Genotype*> &genotype, bool chromosomeStart); //DEBUG
 		void print();
 	protected:
 	private:

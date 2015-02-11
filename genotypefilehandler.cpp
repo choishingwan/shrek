@@ -247,7 +247,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
             snpLoc.push_back(m_inclusion[m_snpIter]);
 		}
 		size_t indx = 0; //The iterative count
-        double oldM, newM,oldS, newS;
+        double oldM=0.0, newM=0.0,oldS=0.0, newS=0.0;
         size_t alleleCount=0;
 		while ( indx < m_ldSampleSize ){
 			std::bitset<8> b; //Initiate the bit array
@@ -303,16 +303,6 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 				snpLoc.pop_back();
 				delete temp;
 			}
-			/* //only do the pop_front after the LD matrix is fully constructed DEBUG
-			else if(prevResidual > (blockSize/3)*2){
-				prevResidual--;
-				Genotype *temp = genotype.front();
-				genotype.pop_front();
-                snpLoc.pop_front();
-				delete temp;
-				processSize--;
-			}
-			*/
 			else{
 				processSize--;
 			}
@@ -333,6 +323,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
         }
 
 	}
+    chromosomeEnd=true;
 	return completed;
 
 }
@@ -354,7 +345,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
             snpLoc.push_back(m_inclusion[m_snpIter]);
 		}
 		size_t indx = 0; //The iterative count
-        double oldM, newM,oldS, newS;
+        double oldM=0.0, newM=0.0,oldS=0.0, newS=0.0;
         size_t alleleCount=0;
 		while ( indx < m_ldSampleSize ){
 			std::bitset<8> b; //Initiate the bit array

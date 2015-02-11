@@ -15,7 +15,8 @@
 class Snp
 {
 	public:
-		Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, double original, double beta);
+		Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double original, double beta);
+        Snp(std::string chr, std::string rs, size_t bp, double original, double beta, double heritability, bool ldFlag);
 		static void generateSnpList(std::vector<Snp*> &snpList, const std::string &pvalueFile, const size_t index, const size_t sampleSize, const size_t rsIndex, const size_t bpIndex, const size_t chrIndex, const size_t sampleIndex, bool sampleSizeProvided);
 		static void generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, std::vector<std::vector<Region*> > &regionList, bool isPvalue);
 		static void generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const size_t &caseSize, const size_t &controlSize, const double &prevalence, std::vector<std::vector<Region*> > &regionList, bool isPvalue);
@@ -24,7 +25,7 @@ class Snp
         std::string Getchr() const;
         std::string GetrsId() const;
         size_t Getbp() const;
-        size_t GetsampleSize() const;
+        double GetsampleSize() const;
         size_t GetregionSize() const;
         double Getoriginal() const;
         double Getbeta() const;
@@ -37,19 +38,19 @@ class Snp
         void shareHeritability( Snp* i );
         void Seteffective(double i );
         static void cleanSnp(std::vector<Snp*> &snpList);
+        static bool sortSnp (Snp* i, Snp* j);
 	protected:
 	private:
         std::string m_chr;
 		std::string m_rs;
 		size_t m_bp;
-		size_t m_sampleSize;
+		double m_sampleSize;
         double m_original;
         double m_oriBeta;
         double m_effectiveNumber;
         std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD
         std::shared_ptr<double> m_heritability; //The master heritability
         std::vector<bool> m_regionFlag;
-        static bool sortSnp (Snp* i, Snp* j);
         void computeVarianceExplained(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue);
         void computeVarianceExplained(bool isPvalue);
 

@@ -234,44 +234,6 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
 	return completed;
 }
 
-
-Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective){
-	Eigen::JacobiSVD<Eigen::MatrixXd> svd(m_linkage.block(start, start, length, length), Eigen::ComputeThinU);
-
-    Eigen::MatrixXd rInvert = svd.matrixU()*(svd.singularValues().array().abs() > svd.threshold()).select(svd.singularValues().array().inverse(), 0).matrix().asDiagonal() * svd.matrixU().transpose();
-    Eigen::VectorXd result = rInvert*(*betaEstimate).segment(start, length);
-	double relative_error = 0.0;
-	Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);
-    relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
-
-    double prev_error = relative_error+1;
-    Eigen::VectorXd update = result;
-    while(relative_error < prev_error){
-        prev_error = relative_error;
-        update =rInvert*(-(error));
-        relative_error = 0.0;
-        error= m_linkage.block(start, start, length, length)*(result+update) - (*betaEstimate).segment(start, length);
-        relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
-        //if(relative_error < 1e-300) relative_error = 0;
-        result = result+update;
-    }
-    Eigen::VectorXd ones = Eigen::VectorXd::Constant(length, 1.0);
-    (*effective) = rInvert*ones;
-    error =m_linkage.block(start, start, length, length)*(*effective) - ones;
-    relative_error = error.norm()/ones.norm();
-    prev_error = relative_error+1;
-    while(relative_error < prev_error){
-        prev_error = relative_error;
-        update =rInvert*(-(error));
-        relative_error = 0.0;
-        error= m_linkage.block(start, start, length, length)*((*effective)+update) - ones;
-        relative_error = error.norm() / ones.norm();
-        //if(relative_error < 1e-300) relative_error = 0;
-        (*effective) = (*effective)+update;
-    }
-    return result;
-}
-
 size_t Linkage::Remove(){
     if(m_perfectLd.empty()) return 0;
     else{
@@ -331,29 +293,102 @@ void Linkage::print(){ //DEBUG
 }
 
 
-void Linkage::Preparation(size_t const blockSize, std::deque<size_t> &snpLoc, std::deque<Genotype*> &genotype, bool chromosomeStart){ //DEBUG
-    if(chromosomeStart) return; //This is the start of the chromosome, will not require to remove the front
-    else{
-        //Need to know how much we have to remove;
-        size_t removeSize = blockSize/3;
-        size_t minimalSize = m_thread*blockSize/3+(blockSize/3)*2;
-        size_t requiredSize = snpLoc.size()-removeSize;
-        if(minimalSize+removeSize <= snpLoc.size()){}//We have more than enough
-        else{ //We don't have enough snps
-            std::cerr << "Error! We always have an additional block of Snps as buffer and that will be decomposed once we reached end of chromosome" << std::endl;
-            std::cerr << "Therefore it is unlikely, or at least for now I cannot think of any situation where this condition will arise." << std::endl;
-            std::cerr << "Please contact the author with your input such that we can find this bug" << std::endl;
-            exit(-1);
-        }
 
-        for(size_t i = 0; i < removeSize; ++i){
-            Genotype *temp = genotype.front();
-            genotype.pop_front();
-            delete temp;
-            snpLoc.pop_front();
-        }
-        Eigen::MatrixXd bottomRightCorner = m_linkage.bottomRightCorner(requiredSize, requiredSize);
-        m_linkage.topLeftCorner(requiredSize,requiredSize) =bottomRightCorner;
-        m_linkage.conservativeResize(requiredSize, requiredSize);
+Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective){
+
+	Eigen::JacobiSVD<Eigen::MatrixXd> svd(m_linkage.block(start, start, length, length), Eigen::ComputeThinU);
+    Eigen::MatrixXd rInvert = svd.matrixU()*(svd.singularValues().array().abs() > svd.threshold()).select(svd.singularValues().array().inverse(), 0).matrix().asDiagonal() * svd.matrixU().transpose();
+    Eigen::VectorXd result = rInvert*(*betaEstimate).segment(start, length);
+	double relative_error = 0.0;
+	Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);
+    relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
+
+    double prev_error = relative_error+1;
+    Eigen::VectorXd update = result;
+    while(relative_error < prev_error){
+        prev_error = relative_error;
+        update =rInvert*(-(error));
+        relative_error = 0.0;
+        error= m_linkage.block(start, start, length, length)*(result+update) - (*betaEstimate).segment(start, length);
+        relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
+        if(relative_error < 1e-300) relative_error = 0;
+        result = result+update;
     }
+    Eigen::VectorXd ones = Eigen::VectorXd::Constant(length, 1.0);
+    (*effective) = rInvert*ones;
+    error =m_linkage.block(start, start, length, length)*(*effective) - ones;
+    relative_error = error.norm()/ones.norm();
+    prev_error = relative_error+1;
+    while(relative_error < prev_error){
+        prev_error = relative_error;
+        update =rInvert*(-(error));
+        relative_error = 0.0;
+        error= m_linkage.block(start, start, length, length)*((*effective)+update) - ones;
+        relative_error = error.norm() / ones.norm();
+        if(relative_error < 1e-300) relative_error = 0;
+        (*effective) = (*effective)+update;
+    }
+    return result;
+}
+
+Eigen::VectorXd Linkage::quickSolve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective){
+    Eigen::LDLT<Eigen::MatrixXd> ldlt(m_linkage.block(start, start, length, length));
+    //Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
+    //Eigen::MatrixXd check = ldlt.matrixL();
+    //std::cout << check << std::endl;
+    //exit(-1);
+    double tolerance = std::numeric_limits<double>::epsilon() * length * ldlt.vectorD().array().abs().maxCoeff();
+    Eigen::MatrixXd D = (ldlt.vectorD().array()>tolerance).select(ldlt.vectorD().array().sqrt(), 0).matrix().asDiagonal();
+    Eigen::MatrixXd ll = (ldlt.matrixL()*D).transpose();
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(ll);
+    Eigen::VectorXd result=Eigen::VectorXd::Zero(length);
+    if(es.info() != Eigen::ComputationInfo::Success){
+        std::cerr << "Failed to compute eigendecomposition" << std::endl;
+    }
+    else{
+        //Build the eigenvalue
+        tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().abs().maxCoeff();
+        Eigen::MatrixXd rInvert = es.eigenvectors()*(es.eigenvalues().array().abs() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
+        result = rInvert*(*betaEstimate).segment(start, length);
+        double relative_error = 0.0;
+        Eigen::VectorXd betaBar = es.eigenvectors()*es.eigenvectors().transpose()*(*betaEstimate).segment(start, length);
+        //Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);
+        //Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - betaBar;
+        Eigen::VectorXd error =ll*result - betaBar;
+        //relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
+        relative_error = error.norm() / betaBar.norm();
+
+        double prev_error = relative_error+1;
+        Eigen::VectorXd update = result;
+        while(relative_error < prev_error){
+            prev_error = relative_error;
+            update =rInvert*(-(error));
+            relative_error = 0.0;
+            //error= m_linkage.block(start, start, length, length)*(result+update) - (*betaEstimate).segment(start, length);
+            //error= m_linkage.block(start, start, length, length)*(result+update) - betaBar;
+            error= ll*(result+update) - betaBar;
+            //relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
+            relative_error = error.norm() / betaBar.norm();
+            if(relative_error < 1e-300) relative_error = 0;
+            result = result+update;
+        }
+        //Eigen::VectorXd ones = Eigen::VectorXd::Constant(length, 1.0);
+        Eigen::VectorXd ones = es.eigenvectors()*es.eigenvectors().transpose()*Eigen::VectorXd::Constant(length, 1.0);
+        (*effective) = rInvert*ones;
+        //error =m_linkage.block(start, start, length, length)*(*effective) - ones;
+        error =ll*(*effective) - ones;
+        relative_error = error.norm()/ones.norm();
+        prev_error = relative_error+1;
+        while(relative_error < prev_error){
+            prev_error = relative_error;
+            update =rInvert*(-(error));
+            relative_error = 0.0;
+            //error= m_linkage.block(start, start, length, length)*((*effective)+update) - ones;
+            error= ll*((*effective)+update) - ones;
+            relative_error = error.norm() / ones.norm();
+            if(relative_error < 1e-300) relative_error = 0;
+            (*effective) = (*effective)+update;
+        }
+    }
+    return result;
 }

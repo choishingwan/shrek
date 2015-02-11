@@ -17,6 +17,8 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
     if(!chromosomeEnd){ //We have not reached the end, so we need to remove the last two blocks from the processing
         processSize = blockSize/3*m_thread+2*(blockSize/3);
     }
+    //std::cerr << "Chromosome is end: " << chromosomeEnd << std::endl;
+    //std::cerr << "snpLoc size: " << snpLoc.size() << std::endl;
     Eigen::VectorXd betaEstimate = Eigen::VectorXd::Zero(processSize);
     for(size_t i=0;i < processSize; ++i){
         if(snpLoc[i] < 0){
@@ -35,8 +37,10 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 	size_t stepSize = currentBlockSize/3;
 	if(stepSize == 0 || currentBlockSize==processSize){ //no multithreading is required
 		//The Block size is only 3. so We can finish it anyway
+		//std::cerr << "Single thread" << std::endl;
 		Eigen::VectorXd effective = Eigen::VectorXd::Constant(currentBlockSize, 1.0);
-		Eigen::VectorXd result = m_linkage->solve(0, processSize, &betaEstimate, &effective);
+		//Eigen::VectorXd result = m_linkage->solve(0, processSize, &betaEstimate, &effective); //DEBUG
+		Eigen::VectorXd result = m_linkage->quickSolve(0, processSize, &betaEstimate, &effective);
 		size_t copyStart = 0;
 		if(!chromosomeStart) copyStart = blockSize/3;
         for(size_t i=copyStart; i < processSize; ++i){
@@ -46,6 +50,7 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 
 	}
 	else if(stepSize > 0){
+			//std::cerr << "Multithread " << std::endl;
 		//Normal situation
 		for(size_t i = 0; i < processSize; i+= stepSize){
 			if(i+currentBlockSize <= processSize){
@@ -63,6 +68,7 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 			return fatalError;
 		}
 		else if(m_thread < startLoc.size()){
+            //std::cerr << "Extra" << std::endl;
             //We will first do the appropriate amount, then do the remaining;
             for(size_t i =0; i < m_thread; ++i){
 				garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
@@ -100,7 +106,7 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 		}
 		else{
 			for(size_t i = 0; i < startLoc.size(); ++i){
-				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], processSize-startLoc[i], &betaEstimate, m_linkage, &snpLoc, m_snpList, chromosomeStart, true));
+				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, m_linkage, &snpLoc, m_snpList, chromosomeStart, true));
 				else garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
 				pthread_t *thread1 = new pthread_t();
 				threadList.push_back(thread1);
