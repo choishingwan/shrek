@@ -297,20 +297,18 @@ void Linkage::print(){ //DEBUG
 Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective){
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().abs().maxCoeff();
-    Eigen::HouseholderQR<MatrixXd> qr((es.eigenvalues().array().abs() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose());
-    ll = qr.matrixQR().triangularView<Eigen::Upper>();
-
-
-
+    Eigen::MatrixXd rTrans = es.eigenvectors()*(es.eigenvalues().array().abs() > tolerance).select(es.eigenvalues().array(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
     Eigen::LDLT<Eigen::MatrixXd> ldlt(m_linkage.block(start, start, length, length));
     tolerance = std::numeric_limits<double>::epsilon() * length * ldlt.vectorD().array().abs().maxCoeff();
+    //Eigen::MatrixXd D = (ldlt.vectorD().array()>tolerance).select(ldlt.vectorD().array().sqrt(), 0).matrix().asDiagonal();
+    Eigen::MatrixXd D = ldlt.vectorD().matrix().asDiagonal();
+    Eigen::MatrixXd ll = (ldlt.matrixL()*D).transpose();
+    std::cout << "NORM!: " << (rTrans-ll*ll.transpose()).norm() << std::endl;
+    std::cout << "Ori NORM!: " << (m_linkage.block(start, start, length, length)-rTrans).norm() << std::endl;
+    std::cout << "Ori NORM!: " << (m_linkage.block(start, start, length, length)- ldlt.matrixL()*D*ldlt.matrixL().transpose()).norm() << std::endl;
 
-    Eigen::MatrixXd D = (ldlt.vectorD().array()>tolerance).select(ldlt.vectorD().array().sqrt(), 0).matrix().asDiagonal();
-    //Eigen::TriangularView<Eigen::MatrixXd, Eigen::Upper> ll = (Eigen::TriangularView<Eigen::MatrixXd, Eigen::Upper>)((ldlt.matrixL()*D).transpose());
-    Eigen::MatrixXd ll = ((ldlt.matrixL()*D).transpose());
-    Eigen::VectorXd result= (*betaEstimate).segment(start, length);
-    //Try to do simple solving and see if it works
 
+    Eigen::VectorXd result = (*betaEstimate).segment(start, length);
     ll.triangularView<Eigen::Upper>().solveInPlace(result);
 
 
