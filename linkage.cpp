@@ -298,14 +298,14 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *bet
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().abs().maxCoeff();
     Eigen::MatrixXd rTrans = es.eigenvectors()*(es.eigenvalues().array().abs() > tolerance).select(es.eigenvalues().array(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
-    Eigen::LDLT<Eigen::MatrixXd> ldlt(m_linkage.block(start, start, length, length));
+    Eigen::LDLT<Eigen::MatrixXd> ldlt(rTrans);
     tolerance = std::numeric_limits<double>::epsilon() * length * ldlt.vectorD().array().abs().maxCoeff();
     //Eigen::MatrixXd D = (ldlt.vectorD().array()>tolerance).select(ldlt.vectorD().array().sqrt(), 0).matrix().asDiagonal();
     Eigen::MatrixXd D = ldlt.vectorD().matrix().asDiagonal();
     Eigen::MatrixXd ll = (ldlt.matrixL()*D).transpose();
     std::cout << "NORM!: " << (rTrans-ll*ll.transpose()).norm() << std::endl;
     std::cout << "Ori NORM!: " << (m_linkage.block(start, start, length, length)-rTrans).norm() << std::endl;
-    std::cout << "Ori NORM!: " << (m_linkage.block(start, start, length, length)- ldlt.matrixL()*D*ldlt.matrixL().transpose()).norm() << std::endl;
+    std::cout << "Ori NORM!: " << (rTrans- ldlt.matrixL()*D*ldlt.matrixL().transpose()).norm() << std::endl;
 
 
     Eigen::VectorXd result = (*betaEstimate).segment(start, length);
