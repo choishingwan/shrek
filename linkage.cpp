@@ -295,39 +295,58 @@ void Linkage::print(){ //DEBUG
 
 
 Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective){
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
+    double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().abs().maxCoeff();
+    Eigen::HouseholderQR<MatrixXd> qr((es.eigenvalues().array().abs() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose());
+    ll = qr.matrixQR().triangularView<Eigen::Upper>();
 
-	Eigen::JacobiSVD<Eigen::MatrixXd> svd(m_linkage.block(start, start, length, length), Eigen::ComputeThinU);
-    Eigen::MatrixXd rInvert = svd.matrixU()*(svd.singularValues().array().abs() > svd.threshold()).select(svd.singularValues().array().inverse(), 0).matrix().asDiagonal() * svd.matrixU().transpose();
-    Eigen::VectorXd result = rInvert*(*betaEstimate).segment(start, length);
+
+
+    Eigen::LDLT<Eigen::MatrixXd> ldlt(m_linkage.block(start, start, length, length));
+    tolerance = std::numeric_limits<double>::epsilon() * length * ldlt.vectorD().array().abs().maxCoeff();
+
+    Eigen::MatrixXd D = (ldlt.vectorD().array()>tolerance).select(ldlt.vectorD().array().sqrt(), 0).matrix().asDiagonal();
+    //Eigen::TriangularView<Eigen::MatrixXd, Eigen::Upper> ll = (Eigen::TriangularView<Eigen::MatrixXd, Eigen::Upper>)((ldlt.matrixL()*D).transpose());
+    Eigen::MatrixXd ll = ((ldlt.matrixL()*D).transpose());
+    Eigen::VectorXd result= (*betaEstimate).segment(start, length);
+    //Try to do simple solving and see if it works
+
+    ll.triangularView<Eigen::Upper>().solveInPlace(result);
+
+
 	double relative_error = 0.0;
-	Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);
+	Eigen::VectorXd error =ll*result - (*betaEstimate).segment(start, length);
     relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
 
     double prev_error = relative_error+1;
     Eigen::VectorXd update = result;
     while(relative_error < prev_error){
         prev_error = relative_error;
-        update =rInvert*(-(error));
+        update=-error;
+        ll.triangularView<Eigen::Upper>().solveInPlace(update);
         relative_error = 0.0;
-        error= m_linkage.block(start, start, length, length)*(result+update) - (*betaEstimate).segment(start, length);
+        error= ll*(result+update) - (*betaEstimate).segment(start, length);
         relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
         if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
     Eigen::VectorXd ones = Eigen::VectorXd::Constant(length, 1.0);
-    (*effective) = rInvert*ones;
-    error =m_linkage.block(start, start, length, length)*(*effective) - ones;
+    (*effective)=Eigen::VectorXd::Constant(length, 1.0);
+    ll.triangularView<Eigen::Upper>().solveInPlace((*effective));
+    error =ll*(*effective) - ones;
     relative_error = error.norm()/ones.norm();
     prev_error = relative_error+1;
     while(relative_error < prev_error){
         prev_error = relative_error;
-        update =rInvert*(-(error));
+        update=-error;
+        ll.triangularView<Eigen::Upper>().solveInPlace(update);
         relative_error = 0.0;
-        error= m_linkage.block(start, start, length, length)*((*effective)+update) - ones;
+        error= ll*((*effective)+update) - ones;
         relative_error = error.norm() / ones.norm();
         if(relative_error < 1e-300) relative_error = 0;
         (*effective) = (*effective)+update;
     }
+
     return result;
 }
 

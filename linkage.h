@@ -5,6 +5,7 @@ class LinkageThread;
 #include <deque>
 #include <Eigen/Dense>
 #include <Eigen/SVD>
+#include <Eigen/QR>
 #include <Eigen/Eigenvalues>
 #include <algorithm>
 #include <limits>
