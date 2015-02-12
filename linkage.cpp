@@ -306,6 +306,13 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *bet
 
     Eigen::VectorXd result=(*betaEstimate).segment(start, length);
     ll.triangularView<Eigen::Lower>().solveInPlace(result);
+    if(result.maxCoeff() > 0.56){
+        std::cout << m_linkage.block(start, start, length, length) << std::endl;
+        std::cerr <<(*betaEstimate).segment(start, length) << std::endl;
+        exit(-1);
+
+    }
+
 
     return result;
     double relative_error = 0.0;
