@@ -148,18 +148,18 @@ void SnpEstimation::Getresult(std::string outputPrefix){
             std::vector<Snp*> resultSnps;
             while(m_snpIndex->valid()){
                 index = m_snpIndex->value();
-				resultSnps.push_back(new Snp((*m_snpList)[index]->Getchr(), (*m_snpList)[index]->GetrsId(), (*m_snpList)[index]->Getbp(),(*m_snpList)[index]->Getoriginal(), (*m_snpList)[index]->Getbeta(), (*m_snpList)[index]->Getheritability(),(*m_snpList)[index]->GetFlag(0) ));
-                //resOut <<  << "\t" << (*m_snpList)[index]->Getbp() << "\t" << (*m_snpList)[index]->GetrsId() << "\t" << (*m_snpList)[index]->Getoriginal()<< "\t" << (*m_snpList)[index]->Getbeta() << "\t" <<  (*m_snpList)[index]->Getheritability() << "\t" << (*m_snpList)[index]->GetFlag(0) << std::endl;
+				//resultSnps.push_back((*m_snpList)[index]);
+                resOut << (*m_snpList)[index]->Getchr() << "\t" << (*m_snpList)[index]->Getbp() << "\t" << (*m_snpList)[index]->GetrsId() << "\t" << (*m_snpList)[index]->Getoriginal()<< "\t" << (*m_snpList)[index]->Getbeta() << "\t" <<  (*m_snpList)[index]->Getheritability() << "\t" << (*m_snpList)[index]->GetFlag(0) << std::endl;
                 if(!m_snpIndex->next()){
                     break;
                 }
             }
-            std::sort(resultSnps.begin(), resultSnps.end(), Snp::sortSnp);
-            for(size_t i =0; i < resultSnps.size(); ++i){
-				resOut << resultSnps[i]->Getchr() << "\t" << resultSnps[i]->Getbp() << "\t" << resultSnps[i]->GetrsId() << "\t" << resultSnps[i]->Getoriginal()<< "\t" << resultSnps[i]->Getbeta() << "\t" <<  resultSnps[i]->Getheritability() << "\t" << resultSnps[i]->GetFlag(0) << std::endl;
-                delete resultSnps[i];
-            }
-            resultSnps.clear();
+            //std::sort(resultSnps.begin(), resultSnps.end(), Snp::sortSnp);
+            //for(size_t i =0; i < resultSnps.size(); ++i){
+			//	resOut << resultSnps[i]->Getchr() << "\t" << resultSnps[i]->Getbp() << "\t" << resultSnps[i]->GetrsId() << "\t" << resultSnps[i]->Getoriginal()<< "\t" << resultSnps[i]->Getbeta() << "\t" <<  resultSnps[i]->Getheritability() << "\t" << resultSnps[i]->GetFlag(0) << std::endl;
+                //Avoid double deletion, do the deletion together with the SnpList
+            //}
+            //resultSnps.clear();
         }
         if(!resSum.is_open()){
             std::cerr << "Cannot open summary file: " << resSumName << " for write" << std::endl;

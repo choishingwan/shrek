@@ -16,7 +16,6 @@ class Snp
 {
 	public:
 		Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double original, double beta);
-        Snp(std::string chr, std::string rs, size_t bp, double original, double beta, double heritability, bool ldFlag);
 		static void generateSnpList(std::vector<Snp*> &snpList, const std::string &pvalueFile, const size_t index, const size_t sampleSize, const size_t rsIndex, const size_t bpIndex, const size_t chrIndex, const size_t sampleIndex, bool sampleSizeProvided);
 		static void generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, std::vector<std::vector<Region*> > &regionList, bool isPvalue);
 		static void generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const size_t &caseSize, const size_t &controlSize, const double &prevalence, std::vector<std::vector<Region*> > &regionList, bool isPvalue);
@@ -51,6 +50,8 @@ class Snp
         std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD
         std::shared_ptr<double> m_heritability; //The master heritability
         std::vector<bool> m_regionFlag;
+        bool m_cc;
+        bool m_qt;
         void computeVarianceExplained(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue);
         void computeVarianceExplained(bool isPvalue);
 

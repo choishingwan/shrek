@@ -4,11 +4,8 @@ Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double o
 	m_beta = std::make_shared<double>(beta);
 	m_heritability = std::make_shared<double>(0.0);
 	m_effectiveNumber=0.0;
-}
-Snp::Snp(std::string chr, std::string rs, size_t bp, double original, double beta, double heritability, bool ldFlag):m_chr(chr), m_rs(rs), m_bp(bp),m_original(original){
-    m_beta = std::make_shared<double>(beta);
-	m_heritability = std::make_shared<double>(heritability);
-	m_regionFlag.push_back(ldFlag);
+	m_cc=false;
+	m_qt=false;
 }
 
 std::string Snp::Getchr() const { return m_chr; }
@@ -23,7 +20,21 @@ double Snp::Getbeta() const {
 }
 void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability;}
 void Snp::Seteffective(double i) { m_effectiveNumber = i; }
-double Snp::Getheritability() const { return (*m_heritability)/(double)(m_beta.use_count()); }
+double Snp::Getheritability() const {
+	double heritability =((*m_heritability)/(double)(m_beta.use_count())) ;
+	heritability *= heritability;
+    if(m_qt && !m_cc){
+		return (heritability/(m_sampleSize-2.0+heritability))-1.0/(m_sampleSize-1.0);
+    }
+    else if(!m_qt && m_cc){
+		double ncp = heritability-1.0;
+		return m_sampleSize*ncp;
+    }
+    else{
+        std::cerr << "Undefined behavior!!! Will set heritability as -1 which is wrong. Please be careful" << std::endl;
+        return -1;
+    }
+}
 
 void Snp::shareHeritability( Snp* i ){
 	if(i->m_beta == m_beta){
@@ -175,9 +186,11 @@ void Snp::computeVarianceExplained(bool isPvalue){
         (*m_beta) = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
         if(!std::isfinite((*m_beta))) (*m_beta) = usefulTools::qnorm(((m_original+0.0)/2.0));
     }
-    (*m_beta) = (*m_beta)*(*m_beta);
-	(*m_beta) = ((*m_beta)/(m_sampleSize-2.0+(*m_beta)))-1.0/(m_sampleSize-1.0);
+    (*m_beta) = fabs((*m_beta));
+    //(*m_beta) = (*m_beta)*(*m_beta); //We don't square it so that it is normal distributed
+	//(*m_beta) = ((*m_beta)/(m_sampleSize-2.0+(*m_beta)))-1.0/(m_sampleSize-1.0);// DEBUG
 	m_oriBeta =(*m_beta);
+	m_qt=true;
 
 }
 
@@ -185,17 +198,25 @@ void Snp::computeVarianceExplained(const size_t &caseSize, const size_t &control
     if(isPvalue){
         (*m_beta) = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
         if(!std::isfinite((*m_beta))) (*m_beta) =usefulTools::qnorm(((m_original+0.0)/2.0));
-        (*m_beta) = (*m_beta)*(*m_beta);
+		(*m_beta) = fabs((*m_beta));
+        //(*m_beta) = (*m_beta)*(*m_beta);
+        //Normal distributed beta, so we don't square it on purpose
     }
-    double ncp = ((*m_beta) -1.0);
+    else{
+        (*m_beta) = std::sqrt(fabs((*m_beta))); //We sqrt it because it come as a chi square
+    }
 	int totalSampleSize = caseSize + controlSize;
 	double portionCase = (caseSize+0.0) / (totalSampleSize+0.0);
 	double i2 = usefulTools::dnorm(usefulTools::qnorm(prevalence))/(prevalence);
 	i2 = i2*i2;
 	m_sampleSize =((1-prevalence)*(1-prevalence))/(i2*portionCase*(1-portionCase)*(totalSampleSize));
+	/*
+    double ncp = ((*m_beta) -1.0);
 	(*m_beta) = m_sampleSize*ncp;
+	*/
 	m_oriBeta =(*m_beta);
 
+	m_cc=true;
 }
 
 void Snp::setFlag(size_t index, bool value){

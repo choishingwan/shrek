@@ -297,8 +297,11 @@ void Linkage::print(){ //DEBUG
 Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective){
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().abs().maxCoeff();
-    Eigen::MatrixXd A =es.eigenvectors()*(es.eigenvalues().array().abs() > tolerance).select(es.eigenvalues().array(), 0).matrix().asDiagonal() * es.eigenvectors().transpose(); //This should give us a well conditioned matrix
-    Eigen::LDLT<Eigen::MatrixXd> ldlt(A); //Cholesky
+    Eigen::MatrixXd r = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().sqrt(), 0).matrix().asDiagonal();
+    Eigen::MatrixXd rInverse =(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().sqrt().inverse(), 0).matrix().asDiagonal()*es.eigenvectors().transpose();
+    Eigen::MatrixXd A =es.eigenvectors()*(2*tolerance-es.eigenvalues().array() > 0).select(2*tolerance-es.eigenvalues().array(), 0).matrix().asDiagonal() * es.eigenvectors().transpose(); //This should give us a well conditioned matrix
+    Eigen::LDLT<Eigen::MatrixXd> ldlt(m_linkage.block(start, start, length, length)+A); //Cholesky
+    //Eigen::LDLT<Eigen::MatrixXd> ldlt(m_linkage.block(start, start, length, length)); //Cholesky
     tolerance = std::numeric_limits<double>::epsilon() * length * ldlt.vectorD().array().abs().maxCoeff(); //This is to avoid having sqrt of negative number (or very small number);
     Eigen::MatrixXd D = (ldlt.vectorD().array()>tolerance).select(ldlt.vectorD().array().sqrt(), 0).matrix().asDiagonal();
     Eigen::MatrixXd ll = (ldlt.matrixL()*D);
@@ -306,13 +309,12 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *bet
 
     Eigen::VectorXd result=(*betaEstimate).segment(start, length);
     ll.triangularView<Eigen::Lower>().solveInPlace(result);
-    if(result.maxCoeff() > 0.56){
-        std::cout << m_linkage.block(start, start, length, length) << std::endl;
-        std::cerr <<(*betaEstimate).segment(start, length) << std::endl;
-        exit(-1);
-
+    if((*betaEstimate).segment(start, length).maxCoeff() > 121 ){
+        std::cout << "Beta: " << std::endl << (*betaEstimate).segment(start, length) << std::endl;
+        std::cout << "result: " << std::endl << result<< std::endl;
+        std::cout<< "ld" << std::endl;
+        std::cout <<m_linkage.block(start, start, length, length) << std::endl;
     }
-
 
     return result;
     double relative_error = 0.0;

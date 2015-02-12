@@ -5,6 +5,7 @@
 #include <string.h>
 #include <iostream>
 #include <deque>
+#include <math.h>
 
 class Genotype
 {
@@ -12,6 +13,7 @@ class Genotype
 		Genotype();
 		virtual ~Genotype();
         double Getr(Genotype* snpB, bool correction);
+        double GetrSq(Genotype* snpB, bool correction);
         static void SetsampleNum(size_t sampleNum);
         void Setmean(double mean);
         void SetstandardDeviation(double standardDeviation);
