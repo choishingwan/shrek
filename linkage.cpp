@@ -295,56 +295,65 @@ void Linkage::print(){ //DEBUG
 
 
 Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective){
+
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().abs().maxCoeff();
-    Eigen::MatrixXd rTrans = es.eigenvectors()*(es.eigenvalues().array().abs() > tolerance).select(es.eigenvalues().array(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
-    Eigen::LDLT<Eigen::MatrixXd> ldlt(rTrans);
-    tolerance = std::numeric_limits<double>::epsilon() * length * ldlt.vectorD().array().abs().maxCoeff();
-    //Eigen::MatrixXd D = (ldlt.vectorD().array()>tolerance).select(ldlt.vectorD().array().sqrt(), 0).matrix().asDiagonal();
-    Eigen::MatrixXd D = ldlt.vectorD().matrix().asDiagonal();
-    Eigen::MatrixXd ll = (ldlt.matrixL()*D).transpose();
-    std::cout << "NORM!: " << (rTrans-ll*ll.transpose()).norm() << std::endl;
-    std::cout << "Ori NORM!: " << (m_linkage.block(start, start, length, length)-rTrans).norm() << std::endl;
-    std::cout << "Ori NORM!: " << (rTrans- ldlt.matrixL()*D*ldlt.matrixL().transpose()).norm() << std::endl;
+    Eigen::HouseholderQR<Eigen::MatrixXd> qr((es.eigenvalues().array().abs() > tolerance).select(es.eigenvalues().array().sqrt(), 0).matrix().asDiagonal() * es.eigenvectors().transpose());
+    Eigen::MatrixXd ll = qr.matrixQR().triangularView<Eigen::Upper>().transpose();
+    Eigen::MatrixXd q = qr.householderQ();
+    Eigen::MatrixXd qrHi = ll.transpose()*ll;
+    q = q*q.transpose();
+    for (int i = 0; i < q.cols(); ++i) {
+            q(i, i) = 0;
+        }
 
+    Eigen::VectorXd result=(*betaEstimate).segment(start, length);
+    ll.triangularView<Eigen::Lower>().solveInPlace(result);
+    Eigen::MatrixXd eigen = es.eigenvectors()*(es.eigenvalues().array().abs() > tolerance).select(es.eigenvalues().array(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
+    std::cerr << "R with Eigen: " <<  (m_linkage.block(start, start, length, length)-eigen).norm()/ eigen.norm() << std::endl;
+    Eigen::LDLT<Eigen::MatrixXd> ldlt(m_linkage.block(start, start, length, length));
+    Eigen::MatrixXd D = (ldlt.vectorD().array()>tolerance).select(ldlt.vectorD().array(), 0).matrix().asDiagonal();
+    Eigen::MatrixXd ld = (ldlt.matrixL())*D*ldlt.matrixL().transpose();
+    std::cerr << "R with Cholesky " << (m_linkage.block(start, start, length, length)-ld).norm()/ld.norm() << std::endl;
+    std::cerr << "R with QR: " <<(m_linkage.block(start, start, length, length)-qrHi).norm()/qrHi.norm() << std::endl;
 
-    Eigen::VectorXd result = (*betaEstimate).segment(start, length);
-    ll.triangularView<Eigen::Upper>().solveInPlace(result);
-
-
-	double relative_error = 0.0;
-	Eigen::VectorXd error =ll*result - (*betaEstimate).segment(start, length);
-    relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
+    std::cerr << "Cholesky with reconstructed R" << (eigen- ld).norm()/ld.norm() << std::endl;
+    return result;
+    double relative_error = 0.0;
+    //Eigen::VectorXd betaBar = es.eigenvectors()*es.eigenvectors().transpose()*(*betaEstimate).segment(start, length);
+    Eigen::VectorXd betaBar =(*betaEstimate).segment(start, length); //Keep this simple first
+    Eigen::VectorXd error =ll*result - betaBar;
+    relative_error = error.norm() / betaBar.norm();
 
     double prev_error = relative_error+1;
     Eigen::VectorXd update = result;
     while(relative_error < prev_error){
         prev_error = relative_error;
-        update=-error;
-        ll.triangularView<Eigen::Upper>().solveInPlace(update);
+        update = -error;
+        ll.triangularView<Eigen::Lower>().solveInPlace(update);
         relative_error = 0.0;
-        error= ll*(result+update) - (*betaEstimate).segment(start, length);
-        relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
+        error= ll*(result+update) - betaBar;
+        relative_error = error.norm() / betaBar.norm();
         if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
+
     Eigen::VectorXd ones = Eigen::VectorXd::Constant(length, 1.0);
-    (*effective)=Eigen::VectorXd::Constant(length, 1.0);
-    ll.triangularView<Eigen::Upper>().solveInPlace((*effective));
+    (*effective) = ones;
+    ll.triangularView<Eigen::Lower>().solveInPlace((*effective));
     error =ll*(*effective) - ones;
     relative_error = error.norm()/ones.norm();
     prev_error = relative_error+1;
     while(relative_error < prev_error){
         prev_error = relative_error;
-        update=-error;
-        ll.triangularView<Eigen::Upper>().solveInPlace(update);
+        update =(-(error));
+        ll.triangularView<Eigen::Lower>().solveInPlace(update);
         relative_error = 0.0;
         error= ll*((*effective)+update) - ones;
         relative_error = error.norm() / ones.norm();
         if(relative_error < 1e-300) relative_error = 0;
         (*effective) = (*effective)+update;
     }
-
     return result;
 }
 

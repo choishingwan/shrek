@@ -39,8 +39,8 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 		//The Block size is only 3. so We can finish it anyway
 		//std::cerr << "Single thread" << std::endl;
 		Eigen::VectorXd effective = Eigen::VectorXd::Constant(currentBlockSize, 1.0);
-		//Eigen::VectorXd result = m_linkage->solve(0, processSize, &betaEstimate, &effective); //DEBUG
-		Eigen::VectorXd result = m_linkage->quickSolve(0, processSize, &betaEstimate, &effective);
+		Eigen::VectorXd result = m_linkage->solve(0, processSize, &betaEstimate, &effective); //DEBUG
+		//Eigen::VectorXd result = m_linkage->quickSolve(0, processSize, &betaEstimate, &effective);
 		size_t copyStart = 0;
 		if(!chromosomeStart) copyStart = blockSize/3;
         for(size_t i=copyStart; i < processSize; ++i){
