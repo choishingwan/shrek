@@ -17,7 +17,7 @@ void LinkageThread::triangularProcess(){
         (*m_ldMatrix)(j,j) = 1.0;
         for(size_t k = m_boundEnd-1; k > j; --k){
             if((*m_ldMatrix)(j,k) == 0.0){
-                double rSquare=(*m_genotype)[j]->Getr( (*m_genotype)[k], m_correction);
+                double rSquare=(*m_genotype)[j]->GetrSq( (*m_genotype)[k], m_correction);
                 if(std::fabs(rSquare-1.0) < G_EPSILON_DBL ){
                     perfectLd.push_back(k);
                     LinkageThread::mtx.lock();
@@ -44,7 +44,7 @@ void LinkageThread::rectangularProcess(){
                 (*m_ldMatrix)(i,i) = 1.0; //Let's just assume that it is duplicated
             }
             else if((*m_ldMatrix)(i,j) == 0.0){
-                double rSquare = (*m_genotype)[i]->Getr((*m_genotype)[j],m_correction);
+                double rSquare = (*m_genotype)[i]->GetrSq((*m_genotype)[j],m_correction);
                 if(std::fabs(rSquare-1.0) < G_EPSILON_DBL){
                     perfectLd.push_back(j);
                     LinkageThread::mtx.lock();

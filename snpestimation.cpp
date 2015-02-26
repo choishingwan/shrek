@@ -105,7 +105,7 @@ void SnpEstimation::Getresult(std::string outputPrefix){
     double totalSum = 0.0;
     while(m_snpIndex->valid()){
 		index = m_snpIndex->value();
-        double num = (*m_snpList)[index]->Getheritability();
+        double num = (*m_snpList)[index]->GetheritabilityChi();
         totalSum+= num;
         m_effective +=(*m_snpList)[index]->Geteffective();
         if((*m_snpList)[index]->GetFlag(0)){
@@ -121,6 +121,7 @@ void SnpEstimation::Getresult(std::string outputPrefix){
         }
 
     }
+
 	if(outputPrefix.empty()){
         std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
         std::cout << "With LD\t" << regionEstimate[0] << "\t" << totalSum-regionEstimate[0] << "\t" << (2.0*(m_effective)+4.0*m_snpList->front()->GetsampleSize()*regionEstimate[0])/(m_snpList->front()->GetsampleSize()*m_snpList->front()->GetsampleSize()*1.0) << std::endl;
@@ -148,7 +149,7 @@ void SnpEstimation::Getresult(std::string outputPrefix){
             std::vector<Snp*> resultSnps;
             while(m_snpIndex->valid()){
                 index = m_snpIndex->value();
-				resultSnps.push_back(new Snp((*m_snpList)[index]->Getchr(), (*m_snpList)[index]->GetrsId(), (*m_snpList)[index]->Getbp(),(*m_snpList)[index]->Getoriginal(), (*m_snpList)[index]->Getbeta(), (*m_snpList)[index]->Getheritability(),(*m_snpList)[index]->GetFlag(0) ));
+				resultSnps.push_back((*m_snpList)[index]);
                 //resOut <<  << "\t" << (*m_snpList)[index]->Getbp() << "\t" << (*m_snpList)[index]->GetrsId() << "\t" << (*m_snpList)[index]->Getoriginal()<< "\t" << (*m_snpList)[index]->Getbeta() << "\t" <<  (*m_snpList)[index]->Getheritability() << "\t" << (*m_snpList)[index]->GetFlag(0) << std::endl;
                 if(!m_snpIndex->next()){
                     break;
@@ -156,8 +157,8 @@ void SnpEstimation::Getresult(std::string outputPrefix){
             }
             std::sort(resultSnps.begin(), resultSnps.end(), Snp::sortSnp);
             for(size_t i =0; i < resultSnps.size(); ++i){
-				resOut << resultSnps[i]->Getchr() << "\t" << resultSnps[i]->Getbp() << "\t" << resultSnps[i]->GetrsId() << "\t" << resultSnps[i]->Getoriginal()<< "\t" << resultSnps[i]->Getbeta() << "\t" <<  resultSnps[i]->Getheritability() << "\t" << resultSnps[i]->GetFlag(0) << std::endl;
-                delete resultSnps[i];
+				resOut << resultSnps[i]->Getchr() << "\t" << resultSnps[i]->Getbp() << "\t" << resultSnps[i]->GetrsId() << "\t" << resultSnps[i]->Getoriginal()<< "\t" << resultSnps[i]->Getbeta() << "\t" <<  resultSnps[i]->GetheritabilityChi() << "\t" << resultSnps[i]->GetFlag(0) << std::endl;
+                //delete resultSnps[i]; //Avoid double deletion
             }
             resultSnps.clear();
         }

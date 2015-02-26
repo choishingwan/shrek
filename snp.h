@@ -30,7 +30,9 @@ class Snp
         double Getoriginal() const;
         double Getbeta() const;
         double Getheritability() const;
+        double GetheritabilityChi() const;
         double Geteffective() const;
+        double Getvariance() const;
         bool Concordant(std::string chr, size_t bp, std::string rsId) const;
         bool GetFlag(size_t index) const;
         void Setheritability(double heritability);
@@ -48,10 +50,13 @@ class Snp
         double m_original;
         double m_oriBeta;
         double m_effectiveNumber;
+        double m_variance;
         std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD
         std::shared_ptr<double> m_heritability; //The master heritability
         std::vector<bool> m_regionFlag;
+        void computeVarianceExplainedChi(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue);
         void computeVarianceExplained(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue);
+        void computeVarianceExplainedChi(bool isPvalue);
         void computeVarianceExplained(bool isPvalue);
 
 

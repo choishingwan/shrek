@@ -18,7 +18,7 @@ void DecompositionThread::solve(){
     size_t processLength = m_length;
     if(m_lastOfBlock) processLength=betaLength-m_start;
 	Eigen::VectorXd effective = Eigen::VectorXd::Constant(processLength, 1.0);
-	Eigen::VectorXd result = m_linkage->solve(m_start, processLength, m_betaEstimate, &effective); //DEBUG
+	Eigen::VectorXd result = m_linkage->solveChi(m_start, processLength, m_betaEstimate, &effective); //DEBUG
 	//Eigen::VectorXd result = m_linkage->quickSolve(m_start, processLength, m_betaEstimate, &effective);
 	size_t copyStart = m_length/3;
 	size_t copyEnd = m_length/3;
