@@ -1,5 +1,6 @@
 #include "linkage.h"
 
+std::mutex Linkage::mtx; //DEBUG
 
 Linkage::Linkage(size_t thread, std::vector<Snp*> *snpList, std::deque<size_t> *snpLoc):m_thread(thread), m_snpList(snpList), m_snpLoc(snpLoc){}
 
@@ -293,15 +294,18 @@ void Linkage::print(){ //DEBUG
 }
 
 
-
-Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective){
+Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *variance){
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
+    //*NumTraits<Scalar>::epsilon();
+    //double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().abs().maxCoeff();
     double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().abs().maxCoeff();
-    Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array().abs() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
+    //Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array().abs() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
+    Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
     Eigen::VectorXd result= rInverse*(*betaEstimate).segment(start, length);
-    double relative_error = 0.0;
+    Eigen::VectorXd ones = Eigen::VectorXd::Constant(length, 1.0);
 	Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);
-    relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
+	double bNorm = (*betaEstimate).segment(start, length).norm();
+    double relative_error = error.norm() / bNorm;
 
     double prev_error = relative_error+1;
     Eigen::VectorXd update = result;
@@ -310,24 +314,37 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd *
         update=rInverse*(-error);
         relative_error = 0.0;
         error= m_linkage.block(start, start, length, length)*(result+update) - (*betaEstimate).segment(start, length);
-        relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
-        if(relative_error < 1e-300) relative_error = 0;
+        relative_error = error.norm() / bNorm;
+        //if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
-    Eigen::VectorXd ones = Eigen::VectorXd::Constant(length, 1.0);
-    (*effective)=rInverse*ones;
-    error =m_linkage.block(start, start, length, length)*(*effective) - ones;
-    relative_error = error.norm()/ones.norm();
+
+    mtx.lock();
+    std::cerr << es.eigenvalues().maxCoeff() << "\t" << es.eigenvalues().minCoeff() << std::endl;
+    if(result.maxCoeff() > 16.0 || result.minCoeff() < -15){
+            std::cout <<m_linkage.block(start, start, length, length) << std::endl;
+            std::ofstream debug;
+            debug.open("DEBUG");
+            debug <<(*betaEstimate).segment(start, length) << std::endl;
+            debug.close();
+        exit(-1);
+    }
+    mtx.unlock();
+    Eigen::VectorXd varRes = rInverse*(*variance);
+    error =m_linkage.block(start, start, length, length)*varRes - (*variance);
+    double vNorm = (*variance).norm();
+    relative_error = error.norm()/vNorm;
     prev_error = relative_error+1;
     while(relative_error < prev_error){
         prev_error = relative_error;
         update=rInverse*(-error);
         relative_error = 0.0;
-        error= m_linkage.block(start, start, length, length)*((*effective)+update) - ones;
-        relative_error = error.norm() / ones.norm();
+        error= m_linkage.block(start, start, length, length)*(varRes+update) - (*variance);
+        relative_error = error.norm() /vNorm;
         if(relative_error < 1e-300) relative_error = 0;
-        (*effective) = (*effective)+update;
+        varRes = varRes+update;
     }
+    (*variance) = varRes;
     return result;
 }
 

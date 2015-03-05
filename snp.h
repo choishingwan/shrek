@@ -16,7 +16,6 @@ class Snp
 {
 	public:
 		Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double original, double beta);
-        Snp(std::string chr, std::string rs, size_t bp, double original, double beta, double heritability, bool ldFlag);
 		static void generateSnpList(std::vector<Snp*> &snpList, const std::string &pvalueFile, const size_t index, const size_t sampleSize, const size_t rsIndex, const size_t bpIndex, const size_t chrIndex, const size_t sampleIndex, bool sampleSizeProvided);
 		static void generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, std::vector<std::vector<Region*> > &regionList, bool isPvalue);
 		static void generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const size_t &caseSize, const size_t &controlSize, const double &prevalence, std::vector<std::vector<Region*> > &regionList, bool isPvalue);
@@ -31,14 +30,15 @@ class Snp
         double Getbeta() const;
         double Getheritability() const;
         double GetheritabilityChi() const;
-        double Geteffective() const;
+        //double Geteffective() const;
         double Getvariance() const;
         bool Concordant(std::string chr, size_t bp, std::string rsId) const;
         bool GetFlag(size_t index) const;
         void Setheritability(double heritability);
         void setFlag(size_t index, bool value);
         void shareHeritability( Snp* i );
-        void Seteffective(double i );
+        //void Seteffective(double i );
+        void Setvariance(double i );
         static void cleanSnp(std::vector<Snp*> &snpList);
         static bool sortSnp (Snp* i, Snp* j);
 	protected:

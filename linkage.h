@@ -17,7 +17,6 @@ class LinkageThread;
 #include "processcode.h"
 #include "snp.h"
 
-
 class Linkage
 {
 	public:
@@ -30,14 +29,14 @@ class Linkage
 		size_t cols() const;
 		Eigen::MatrixXd block(size_t blockStart, size_t lengthOfBlock);
 		Eigen::VectorXd solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective);
-		//Eigen::VectorXd solveChi(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective);
-		Eigen::VectorXd solveChi(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective);
+		Eigen::VectorXd solveChi(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *variance);
 		double Geteffective() const;
         size_t Remove();
         void Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc);
 		void print();
 	protected:
 	private:
+		static std::mutex mtx;
         Eigen::MatrixXd m_linkage;
         size_t m_thread;
         std::vector<size_t> m_perfectLd; //Store the remove index of on matrix level

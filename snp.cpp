@@ -6,12 +6,6 @@ Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double o
 	m_variance = 0.0;
 	m_effectiveNumber=0.0;
 }
-Snp::Snp(std::string chr, std::string rs, size_t bp, double original, double beta, double heritability, bool ldFlag):m_chr(chr), m_rs(rs), m_bp(bp),m_original(original){
-    m_beta = std::make_shared<double>(beta);
-	m_heritability = std::make_shared<double>(heritability);
-	m_variance = std::make_shared<double>(heritability);
-	m_regionFlag.push_back(ldFlag);
-}
 
 std::string Snp::Getchr() const { return m_chr; }
 std::string Snp::GetrsId() const { return m_rs; }
@@ -19,7 +13,7 @@ size_t Snp::Getbp() const { return m_bp; }
 double Snp::GetsampleSize() const { return m_sampleSize; }
 size_t Snp::GetregionSize() const {return m_regionFlag.size(); }
 double Snp::Getoriginal() const { return m_original; }
-double Snp::Geteffective() const { return m_effectiveNumber; }
+//double Snp::Geteffective() const { return m_effectiveNumber; }
 double Snp::Getbeta() const {
 	return (*m_beta)/(double)(m_beta.use_count());
 }
@@ -27,7 +21,8 @@ double Snp::Getvariance() const{
 	return (2.0+4.0*m_sampleSize*((*m_beta)/(double)(m_beta.use_count())))/(double)(m_sampleSize*m_sampleSize);
 }
 void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability;}
-void Snp::Seteffective(double i) { m_effectiveNumber = i; }
+//void Snp::Seteffective(double i) { m_effectiveNumber = i; }
+void Snp::Setvariance(double i) { m_variance = i; }
 double Snp::GetheritabilityChi() const { return (*m_heritability)/(double)(m_beta.use_count()); }
 double Snp::Getheritability() const {
 	double heritability = (*m_heritability)/(double)(m_beta.use_count());
@@ -35,6 +30,7 @@ double Snp::Getheritability() const {
     //std::cout << m_rs << "\tSample size: " << m_sampleSize << std::endl;
 	return heritability;
 }
+
 
 void Snp::shareHeritability( Snp* i ){
 	if(i->m_beta == m_beta){
