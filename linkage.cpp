@@ -294,7 +294,7 @@ void Linkage::print(){ //DEBUG
 }
 
 
-Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *variance){
+Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd *variance){
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     //*NumTraits<Scalar>::epsilon();
     //double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().abs().maxCoeff();
@@ -312,6 +312,7 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd *
     while(relative_error < prev_error){
         prev_error = relative_error;
         update=rInverse*(-error);
+        update=rInverse*(-error);
         relative_error = 0.0;
         error= m_linkage.block(start, start, length, length)*(result+update) - (*betaEstimate).segment(start, length);
         relative_error = error.norm() / bNorm;
@@ -319,17 +320,6 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd *
         result = result+update;
     }
 
-    mtx.lock();
-    std::cerr << es.eigenvalues().maxCoeff() << "\t" << es.eigenvalues().minCoeff() << std::endl;
-    if(result.maxCoeff() > 16.0 || result.minCoeff() < -15){
-            std::cout <<m_linkage.block(start, start, length, length) << std::endl;
-            std::ofstream debug;
-            debug.open("DEBUG");
-            debug <<(*betaEstimate).segment(start, length) << std::endl;
-            debug.close();
-        exit(-1);
-    }
-    mtx.unlock();
     Eigen::VectorXd varRes = rInverse*(*variance);
     error =m_linkage.block(start, start, length, length)*varRes - (*variance);
     double vNorm = (*variance).norm();
@@ -386,3 +376,4 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *bet
     }
     return result;
 }
+
