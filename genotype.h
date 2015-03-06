@@ -22,6 +22,7 @@ class Genotype
 	private:
         unsigned long long *m_genotypeA;
         unsigned long long *m_genotypeB;
+        unsigned long long *m_missing;
         static size_t m_sampleNum;
         unsigned int m_bitSize;
         unsigned int m_requiredBit;

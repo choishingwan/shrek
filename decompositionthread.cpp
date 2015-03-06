@@ -14,7 +14,6 @@ void *DecompositionThread::ThreadProcesser(void *in){
 }
 
 void DecompositionThread::solve(){
-	std::cerr << "Multithread" << std::endl;
     size_t betaLength = (*m_betaEstimate).rows();
     size_t processLength = m_length;
     if(m_lastOfBlock) processLength=betaLength-m_start;
@@ -30,10 +29,6 @@ void DecompositionThread::solve(){
 	}
 	if(m_lastOfBlock) copyEnd = processLength-copyStart;
     for(size_t i = copyStart; i < copyStart+copyEnd; ++i){
-			if( (*m_snpList)[(*m_snpLoc)[m_start+i]]->GetrsId().compare("rs3747267")==0){
-                std::cout << result << std::endl;
-			}
-
 		(*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability(result(i));
 		(*m_snpList)[(*m_snpLoc)[m_start+i]]->Setvariance(varRes(i));
 	}

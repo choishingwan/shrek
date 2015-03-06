@@ -364,7 +364,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 				if (snp){
 					int first = b[c++];
 					int second = b[c++];
-					if(first == 1 && second == 0) first = 0; //We consider the missing value to be reference
+					if(first == 1 && second == 0) first = 3; //We consider the missing value to 3
 					genotype.back()->AddsampleGenotype(first+second, indx-1); //0 1 or 2
 					alleleCount += first+second;
 					double value = first+second+0.0;

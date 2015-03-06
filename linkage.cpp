@@ -302,8 +302,7 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
     //Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array().abs() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
     Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
     Eigen::VectorXd result= rInverse*(*betaEstimate).segment(start, length);
-    Eigen::VectorXd ones = Eigen::VectorXd::Constant(length, 1.0);
-	Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);
+    Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);
 	double bNorm = (*betaEstimate).segment(start, length).norm();
     double relative_error = error.norm() / bNorm;
 
@@ -311,7 +310,6 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
     Eigen::VectorXd update = result;
     while(relative_error < prev_error){
         prev_error = relative_error;
-        update=rInverse*(-error);
         update=rInverse*(-error);
         relative_error = 0.0;
         error= m_linkage.block(start, start, length, length)*(result+update) - (*betaEstimate).segment(start, length);
@@ -331,7 +329,7 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
         relative_error = 0.0;
         error= m_linkage.block(start, start, length, length)*(varRes+update) - (*variance);
         relative_error = error.norm() /vNorm;
-        if(relative_error < 1e-300) relative_error = 0;
+        //if(relative_error < 1e-300) relative_error = 0;
         varRes = varRes+update;
     }
     (*variance) = varRes;
