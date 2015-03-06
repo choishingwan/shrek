@@ -21,21 +21,25 @@ Genotype::~Genotype(){
 double Genotype::Getr(Genotype* snpB, bool correction){
 	size_t range = (m_requiredBit /(8*m_bitSize))+1;
     double r = 0.0;
-    size_t numSampleInBlock = 2*m_bitSize;
+    //size_t numSampleInBlock = 2*m_bitSize;
     size_t i = 0;
-	for(; i < range-1;){
-		r += (__builtin_popcountll(m_genotypeA[i] & snpB->m_genotypeB[i] )- numSampleInBlock*m_mean*snpB->m_mean)/(m_standardDeviation *snpB->m_standardDeviation);
+	for(; i < range;){
+		size_t numSampleInBlock = __builtin_popcountll(m_missing[i] & snpB->m_missing[i]);
+		if(numSampleInBlock != 0){
+			rSquare += (__builtin_popcountll(m_genotypeA[i] & snpB->m_genotypeB[i] )- numSampleInBlock*m_mean*snpB->m_mean)/(m_standardDeviation *snpB->m_standardDeviation);
+		}
 		i++;
 	}
+	/*
 	size_t remainSample = (Genotype::m_sampleNum)%(2*m_bitSize);
 	if(remainSample > 0){
 		r += (__builtin_popcountll(m_genotypeA[i] & snpB->m_genotypeB[i] )- remainSample*m_mean*snpB->m_mean)/(m_standardDeviation *snpB->m_standardDeviation);
     }
+    */
     r *= 1.0/(m_sampleNum-1.0);
 	if(correction){
         return r*(1+(1-r*r)/(2*(m_sampleNum-4))); //POPA
 	}
-
     return r;
 }
 
@@ -46,7 +50,9 @@ double Genotype::GetrSq(Genotype* snpB, bool correction){
     size_t i = 0;
 	for(; i < range;){
 		size_t numSampleInBlock = __builtin_popcountll(m_missing[i] & snpB->m_missing[i]);
-		rSquare += (__builtin_popcountll(m_genotypeA[i] & snpB->m_genotypeB[i] )- numSampleInBlock*m_mean*snpB->m_mean)/(m_standardDeviation *snpB->m_standardDeviation);
+		if(numSampleInBlock != 0){
+			rSquare += (__builtin_popcountll(m_genotypeA[i] & snpB->m_genotypeB[i] )- numSampleInBlock*m_mean*snpB->m_mean)/(m_standardDeviation *snpB->m_standardDeviation);
+		}
 		i++;
 	}
 	/* Now the missing array should help to account for this situation

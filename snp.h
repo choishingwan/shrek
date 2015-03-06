@@ -32,6 +32,7 @@ class Snp
         double GetheritabilityChi() const;
         //double Geteffective() const;
         double Getvariance() const;
+        double GetvarianceRes() const;
         bool Concordant(std::string chr, size_t bp, std::string rsId) const;
         bool GetFlag(size_t index) const;
         void Setheritability(double heritability);

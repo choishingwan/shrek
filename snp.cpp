@@ -21,6 +21,10 @@ double Snp::Getbeta() const {
 double Snp::Getvariance() const{
 	return (2.0+4.0*m_sampleSize*((*m_beta)/(double)(m_beta.use_count())))/(double)(m_sampleSize*m_sampleSize);
 }
+double Snp::GetvarianceRes() const{
+	return m_variance;
+}
+
 void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability;}
 //void Snp::Seteffective(double i) { m_effectiveNumber = i; }
 void Snp::Setvariance(double i) { m_variance = i; }

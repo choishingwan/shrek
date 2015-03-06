@@ -109,7 +109,7 @@ void SnpEstimation::Getresult(std::string outputPrefix){
         double num = (*m_snpList)[index]->GetheritabilityChi();
         totalSum+= num;
         //m_effective +=(*m_snpList)[index]->Geteffective();
-        variance +=(*m_snpList)[index]->Getvariance();
+        variance +=(*m_snpList)[index]->GetvarianceRes();
         if((*m_snpList)[index]->GetFlag(0)){
 			nSnp++;
             for(size_t j = 0; j < regionSize;++j){
