@@ -26,7 +26,7 @@ double Genotype::Getr(Genotype* snpB, bool correction){
 	for(; i < range;){
 		size_t numSampleInBlock = __builtin_popcountll(m_missing[i] & snpB->m_missing[i]);
 		if(numSampleInBlock != 0){
-			rSquare += (__builtin_popcountll(m_genotypeA[i] & snpB->m_genotypeB[i] )- numSampleInBlock*m_mean*snpB->m_mean)/(m_standardDeviation *snpB->m_standardDeviation);
+			r += (__builtin_popcountll(m_genotypeA[i] & snpB->m_genotypeB[i] )- numSampleInBlock*m_mean*snpB->m_mean)/(m_standardDeviation *snpB->m_standardDeviation);
 		}
 		i++;
 	}
