@@ -12,6 +12,7 @@ class LinkageThread;
 #include <limits>
 #include <map>
 #include <mutex> //DEBUG
+#include <complex>
 #include "configure.h"
 #include "genotype.h"
 #include "linkagethread.h"

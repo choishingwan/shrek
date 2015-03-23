@@ -293,7 +293,9 @@ void Linkage::print(){ //DEBUG
     std::cout << m_linkage << std::endl;
 }
 
-
+/**< Now try to implement the following:
+R* D R*  = Dh QE*Qt Dh
+ */
 Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd *variance){
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     //*NumTraits<Scalar>::epsilon();
@@ -303,6 +305,18 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
     Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
     Eigen::VectorXd result= rInverse*(*betaEstimate).segment(start, length);
     Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);
+
+
+    //Test Zone
+    Eigen::MatrixXd varInfo = rInverse*(*variance)*rInverse;
+    double checkVariance = 0.0;
+    for(size_t i = 0; i < length; ++i){
+        checkVariance += varInfo(i,i);
+    }
+    std::cout << "Variance? " << checkVariance << std::endl;
+    //Test Zone
+
+
 	double bNorm = (*betaEstimate).segment(start, length).norm();
     double relative_error = error.norm() / bNorm;
 
@@ -346,7 +360,6 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *bet
     double relative_error = 0.0;
 	Eigen::VectorXd error =r*result - (*betaEstimate).segment(start, length);
     relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
-
     double prev_error = relative_error+1;
     Eigen::VectorXd update = result;
     while(relative_error < prev_error){

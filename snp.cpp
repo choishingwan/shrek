@@ -227,7 +227,7 @@ void Snp::computeVarianceExplainedChi(bool isPvalue){
         if(!std::isfinite((*m_beta))) (*m_beta) = usefulTools::qnorm(((m_original+0.0)/2.0));
     }
     (*m_beta) = (*m_beta)*(*m_beta);
-	(*m_beta) = ((*m_beta)/(m_sampleSize-2.0+(*m_beta)))-1.0/(m_sampleSize-1.0);
+	(*m_beta) = ((*m_beta)/(m_sampleSize-2.0+(*m_beta)))-1.0/(m_sampleSize-2.0+(*m_beta));
 	m_oriBeta =(*m_beta);
 }
 
