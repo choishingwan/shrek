@@ -1,18 +1,70 @@
 #include "linkage.h"
 
 std::mutex Linkage::mtx; //DEBUG
-
-Linkage::Linkage(size_t thread, std::vector<Snp*> *snpList, std::deque<size_t> *snpLoc):m_thread(thread), m_snpList(snpList), m_snpLoc(snpLoc){}
+Linkage::Linkage(){
+    m_perfectLd =std::vector<size_t>();
+    m_snpLoc = nullptr;
+    m_snpList = nullptr;
+    m_thread = 1;
+}
+/*
+Linkage::Linkage(size_t thread, std::vector<Snp*> *snpList, std::deque<size_t> *snpLoc):m_thread(thread), m_snpList(snpList), m_snpLoc(snpLoc){
+    m_perfectLd=std::vector<size_t>();
+}
+*/
+void Linkage::setSnpList(std::vector<Snp*> *snpList){
+    m_snpList = snpList;
+}
+void Linkage::setSnpLoc(std::deque<size_t> *snpLoc){
+    m_snpLoc = snpLoc;
+}
+void Linkage::setThread(size_t thread){
+    m_thread = thread;
+}
 
 Linkage::~Linkage()
 {
 	//dtor
 }
+double Linkage::ExpectedR2(double rSq, size_t numSample, size_t predictor){
+    /*gsl_sf_result result;
+    int status = gsl_sf_hyperg_2F1_e(1, 1, 0.5 * (numSample + 1), rSq, &result);
+    if(status == GSL_SUCCESS) {
+        double y = result.val;
+        double value = 1.0 - ((numSample - predictor- 1.0)/(numSample - 1.0)) * (1.0 - rSq) * y;
+        (value>0) ? value=value : value=0.0;
+        (value<1) ? value=value : value=1.0;
+        return value;
+    }
+    else{
+        std::cerr << "Problem with calculating the variance of Rsq" << std::endl;
+        exit(-1);
+    }
+    */
+}
+
+double Linkage::VarianceR2(double rSq, size_t numSample, size_t predictor){
+    return 0; //Deactivate the variance of R2 at the moment to avoid problem
+    /*
+    gsl_sf_result result;
+    int status = gsl_sf_hyperg_2F1_e(2, 2, 0.5 * (numSample + 3), rSq, &result);
+    if(status == GSL_SUCCESS){
+        double y = result.val;
+        double expected =(ExpectedR2(rSq,numSample,predictor) - 1);
+        double value =(((numSample -predictor -1.0)*((double)numSample-predictor+1.0))/((double)numSample*(double)numSample-1.0)) * ((1.0 - rSq)*(1.0 - rSq)) *y-(expected*expected);
+        return value;
+    }
+    else{
+        std::cerr << "Problem with calculating the variance of Rsq" << std::endl;
+        exit(-1);
+    }
+    */
+}
 
 size_t Linkage::rows() const { return m_linkage.rows(); }
 size_t Linkage::cols() const { return m_linkage.cols(); }
 Eigen::MatrixXd Linkage::block(size_t blockStart, size_t lengthOfBlock){ return m_linkage.block(blockStart, blockStart, lengthOfBlock, lengthOfBlock); }
-
+Eigen::MatrixXd Linkage::varBlock(size_t blockStart, size_t lengthOfBlock){ return m_varLinkage.block(blockStart, blockStart, lengthOfBlock, lengthOfBlock); }
 void Linkage::triangularThread( const size_t startBlock, const size_t endBlock, bool correction, std::deque<Genotype*> &genotype){
     //Make the thread region
     std::vector<LinkageThread*> garbageCollection;
@@ -20,7 +72,7 @@ void Linkage::triangularThread( const size_t startBlock, const size_t endBlock, 
     if(maxThread >=1) maxThread = m_thread;
     else maxThread =(endBlock-startBlock)%m_thread;
     for(size_t i = 0; i < maxThread; ++i){
-        garbageCollection.push_back(new LinkageThread(correction, endBlock, &m_linkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
+        garbageCollection.push_back(new LinkageThread(correction, endBlock, &m_linkage, &m_varLinkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
     }
 
     for(size_t i = startBlock; i < endBlock; ++i){
@@ -59,7 +111,7 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
     if(m_thread > (snpEnd-snpStart)){
         //if there are more threads than items, each will do one horizontal row
         for(size_t i = snpStart; i < snpEnd; ++i){
-            garbageCollection.push_back(new LinkageThread(correction, i, i+1, start, width, &m_linkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
+            garbageCollection.push_back(new LinkageThread(correction, i, i+1, start, width, &m_linkage, &m_varLinkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
             pthread_t *thread1 = new pthread_t();
             threadList.push_back(thread1);
             int threadStatus = pthread_create( thread1, NULL, &LinkageThread::rectangularProcess, garbageCollection.back());
@@ -78,12 +130,12 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
         size_t current = snpStart;
         for(size_t i = 0; i < maxThread; ++i){
             if(remaining > 0){
-                garbageCollection.push_back(new LinkageThread(correction, current, current+step+1, start, width, &m_linkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
+                garbageCollection.push_back(new LinkageThread(correction, current, current+step+1, start, width,&m_linkage, &m_varLinkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
                 remaining--;
                 current++;
             }
             else{
-                garbageCollection.push_back(new LinkageThread(correction, current, current+step, start, width, &m_linkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
+                garbageCollection.push_back(new LinkageThread(correction, current, current+step, start, width, &m_linkage, &m_varLinkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
             }
             pthread_t *thread1 = new pthread_t();
             threadList.push_back(thread1);
@@ -120,11 +172,15 @@ ProcessCode Linkage::Initialize(std::deque<Genotype*> &genotype, const size_t &p
 	//Use previous informations
     if(prevResiduals == 0){
         m_linkage = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
+        m_varLinkage = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
     }
     else{
 		Eigen::MatrixXd temp = m_linkage.bottomRightCorner(prevResiduals,prevResiduals);
 		m_linkage= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
 		m_linkage.topLeftCorner(prevResiduals, prevResiduals) = temp;
+		temp = m_varLinkage.bottomRightCorner(prevResiduals,prevResiduals);
+		m_varLinkage= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
+		m_varLinkage.topLeftCorner(prevResiduals, prevResiduals) = temp;
     }
     return continueProcess;
 }
@@ -139,6 +195,7 @@ ProcessCode Linkage::Reinitialize(size_t &genotypeSize){
     }
     else if(genotypeSize < (unsigned) m_linkage.cols()){
         m_linkage.conservativeResize(genotypeSize, genotypeSize);
+        m_varLinkage.conservativeResize(genotypeSize, genotypeSize);
     }
     return continueProcess;
 }
@@ -165,14 +222,18 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
 
     if(stepSize == 0){
         for(size_t i = 0; i < genotype.size(); ++i){
-            m_linkage(i,i) = 1.0;
+            m_linkage(i,i) = 1.0; //When linkage is self, there is no variance
+            m_varLinkage(i,i) = Linkage::VarianceR2(1.0,genotype[i]->GetnumSample(),0);
             for(size_t j = genotype.size()-1; j > i; --j){ //invert the direction
                 if(m_linkage(i,j) == 0.0){
-                    double rSquare = genotype[i]->GetrSq(genotype[j], correction);
+                    size_t numSample =0;
+                    double rSquare = genotype[i]->GetrSq(genotype[j], correction,numSample);
                     if(i != j && std::fabs(rSquare-1.0) < G_EPSILON_DBL){
                         m_perfectLd.push_back(j);
                         (*m_snpList)[(*m_snpLoc)[j]]->shareHeritability((*m_snpList)[(*m_snpLoc)[i]]);
                     }
+                    m_varLinkage(i,j) = Linkage::VarianceR2(rSquare,numSample,1);
+                    m_varLinkage(j,i) = m_varLinkage(i,j);
                     m_linkage(i,j) = rSquare;
                     m_linkage(j,i) = rSquare;
                 }
@@ -256,12 +317,16 @@ size_t Linkage::Remove(){
                     if(requireRemove.find(j) == requireRemove.end()){
                         m_linkage(rowIndex, colIndex) = m_linkage(i, j);
                         m_linkage(colIndex,rowIndex ) = m_linkage(j, i);
+                        m_varLinkage(rowIndex, colIndex) = m_varLinkage(i, j);
+                        m_varLinkage(colIndex,rowIndex ) = m_varLinkage(j, i);
                         colIndex++;
                     }
                 }
                 for(size_t j = colIndex; j < numCol; ++j){
                     m_linkage(rowIndex, j) = 0.0;
                     m_linkage(j, rowIndex) = 0.0;
+                    m_varLinkage(rowIndex, j) = 0.0;
+                    m_varLinkage(j, rowIndex) = 0.0;
                 }
                 rowIndex++;
             }
@@ -270,6 +335,8 @@ size_t Linkage::Remove(){
             for(size_t j = i; j < numCol; ++j){
                 m_linkage(i, j)  = 0.0;
                 m_linkage(j, i) = 0.0;
+                m_varLinkage(i, j)  = 0.0;
+                m_varLinkage(j, i) = 0.0;
             }
         }
         return m_perfectLd.size();
@@ -293,10 +360,8 @@ void Linkage::print(){ //DEBUG
     std::cout << m_linkage << std::endl;
 }
 
-/**< Now try to implement the following:
-R* D R*  = Dh QE*Qt Dh
- */
-Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd *variance){
+
+Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const ncpInfo, Eigen::VectorXd *variance){
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     //*NumTraits<Scalar>::epsilon();
     //double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().abs().maxCoeff();
@@ -306,15 +371,6 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
     Eigen::VectorXd result= rInverse*(*betaEstimate).segment(start, length);
     Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);
 
-
-    //Test Zone
-    Eigen::MatrixXd varInfo = rInverse*(*variance)*rInverse;
-    double checkVariance = 0.0;
-    for(size_t i = 0; i < length; ++i){
-        checkVariance += varInfo(i,i);
-    }
-    std::cout << "Variance? " << checkVariance << std::endl;
-    //Test Zone
 
 
 	double bNorm = (*betaEstimate).segment(start, length).norm();
@@ -331,6 +387,50 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
         //if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
+
+    //Test Zone var(H)=[var(B)-HH^T var(R)] [[R_sq R_sq+var(R)]]^(-1)
+
+
+    //DRD here again
+    /*
+     Eigen::MatrixXd rQ = Eigen::MatrixXd::Zero(length, length);
+    for(size_t i = 0; i < length; ++i){
+        for(size_t j = i; j < length; ++j){
+            double num = (m_linkage.block(start, start, length, length))(i,j);
+            rQ(i,j) = num*num;
+            rQ(j,i) = rQ(i,j);
+        }
+    }
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eQ(rQ);
+    tolerance = std::numeric_limits<double>::epsilon() * length * eQ.eigenvalues().array().maxCoeff();
+    Eigen::MatrixXd rQi =  eQ.eigenvectors()*(eQ.eigenvalues().array() > tolerance).select(eQ.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * eQ.eigenvectors().transpose();
+*/
+    Eigen::VectorXcd d = Eigen::VectorXcd::Zero(length);
+    Eigen::MatrixXcd rSqrt =  Eigen::MatrixXcd::Zero(length,length);
+    for(size_t i = 0; i < length; ++i){
+        d(i) = std::sqrt((std::complex<double>)(*ncpInfo).segment(start, length)(i) );
+        rSqrt(i,i) = sqrt((std::complex<double>)m_linkage.block(start, start, length, length)(i,i));
+        for(size_t j = i+1; j < length; ++j){
+            rSqrt(i,j) =sqrt((std::complex<double>)m_linkage.block(start, start, length, length)(i,j));
+            rSqrt(j,i) = rSqrt(i,j);
+        }
+    }
+    Eigen::MatrixXd varianceResult =  ((Eigen::VectorXd::Constant(length,1.0)-(*betaEstimate).segment(start, length)).asDiagonal())*((2.0*(m_linkage.block(start, start, length, length))+(d.asDiagonal()*rSqrt*d.adjoint().asDiagonal()).real()*4.0)/(10000*10000))*((Eigen::VectorXd::Constant(length,1.0)-(*betaEstimate).segment(start, length)).asDiagonal());
+    for(size_t i = 0; i < length; ++i){
+        varianceResult(i,i) = (*variance)(i);
+    }
+    std::cout << "Variance: " << (rInverse*varianceResult*rInverse).sum() << std::endl;
+
+
+    //Test again
+
+    //(*variance) = rQi* (*variance);
+    //(*variance) = rInverse*(*variance);
+    //return result;
+
+    //Test Zone
+
+
 
     Eigen::VectorXd varRes = rInverse*(*variance);
     error =m_linkage.block(start, start, length, length)*varRes - (*variance);

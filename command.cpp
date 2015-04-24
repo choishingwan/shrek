@@ -60,6 +60,17 @@ Command::Command(int argc, char* argv[], bool &error)
     m_pValueFileName = "";
 	m_regionList="";
 	m_programmeName =argv[0];
+    m_sampleSize=0;
+	m_caseSize=0;
+	m_controlSize=0;
+	m_cIndex=7;
+    m_tIndex=7;
+    m_prevalence=1.0;
+    m_outputPrefix="";
+	m_pValueFileName="";
+    m_ldFilePrefix="";
+	m_regionList="";
+
 	static const char *optString = "t:b:B:s:a:q:c:r:x:k:m:nvuo:p:l:L:h?";
 	static const struct option longOpts[]={
 		{"thread", required_argument, NULL, 't'},

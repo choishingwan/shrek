@@ -49,7 +49,7 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpInde
             if(token.size() >= 6){
 				std::string chr = token[0];
                 std::string rs = token[1];
-                size_t bp = std::atoi(token[2].c_str());
+                size_t bp = std::atoi(token[3].c_str());
                 m_chrCount->increment(chr); //Perform the count of items in each chromosome
 				m_inputSnp++;
                 if(m_chrExists.empty()) m_chrExists.push_back(chr);

@@ -16,7 +16,6 @@ int main(int argc, char *argv[]){
 	commander->printRunSummary(std::to_string(regionList.size()));
 	std::vector<Snp*> snpList;
     SnpIndex *snpIndex = new SnpIndex();
-
 	if(commander->quantitative()){
 		Snp::generateSnpList(snpList, commander->GetpValueFileName(), commander->GettIndex(), commander->GetsampleSize(), commander->GetrsIndex(), commander->GetbpIndex(), commander->GetchrIndex(), commander->GetsampleSizeIndex(), commander->provideSampleSize());
 		Snp::generateSnpIndex(snpIndex, snpList, regionList, commander->isPvalue() );

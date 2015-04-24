@@ -11,7 +11,10 @@ void SnpEstimation::Estimate(){
     bool chromosomeEnd = false;
     size_t prevResidual;
     size_t blockSize;
-    Linkage *linkageMatrix = new Linkage(m_thread, m_snpList, &snpLoc);
+    Linkage *linkageMatrix = new Linkage();
+    linkageMatrix->setSnpList(m_snpList);
+    linkageMatrix->setSnpLoc(&snpLoc);
+    linkageMatrix->setThread(m_thread);
     Decomposition *decompositionHandler = new Decomposition( m_snpIndex, m_snpList, linkageMatrix, m_thread);
     size_t numProcessed = 0;
     size_t totalNum = m_genotypeFileHandler->GetestimateSnpTotal();

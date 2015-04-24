@@ -13,6 +13,8 @@ class LinkageThread;
 #include <map>
 #include <mutex> //DEBUG
 #include <complex>
+#include <gsl/gsl_sf_hyperg.h> //debug
+#include <gsl/gsl_errno.h> //debug
 #include "configure.h"
 #include "genotype.h"
 #include "linkagethread.h"
@@ -22,7 +24,8 @@ class LinkageThread;
 class Linkage
 {
 	public:
-		Linkage(size_t thread, std::vector<Snp*> *snpList, std::deque<size_t> *snpLoc);
+		Linkage();
+		//Linkage(size_t thread, std::vector<Snp*> *snpList, std::deque<size_t> *snpLoc);
 		virtual ~Linkage();
 		ProcessCode Construct(std::deque<Genotype*> &genotype, const size_t &prevResidual, const size_t &blockSize, bool correction);
 		ProcessCode Initialize(std::deque<Genotype*> &genotype, const size_t &prevResiduals, const size_t &blockSize);
@@ -30,17 +33,23 @@ class Linkage
 		size_t rows() const;
 		size_t cols() const;
 		Eigen::MatrixXd block(size_t blockStart, size_t lengthOfBlock);
+		Eigen::MatrixXd varBlock(size_t blockStart, size_t lengthOfBlock);
 		Eigen::VectorXd solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective);
-		Eigen::VectorXd solveChi(size_t start, size_t length, Eigen::VectorXd const* const betaEstimate, Eigen::VectorXd *variance);
-
+		Eigen::VectorXd solveChi(size_t start, size_t length, Eigen::VectorXd const* const betaEstimate, Eigen::VectorXd const *const ncpInfo, Eigen::VectorXd *variance);
 		double Geteffective() const;
+		static double VarianceR2(double rSq, size_t numSample, size_t predictor);
+		static double ExpectedR2(double rSq, size_t numSample, size_t predictor);
         size_t Remove();
         void Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc);
+        void setSnpLoc(std::deque<size_t> *snpLoc);
+        void setSnpList(std::vector<Snp* > *snpList);
+        void setThread(size_t thread);
 		void print();
 	protected:
 	private:
 		static std::mutex mtx;
         Eigen::MatrixXd m_linkage;
+        Eigen::MatrixXd m_varLinkage;
         size_t m_thread;
         std::vector<size_t> m_perfectLd; //Store the remove index of on matrix level
         std::vector<Snp*> *m_snpList;

@@ -3,6 +3,7 @@
 size_t Genotype::m_sampleNum;
 
 Genotype::Genotype(){
+	m_numSample =0;
 	m_bitSize = sizeof(unsigned long long);
 	m_requiredBit = Genotype::m_sampleNum*4;
 	m_genotypeA = new unsigned long long [(m_requiredBit /(8*m_bitSize))+1];
@@ -16,8 +17,9 @@ Genotype::Genotype(){
 Genotype::~Genotype(){
     delete [] m_genotypeA;
     delete [] m_genotypeB;
+    delete [] m_missing;
 }
-
+size_t Genotype::GetnumSample() const { return m_numSample; }
 double Genotype::Getr(Genotype* snpB, bool correction){
 	size_t range = (m_requiredBit /(8*m_bitSize))+1;
     double r = 0.0;
@@ -43,13 +45,15 @@ double Genotype::Getr(Genotype* snpB, bool correction){
     return r;
 }
 
-double Genotype::GetrSq(Genotype* snpB, bool correction){
+double Genotype::GetrSq(Genotype* snpB, bool correction, size_t &numSample){
 	size_t range = (m_requiredBit /(8*m_bitSize))+1;
     double rSquare = 0.0;
+    numSample = 0;
     //size_t numSampleInBlock = 2*m_bitSize;
     size_t i = 0;
 	for(; i < range;){
 		size_t numSampleInBlock = __builtin_popcountll(m_missing[i] & snpB->m_missing[i]);
+		numSample += numSampleInBlock;
 		if(numSampleInBlock != 0){
 			rSquare += (__builtin_popcountll(m_genotypeA[i] & snpB->m_genotypeB[i] )- numSampleInBlock*m_mean*snpB->m_mean)/(m_standardDeviation *snpB->m_standardDeviation);
 		}
@@ -87,16 +91,19 @@ void Genotype::AddsampleGenotype(int genotype, size_t sampleIndex){
     switch(genotype){
 	case 0:
 		m_missing[(sampleIndex*4)/(8*m_bitSize)] = m_missing[(sampleIndex*4)/(8*m_bitSize)]  | 0x1ull << ((sampleIndex*4)% (8*m_bitSize));
+		m_numSample++;
 		break;
 	case 1:
 		m_genotypeA[(sampleIndex*4)/(8*m_bitSize)] = m_genotypeA[(sampleIndex*4)/(8*m_bitSize)]  | 0x5ull  << ((sampleIndex*4)% (8*m_bitSize));
 		m_genotypeB[(sampleIndex*4)/(8*m_bitSize)] = m_genotypeB[(sampleIndex*4)/(8*m_bitSize)]  | 0x3ull << ((sampleIndex*4)% (8*m_bitSize));
 		m_missing[(sampleIndex*4)/(8*m_bitSize)] = m_missing[(sampleIndex*4)/(8*m_bitSize)]  | 0x1ull << ((sampleIndex*4)% (8*m_bitSize));
+		m_numSample++;
 		break;
 	case 2:
 		m_genotypeA[(sampleIndex*4)/(8*m_bitSize)]= m_genotypeA[(sampleIndex*4)/(8*m_bitSize)]  | 0xfull << ((sampleIndex*4)% (8*m_bitSize));
 		m_genotypeB[(sampleIndex*4)/(8*m_bitSize)]= m_genotypeB[(sampleIndex*4)/(8*m_bitSize)]  | 0xfull << ((sampleIndex*4)% (8*m_bitSize));
 		m_missing[(sampleIndex*4)/(8*m_bitSize)] = m_missing[(sampleIndex*4)/(8*m_bitSize)]  | 0x1ull << ((sampleIndex*4)% (8*m_bitSize));
+		m_numSample++;
         break;
 	case 3: //missing
         break;

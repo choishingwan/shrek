@@ -2,6 +2,7 @@
 
 Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double original, double beta):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original), m_oriBeta(beta){
 	m_beta = std::make_shared<double>(beta);
+	m_ncp = std::make_shared<double>(0.0);
 	m_heritability = std::make_shared<double>(0.0);
 	m_variance = 0.0;
 	m_effectiveNumber=0.0;
@@ -18,8 +19,12 @@ double Snp::Getoriginal() const { return m_original; }
 double Snp::Getbeta() const {
 	return (*m_beta)/(double)(m_beta.use_count());
 }
+double Snp::Getncp() const{
+    return (*m_ncp)/(double)(m_ncp.use_count());
+}
 double Snp::Getvariance() const{
-	return (2.0+4.0*m_sampleSize*((*m_beta)/(double)(m_beta.use_count())))/(double)(m_sampleSize*m_sampleSize);
+	//return (2.0+4.0*m_sampleSize*((*m_beta)/(double)(m_beta.use_count())))/(double)(m_sampleSize*m_sampleSize); //DEBUG
+	return m_variance;
 }
 double Snp::GetvarianceRes() const{
 	return m_variance;
@@ -42,16 +47,19 @@ void Snp::shareHeritability( Snp* i ){
 		return;
 	}
 	(*i->m_beta) += (*m_beta); //Add up the beta to get an average
+	(*i->m_ncp) += (*m_ncp);
 	(*i->m_heritability) += (*m_heritability);
 	//i is the one who buy
 	//this is the one who sell
     //For this's family, all of them should point to the same location
 	m_beta = (i->m_beta); //They now share the same beta
+	m_ncp = (i->m_ncp);
 	m_heritability = (i->m_heritability);
 	Snp* currentClass = m_targetClass;
 	Snp* prevClass = this;
 	while(currentClass != this){
 		currentClass->m_beta = i->m_beta; //The subsequent stuff are also pointing here
+		currentClass->m_ncp = i->m_ncp;
 		currentClass->m_heritability = i->m_heritability;
         prevClass = currentClass;
         currentClass = currentClass->m_targetClass;
@@ -60,15 +68,6 @@ void Snp::shareHeritability( Snp* i ){
 	//Now prevClass is the last person in chain
     prevClass->m_targetClass = i->m_targetClass;
     i->m_targetClass = this;
-    /*
-    if((*i->m_heritability) != 0.0){
-        (*m_heritability) = (*i->m_heritability); //Share the same heritability
-    }
-    else{
-        (*i->m_heritability) = (*m_heritability);
-    }
-    m_heritability = (i->m_heritability);
-    */
 }
 
 
@@ -119,6 +118,10 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const std::string &pvalueF
     std::sort(snpList.begin(), snpList.end(), Snp::sortSnp);
     snpList.erase( unique( snpList.begin(), snpList.end() ), snpList.end() );
     std::cerr << "There are a total of " << snpList.size() << " Snps in the input" << std::endl;
+    if(snpList.size() ==0){
+		std::cerr << "Programme terminated as there are no snp provided" << std::endl;
+		exit(-1);
+    }
 }
 
 bool Snp::sortSnp (Snp* i, Snp* j){
@@ -227,6 +230,11 @@ void Snp::computeVarianceExplainedChi(bool isPvalue){
         if(!std::isfinite((*m_beta))) (*m_beta) = usefulTools::qnorm(((m_original+0.0)/2.0));
     }
     (*m_beta) = (*m_beta)*(*m_beta);
+    //Calculate the variance
+	double f_stat = 2.0*(double)m_sampleSize*(double)m_sampleSize*(((*m_beta)*(*m_beta)+(2.0*(*m_beta)-1.0)*(m_sampleSize-2.0))/((m_sampleSize-2.0)*(m_sampleSize-2.0)*(m_sampleSize-4.0)));
+	double bot = m_sampleSize-2.0+(*m_beta);
+	m_variance = ((m_sampleSize-1.0)*(m_sampleSize-1.0)/(bot*bot*bot*bot))*f_stat;
+	(*m_ncp) = (*m_beta)-1.0;
 	(*m_beta) = ((*m_beta)/(m_sampleSize-2.0+(*m_beta)))-1.0/(m_sampleSize-2.0+(*m_beta));
 	m_oriBeta =(*m_beta);
 }
