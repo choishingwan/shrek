@@ -7,13 +7,15 @@ Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double o
 	m_variance = 0.0;
 	m_effectiveNumber=0.0;
 	m_targetClass = this;
+	m_sign = 1;
 }
 
 std::string Snp::Getchr() const { return m_chr; }
 std::string Snp::GetrsId() const { return m_rs; }
 size_t Snp::Getbp() const { return m_bp; }
-double Snp::GetsampleSize() const { return m_sampleSize; }
 size_t Snp::GetregionSize() const {return m_regionFlag.size(); }
+int Snp::Getsign() const { return m_sign; }
+double Snp::GetsampleSize() const { return m_sampleSize; }
 double Snp::Getoriginal() const { return m_original; }
 //double Snp::Geteffective() const { return m_effectiveNumber; }
 double Snp::Getbeta() const {
@@ -133,13 +135,13 @@ bool Snp::sortSnp (Snp* i, Snp* j){
 	else return (i->Getchr().compare(j->Getchr()) < 0);
 }
 
-void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, std::vector<std::vector<Region*> > &regionList, bool isPvalue){
+void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, std::vector<std::vector<Region*> > &regionList, bool isPvalue, double extremeRatio){
 	std::vector<size_t> regionIncrementationIndex(regionList.size(), 0);
 	size_t duplicate = 0;
 	for(size_t i = 0; i < snpList.size(); ++i){
         if(!snpIndex->find(snpList[i]->GetrsId())){
             snpIndex->set(snpList[i]->GetrsId(), i);
-            snpList[i]->computeVarianceExplainedChi(isPvalue);
+            snpList[i]->computeVarianceExplainedChi(isPvalue, extremeRatio);
             snpList[i]->m_regionFlag.push_back(false);
 
             if(regionList.size() != 0){
@@ -224,7 +226,7 @@ void Snp::computeVarianceExplained(const size_t &caseSize, const size_t &control
 
 }
 
-void Snp::computeVarianceExplainedChi(bool isPvalue){
+void Snp::computeVarianceExplainedChi(bool isPvalue, double extremeRatio){
     if(isPvalue){
         (*m_beta) = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
         if(!std::isfinite((*m_beta))) (*m_beta) = usefulTools::qnorm(((m_original+0.0)/2.0));
@@ -235,7 +237,7 @@ void Snp::computeVarianceExplainedChi(bool isPvalue){
 	double bot = m_sampleSize-2.0+(*m_beta);
 	m_variance = ((m_sampleSize-1.0)*(m_sampleSize-1.0)/(bot*bot*bot*bot))*f_stat;
 	(*m_ncp) = (*m_beta)-1.0;
-	(*m_beta) = ((*m_beta)/(m_sampleSize-2.0+(*m_beta)))-1.0/(m_sampleSize-2.0+(*m_beta));
+	(*m_beta) = ((*m_beta)/(m_sampleSize-2.0+(*m_beta)))-1.0/(extremeRatio*m_sampleSize-2.0+(*m_beta));
 	m_oriBeta =(*m_beta);
 }
 
@@ -274,3 +276,29 @@ void Snp::cleanSnp(std::vector<Snp*> &snpList){
 bool Snp::Concordant(std::string chr, size_t bp, std::string rsId) const{
     return chr.compare(m_chr) ==0 && bp==m_bp && rsId.compare(m_rs) == 0;
 }
+
+void Snp::setSnpEffectDirection(SnpIndex *snpIndex, std::vector<Snp*> &snpList, std::string directionFile){
+    std::ifstream direction;
+    direction.open(directionFile.c_str());
+    if(!direction.is_open()){
+		std::cerr << "Direction file: " << directionFile << " cannot be opened" << std::endl;
+		exit(-1);
+    }
+    std::string line;
+    while(std::getline(direction, line)){
+		line = usefulTools::trim(line);
+        std::vector<std::string> token;
+        usefulTools::tokenizer(line, "\t ", &token);
+        if(!line.empty() && token.size()> 1){
+            if(snpIndex->find(token[0])){
+                snpList[snpIndex->value(token[0])]->m_sign = usefulTools::signum(atof(token[1].c_str()));
+            }
+        }
+    }
+    direction.close();
+}
+
+
+
+
+

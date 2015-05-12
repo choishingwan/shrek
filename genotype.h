@@ -12,7 +12,7 @@ class Genotype
 		Genotype();
 		virtual ~Genotype();
         double Getr(Genotype* snpB, bool correction);
-        double GetrSq(Genotype* snpB, bool correction, size_t &numSample);
+        double GetrSq(Genotype* snpB, bool correction);
         size_t GetnumSample() const;
         static void SetsampleNum(size_t sampleNum);
         void Setmean(double mean);

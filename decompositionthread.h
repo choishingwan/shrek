@@ -14,7 +14,7 @@
 class DecompositionThread
 {
 	public:
-		DecompositionThread(size_t start, size_t length, Eigen::VectorXd const * const betaEstimate, Eigen::VectorXd const * const ncpInfo,Eigen::VectorXd *variance, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, bool lastOfBlock);
+		DecompositionThread(size_t start, size_t length, Eigen::VectorXd const * const betaEstimate, Eigen::VectorXd const * const ncpInfo,Eigen::VectorXd const * const sign,Eigen::VectorXd *variance, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, bool lastOfBlock);
 		virtual ~DecompositionThread();
 		static void *ThreadProcesser(void *in);
 		void solve();
@@ -24,6 +24,7 @@ class DecompositionThread
 		size_t m_length;
 		Eigen::VectorXd const * const m_betaEstimate;
 		Eigen::VectorXd const * const m_ncpInfo;
+		Eigen::VectorXd const * const m_sign;
 		Eigen::VectorXd *m_variance;
 		Linkage *m_linkage;
 		std::deque<size_t> const *m_snpLoc;

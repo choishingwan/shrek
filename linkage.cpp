@@ -26,7 +26,9 @@ Linkage::~Linkage()
 {
 	//dtor
 }
+
 double Linkage::ExpectedR2(double rSq, size_t numSample, size_t predictor){
+    return 0;
     /*gsl_sf_result result;
     int status = gsl_sf_hyperg_2F1_e(1, 1, 0.5 * (numSample + 1), rSq, &result);
     if(status == GSL_SUCCESS) {
@@ -65,6 +67,7 @@ size_t Linkage::rows() const { return m_linkage.rows(); }
 size_t Linkage::cols() const { return m_linkage.cols(); }
 Eigen::MatrixXd Linkage::block(size_t blockStart, size_t lengthOfBlock){ return m_linkage.block(blockStart, blockStart, lengthOfBlock, lengthOfBlock); }
 Eigen::MatrixXd Linkage::varBlock(size_t blockStart, size_t lengthOfBlock){ return m_varLinkage.block(blockStart, blockStart, lengthOfBlock, lengthOfBlock); }
+Eigen::MatrixXd Linkage::blockSqrt(size_t blockStart, size_t lengthOfBlock){ return m_linkageSqrt.block(blockStart, blockStart, lengthOfBlock, lengthOfBlock); }
 void Linkage::triangularThread( const size_t startBlock, const size_t endBlock, bool correction, std::deque<Genotype*> &genotype){
     //Make the thread region
     std::vector<LinkageThread*> garbageCollection;
@@ -72,7 +75,7 @@ void Linkage::triangularThread( const size_t startBlock, const size_t endBlock, 
     if(maxThread >=1) maxThread = m_thread;
     else maxThread =(endBlock-startBlock)%m_thread;
     for(size_t i = 0; i < maxThread; ++i){
-        garbageCollection.push_back(new LinkageThread(correction, endBlock, &m_linkage, &m_varLinkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
+        garbageCollection.push_back(new LinkageThread(correction, endBlock, &m_linkage, &m_linkageSqrt, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
     }
 
     for(size_t i = startBlock; i < endBlock; ++i){
@@ -111,7 +114,7 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
     if(m_thread > (snpEnd-snpStart)){
         //if there are more threads than items, each will do one horizontal row
         for(size_t i = snpStart; i < snpEnd; ++i){
-            garbageCollection.push_back(new LinkageThread(correction, i, i+1, start, width, &m_linkage, &m_varLinkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
+            garbageCollection.push_back(new LinkageThread(correction, i, i+1, start, width, &m_linkage, &m_linkageSqrt, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
             pthread_t *thread1 = new pthread_t();
             threadList.push_back(thread1);
             int threadStatus = pthread_create( thread1, NULL, &LinkageThread::rectangularProcess, garbageCollection.back());
@@ -130,12 +133,12 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
         size_t current = snpStart;
         for(size_t i = 0; i < maxThread; ++i){
             if(remaining > 0){
-                garbageCollection.push_back(new LinkageThread(correction, current, current+step+1, start, width,&m_linkage, &m_varLinkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
+                garbageCollection.push_back(new LinkageThread(correction, current, current+step+1, start, width,&m_linkage, &m_linkageSqrt, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
                 remaining--;
                 current++;
             }
             else{
-                garbageCollection.push_back(new LinkageThread(correction, current, current+step, start, width, &m_linkage, &m_varLinkage, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
+                garbageCollection.push_back(new LinkageThread(correction, current, current+step, start, width, &m_linkage, &m_linkageSqrt, &genotype, m_snpLoc, &m_perfectLd, m_snpList));
             }
             pthread_t *thread1 = new pthread_t();
             threadList.push_back(thread1);
@@ -172,15 +175,20 @@ ProcessCode Linkage::Initialize(std::deque<Genotype*> &genotype, const size_t &p
 	//Use previous informations
     if(prevResiduals == 0){
         m_linkage = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
-        m_varLinkage = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
+        m_linkageSqrt = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
+        //m_varLinkage = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
     }
     else{
 		Eigen::MatrixXd temp = m_linkage.bottomRightCorner(prevResiduals,prevResiduals);
 		m_linkage= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
 		m_linkage.topLeftCorner(prevResiduals, prevResiduals) = temp;
-		temp = m_varLinkage.bottomRightCorner(prevResiduals,prevResiduals);
-		m_varLinkage= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
-		m_varLinkage.topLeftCorner(prevResiduals, prevResiduals) = temp;
+		temp = m_linkageSqrt.bottomRightCorner(prevResiduals,prevResiduals);
+		m_linkageSqrt= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
+		m_linkageSqrt.topLeftCorner(prevResiduals, prevResiduals) = temp;
+
+		//temp = m_varLinkage.bottomRightCorner(prevResiduals,prevResiduals);
+		//m_varLinkage= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
+		//m_varLinkage.topLeftCorner(prevResiduals, prevResiduals) = temp;
     }
     return continueProcess;
 }
@@ -195,7 +203,8 @@ ProcessCode Linkage::Reinitialize(size_t &genotypeSize){
     }
     else if(genotypeSize < (unsigned) m_linkage.cols()){
         m_linkage.conservativeResize(genotypeSize, genotypeSize);
-        m_varLinkage.conservativeResize(genotypeSize, genotypeSize);
+        m_linkageSqrt.conservativeResize(genotypeSize, genotypeSize);
+        //m_varLinkage.conservativeResize(genotypeSize, genotypeSize);
     }
     return continueProcess;
 }
@@ -223,19 +232,22 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
     if(stepSize == 0){
         for(size_t i = 0; i < genotype.size(); ++i){
             m_linkage(i,i) = 1.0; //When linkage is self, there is no variance
-            m_varLinkage(i,i) = Linkage::VarianceR2(1.0,genotype[i]->GetnumSample(),0);
+            m_linkageSqrt(i,i) = 1.0;
+            //m_varLinkage(i,i) = Linkage::VarianceR2(1.0,genotype[i]->GetnumSample(),0);
             for(size_t j = genotype.size()-1; j > i; --j){ //invert the direction
                 if(m_linkage(i,j) == 0.0){
-                    size_t numSample =0;
-                    double rSquare = genotype[i]->GetrSq(genotype[j], correction,numSample);
+                    double rSquare = genotype[i]->GetrSq(genotype[j], correction);
+                    double r = genotype[i]->Getr(genotype[j], correction);
                     if(i != j && std::fabs(rSquare-1.0) < G_EPSILON_DBL){
                         m_perfectLd.push_back(j);
                         (*m_snpList)[(*m_snpLoc)[j]]->shareHeritability((*m_snpList)[(*m_snpLoc)[i]]);
                     }
-                    m_varLinkage(i,j) = Linkage::VarianceR2(rSquare,numSample,1);
-                    m_varLinkage(j,i) = m_varLinkage(i,j);
+                    //m_varLinkage(i,j) = Linkage::VarianceR2(rSquare,numSample,1);
+                    //m_varLinkage(j,i) = m_varLinkage(i,j);
                     m_linkage(i,j) = rSquare;
                     m_linkage(j,i) = rSquare;
+                    m_linkageSqrt(i,j) = r;
+                    m_linkageSqrt(j,i) = r;
                 }
                 else break; //Already calculated before
             }
@@ -317,16 +329,20 @@ size_t Linkage::Remove(){
                     if(requireRemove.find(j) == requireRemove.end()){
                         m_linkage(rowIndex, colIndex) = m_linkage(i, j);
                         m_linkage(colIndex,rowIndex ) = m_linkage(j, i);
-                        m_varLinkage(rowIndex, colIndex) = m_varLinkage(i, j);
-                        m_varLinkage(colIndex,rowIndex ) = m_varLinkage(j, i);
+                        m_linkageSqrt(rowIndex, colIndex) = m_linkageSqrt(i, j);
+                        m_linkageSqrt(colIndex,rowIndex ) = m_linkageSqrt(j, i);
+                        //m_varLinkage(rowIndex, colIndex) = m_varLinkage(i, j);
+                        //m_varLinkage(colIndex,rowIndex ) = m_varLinkage(j, i);
                         colIndex++;
                     }
                 }
                 for(size_t j = colIndex; j < numCol; ++j){
                     m_linkage(rowIndex, j) = 0.0;
                     m_linkage(j, rowIndex) = 0.0;
-                    m_varLinkage(rowIndex, j) = 0.0;
-                    m_varLinkage(j, rowIndex) = 0.0;
+                    m_linkageSqrt(rowIndex, j) = 0.0;
+                    m_linkageSqrt(j, rowIndex) = 0.0;
+                    //m_varLinkage(rowIndex, j) = 0.0;
+                    //m_varLinkage(j, rowIndex) = 0.0;
                 }
                 rowIndex++;
             }
@@ -335,8 +351,10 @@ size_t Linkage::Remove(){
             for(size_t j = i; j < numCol; ++j){
                 m_linkage(i, j)  = 0.0;
                 m_linkage(j, i) = 0.0;
-                m_varLinkage(i, j)  = 0.0;
-                m_varLinkage(j, i) = 0.0;
+                m_linkageSqrt(i, j)  = 0.0;
+                m_linkageSqrt(j, i) = 0.0;
+                //m_varLinkage(i, j)  = 0.0;
+                //m_varLinkage(j, i) = 0.0;
             }
         }
         return m_perfectLd.size();
@@ -361,7 +379,7 @@ void Linkage::print(){ //DEBUG
 }
 
 
-Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const ncpInfo, Eigen::VectorXd *variance){
+Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const ncpInfo, Eigen::VectorXd *variance, Eigen::VectorXd const *const sign){
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     //*NumTraits<Scalar>::epsilon();
     //double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().abs().maxCoeff();
@@ -388,34 +406,12 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
         result = result+update;
     }
 
-    //Test Zone var(H)=[var(B)-HH^T var(R)] [[R_sq R_sq+var(R)]]^(-1)
 
-
-    //DRD here again
-    /*
-     Eigen::MatrixXd rQ = Eigen::MatrixXd::Zero(length, length);
-    for(size_t i = 0; i < length; ++i){
-        for(size_t j = i; j < length; ++j){
-            double num = (m_linkage.block(start, start, length, length))(i,j);
-            rQ(i,j) = num*num;
-            rQ(j,i) = rQ(i,j);
-        }
-    }
-    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eQ(rQ);
-    tolerance = std::numeric_limits<double>::epsilon() * length * eQ.eigenvalues().array().maxCoeff();
-    Eigen::MatrixXd rQi =  eQ.eigenvectors()*(eQ.eigenvalues().array() > tolerance).select(eQ.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * eQ.eigenvectors().transpose();
-*/
     Eigen::VectorXcd d = Eigen::VectorXcd::Zero(length);
-    Eigen::MatrixXcd rSqrt =  Eigen::MatrixXcd::Zero(length,length);
     for(size_t i = 0; i < length; ++i){
-        d(i) = std::sqrt((std::complex<double>)(*ncpInfo).segment(start, length)(i) );
-        rSqrt(i,i) = sqrt((std::complex<double>)m_linkage.block(start, start, length, length)(i,i));
-        for(size_t j = i+1; j < length; ++j){
-            rSqrt(i,j) =sqrt((std::complex<double>)m_linkage.block(start, start, length, length)(i,j));
-            rSqrt(j,i) = rSqrt(i,j);
-        }
+        d(i) = std::sqrt((std::complex<double>)(*ncpInfo).segment(start, length)(i) )*(*sign).segment(start, length)(i);
     }
-    Eigen::MatrixXd varianceResult =  ((Eigen::VectorXd::Constant(length,1.0)-(*betaEstimate).segment(start, length)).asDiagonal())*((2.0*(m_linkage.block(start, start, length, length))+(d.asDiagonal()*rSqrt*d.adjoint().asDiagonal()).real()*4.0)/(10000*10000))*((Eigen::VectorXd::Constant(length,1.0)-(*betaEstimate).segment(start, length)).asDiagonal());
+    Eigen::MatrixXd varianceResult =  ((Eigen::VectorXd::Constant(length,1.0)-(*betaEstimate).segment(start, length)).asDiagonal())*((2.0*(m_linkage.block(start, start, length, length))+(d.asDiagonal()*m_linkageSqrt.block(start, start, length, length)*d.adjoint().asDiagonal()).real()*4.0)/(10000*10000))*((Eigen::VectorXd::Constant(length,1.0)-(*betaEstimate).segment(start, length)).asDiagonal());
     for(size_t i = 0; i < length; ++i){
         varianceResult(i,i) = (*variance)(i);
     }

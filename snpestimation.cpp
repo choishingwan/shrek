@@ -106,13 +106,14 @@ void SnpEstimation::Getresult(std::string outputPrefix){
     //m_effective=0.0;
     size_t index;
     double totalSum = 0.0;
-    double variance = 0.0;
+	double sampleSize= 0.0;
     while(m_snpIndex->valid()){
 		index = m_snpIndex->value();
         double num = (*m_snpList)[index]->GetheritabilityChi();
+        sampleSize = (*m_snpList)[index]->GetsampleSize();
         totalSum+= num;
         //m_effective +=(*m_snpList)[index]->Geteffective();
-        variance +=(*m_snpList)[index]->GetvarianceRes();
+        //variance +=(*m_snpList)[index]->GetvarianceRes();
         if((*m_snpList)[index]->GetFlag(0)){
 			nSnp++;
             for(size_t j = 0; j < regionSize;++j){
@@ -126,6 +127,8 @@ void SnpEstimation::Getresult(std::string outputPrefix){
         }
 
     }
+
+	double variance = (((1-regionEstimate[0])*(1-regionEstimate[0]))/(sampleSize*sampleSize-1))*((4*regionEstimate[0]*(sampleSize-1)*(sampleSize-1))/(sampleSize+3));
 
 	if(outputPrefix.empty()){
         std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;

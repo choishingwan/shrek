@@ -33,9 +33,10 @@ class Linkage
 		size_t rows() const;
 		size_t cols() const;
 		Eigen::MatrixXd block(size_t blockStart, size_t lengthOfBlock);
+		Eigen::MatrixXd blockSqrt(size_t blockStart, size_t lengthOfBlock);
 		Eigen::MatrixXd varBlock(size_t blockStart, size_t lengthOfBlock);
 		Eigen::VectorXd solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective);
-		Eigen::VectorXd solveChi(size_t start, size_t length, Eigen::VectorXd const* const betaEstimate, Eigen::VectorXd const *const ncpInfo, Eigen::VectorXd *variance);
+		Eigen::VectorXd solveChi(size_t start, size_t length, Eigen::VectorXd const* const betaEstimate, Eigen::VectorXd const *const ncpInfo, Eigen::VectorXd *variance,Eigen::VectorXd const *const sign);
 		double Geteffective() const;
 		static double VarianceR2(double rSq, size_t numSample, size_t predictor);
 		static double ExpectedR2(double rSq, size_t numSample, size_t predictor);
@@ -49,6 +50,7 @@ class Linkage
 	private:
 		static std::mutex mtx;
         Eigen::MatrixXd m_linkage;
+        Eigen::MatrixXd m_linkageSqrt;
         Eigen::MatrixXd m_varLinkage;
         size_t m_thread;
         std::vector<size_t> m_perfectLd; //Store the remove index of on matrix level

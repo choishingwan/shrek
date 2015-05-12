@@ -1,4 +1,4 @@
-/* 
+/*
  * File:   usefulTools.h
  * Author: Choi
  *
@@ -25,6 +25,17 @@ class usefulTools{
     static bool checkIfNumeric(const std::string seq);
 	static double dnorm(const double x);
 	static double qnorm(const double p);
+
+
+	template <typename T> inline constexpr
+	static int signum(T x, std::false_type is_signed) { return T(0) < x; }
+
+	template <typename T> inline constexpr
+	static int signum(T x, std::true_type is_signed) { return (T(0) < x) - (x < T(0)); }
+
+	template <typename T> inline constexpr
+	static int signum(T x) { return signum(x, std::is_signed<T>()); }
+
 };
 
 #endif	/* USEFULTOOLS_H */

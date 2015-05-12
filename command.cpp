@@ -14,6 +14,7 @@ size_t Command::GetrsIndex() const { return m_rsIndex; }
 size_t Command::GetsampleSizeIndex() const { return m_sampleSizeIndex; }
 double Command::Getprevalence() const { return m_prevalence; }
 double Command::Getmaf() const { return m_maf; }
+double Command::GetextremeAdjust() const { return m_extremeAdjust; }
 bool Command::ldCorrect() const { return m_ldCorrection; }
 bool Command::validate() const { return m_validate; }
 bool Command::isPvalue() const { return m_isPvalue; }
@@ -26,6 +27,7 @@ std::string Command::GetpValueFileName() const { return m_pValueFileName; }
 std::string Command::GetldFilePrefix() const { return m_ldFilePrefix; }
 std::string Command::GetregionList() const { return m_regionList; }
 std::string Command::GetprogrammeName() const { return m_programmeName; }
+std::string Command::GetdirectionFile() const { return m_directionFile; }
 
 
 
@@ -41,6 +43,7 @@ Command::Command(int argc, char* argv[], bool &error)
     int threadDefault = 1;
     bool providedPrevalence = false;
     bool providedMaf= false;
+    bool provideExtremeAdjustment = false;
     m_ldCorrection = true;
     m_validate = false;
 	m_isPvalue = false;
@@ -66,12 +69,14 @@ Command::Command(int argc, char* argv[], bool &error)
 	m_cIndex=7;
     m_tIndex=7;
     m_prevalence=1.0;
+    m_extremeAdjust=1.0;
     m_outputPrefix="";
 	m_pValueFileName="";
     m_ldFilePrefix="";
 	m_regionList="";
+	m_directionFile="";
 
-	static const char *optString = "t:b:B:s:a:q:c:r:x:k:m:nvuo:p:l:L:h?";
+	static const char *optString = "t:b:B:s:a:q:c:r:x:k:e:m:d:nvuo:p:l:L:h?";
 	static const struct option longOpts[]={
 		{"thread", required_argument, NULL, 't'},
         {"minBlock", required_argument, NULL, 'b'},
@@ -90,10 +95,12 @@ Command::Command(int argc, char* argv[], bool &error)
 		{"no_correct", no_argument, NULL, 'n'},
 		{"validate", no_argument, NULL, 'v'},
 		{"pvalue", no_argument, NULL, 'u'},
+		{"direction", no_argument, NULL, 'u'},
 		{"out", required_argument, NULL, 'o'},
 		{"pfile", required_argument, NULL, 'p'},
 		{"linkage", required_argument, NULL, 'l'},
 		{"region", required_argument, NULL, 'L'},
+		{"extreme", required_argument, NULL, 'e'},
         {"help", no_argument, NULL, 'h'},
 		{NULL, 0, 0, 0}
 	};
@@ -133,6 +140,13 @@ Command::Command(int argc, char* argv[], bool &error)
             case 'a':
 				m_cIndex= atoi(optarg)-1;
 				m_caseControl = true;
+				break;
+            case 'd':
+				m_directionFile = optarg;
+				break;
+            case 'e':
+				m_extremeAdjust = atof(optarg);
+				provideExtremeAdjustment = true;
 				break;
             case 'q':
 				m_tIndex= atoi(optarg)-1;
@@ -279,7 +293,13 @@ Command::Command(int argc, char* argv[], bool &error)
         std::cerr << "We prefer a blockSize that can be divided by 3. Will change the min block size to " << m_minBlock+3-m_minBlock%3 << std::endl;
         m_minBlock = m_minBlock+3-m_minBlock%3;
     }
-
+	if(m_extremeAdjust <= 0.0){
+        error = true;
+        std::cerr << "The extreme adjustment value should always be bigger than 0" << std::endl;
+	}
+	else if(provideExtremeAdjustment && m_caseControl){
+        std::cerr << "Currently there is no support for extreme phenotype in case control study. Extreme adjustment value will have no effect" << std::endl;
+	}
 	if(error){
 		std::cerr << "Type " << argv[0] << " -h for more information" << std::endl;
 		exit(-1);
@@ -313,6 +333,7 @@ void Command::printBriefUsage(){
     std::cerr << "Quantitative trait analysis: "                                                   << std::endl;
     std::cerr << "  --quant          The column of statistic. Quantitative trait    [ Required ]"  << std::endl;
     std::cerr << "  -s,--sampleSize  The number of sample used."                                   << std::endl;
+    std::cerr << "  -e,--extreme     The extreme phenotype adjustment ratio."                      << std::endl;
     std::cerr << "  --sampleIndex    The sample column index.                     [ Default: 4 ]"  << std::endl;
     std::cerr << "                                                                              "  << std::endl;
     std::cerr << "Case Control analysis: "                                                         << std::endl;
@@ -323,6 +344,7 @@ void Command::printBriefUsage(){
     std::cerr << "                                                                              "  << std::endl;
     std::cerr << "General options: " << std::endl;
     std::cerr << "  -u,--pvalue      Input is p-value "                                            << std::endl;
+    std::cerr << "  -d,--direction   File containing the direction of effect "                     << std::endl;
     std::cerr << "  -b,--minBlock    The minimum block size                    [ Default: None ]"  << std::endl;
     std::cerr << "  -B,--maxBlock    The maximum block size                    [ Default: None ]"  << std::endl;
     std::cerr << "  -L,--region      Region information"                                           << std::endl;
@@ -371,6 +393,8 @@ void Command::printUsage(){
     std::cerr << "  -s,--sampleSize  The number of sample used for the analysis. If not provided " << std::endl;
     std::cerr << "                   the programme will try to obtain it directly from the "       << std::endl;
     std::cerr << "                   p-value file based on the sample column index information"    << std::endl;
+    std::cerr << "  -e,--extreme     The extreme phenotype adjustment value. Should be: "          << std::endl;
+    std::cerr << "                   Variance after selection / Variance before selection"         << std::endl;
     std::cerr << "  --sampleIndex    The sample column index. Indicating which column contains "   << std::endl;
     std::cerr << "                   the sample size information "                                 << std::endl;
     std::cerr << "                                                                               " << std::endl;
@@ -387,6 +411,11 @@ void Command::printUsage(){
     std::cerr << "General options: " << std::endl;
     std::cerr << "  -u,--pvalue      Indicate whether if the input is p-value or test-statistic  " << std::endl;
     std::cerr << "                   Cannot handle p-value of 0 or 1"                              << std::endl;
+    std::cerr << "  -d,--direction   The file containing the direction of significance. If it is " << std::endl;
+    std::cerr << "                   not provided, there will be an upward bias of variance. "     << std::endl;
+    std::cerr << "                   Format of the file should be: "                               << std::endl;
+    std::cerr << "                   <rsID>    <Direction> "                                       << std::endl;
+    std::cerr << "                   where the direction should be represented by +1/-1"           << std::endl;
     std::cerr << "  -b,--minBlock    The minimum block size for the sliding window. A large"       << std::endl;
     std::cerr << "                   number will increase the run time exponentially. Window size" << std::endl;
     std::cerr << "                   is the most important factor affecting the run time and "     << std::endl;

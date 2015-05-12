@@ -30,6 +30,7 @@ class Command
         size_t GetsampleSizeIndex() const;
         double Getprevalence() const;
         double Getmaf() const;
+        double GetextremeAdjust() const;
         bool ldCorrect() const;
         bool validate() const;
         bool isPvalue() const;
@@ -42,6 +43,7 @@ class Command
         std::string GetldFilePrefix() const;
         std::string GetregionList() const;
         std::string GetprogrammeName() const;
+        std::string GetdirectionFile() const;
     protected:
     private:
         size_t m_thread;
@@ -58,6 +60,7 @@ class Command
         size_t m_sampleSizeIndex;
         double m_prevalence;
         double m_maf;
+        double m_extremeAdjust;
         bool m_ldCorrection;
         bool m_validate;
         bool m_isPvalue;
@@ -70,6 +73,7 @@ class Command
         std::string m_ldFilePrefix;
         std::string m_regionList;
         std::string m_programmeName;
+        std::string m_directionFile;
         void printUsage();
 };
 
