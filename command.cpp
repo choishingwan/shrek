@@ -27,7 +27,6 @@ std::string Command::GetpValueFileName() const { return m_pValueFileName; }
 std::string Command::GetldFilePrefix() const { return m_ldFilePrefix; }
 std::string Command::GetregionList() const { return m_regionList; }
 std::string Command::GetprogrammeName() const { return m_programmeName; }
-std::string Command::GetdirectionFile() const { return m_directionFile; }
 
 
 
@@ -74,9 +73,8 @@ Command::Command(int argc, char* argv[], bool &error)
 	m_pValueFileName="";
     m_ldFilePrefix="";
 	m_regionList="";
-	m_directionFile="";
 
-	static const char *optString = "t:b:B:s:a:q:c:r:x:k:e:m:d:nvuo:p:l:L:h?";
+	static const char *optString = "t:b:B:s:a:q:c:r:x:k:e:m:nvuo:p:l:L:h?";
 	static const struct option longOpts[]={
 		{"thread", required_argument, NULL, 't'},
         {"minBlock", required_argument, NULL, 'b'},
@@ -95,7 +93,6 @@ Command::Command(int argc, char* argv[], bool &error)
 		{"no_correct", no_argument, NULL, 'n'},
 		{"validate", no_argument, NULL, 'v'},
 		{"pvalue", no_argument, NULL, 'u'},
-		{"direction", no_argument, NULL, 'u'},
 		{"out", required_argument, NULL, 'o'},
 		{"pfile", required_argument, NULL, 'p'},
 		{"linkage", required_argument, NULL, 'l'},
@@ -140,9 +137,6 @@ Command::Command(int argc, char* argv[], bool &error)
             case 'a':
 				m_cIndex= atoi(optarg)-1;
 				m_caseControl = true;
-				break;
-            case 'd':
-				m_directionFile = optarg;
 				break;
             case 'e':
 				m_extremeAdjust = atof(optarg);
@@ -344,7 +338,6 @@ void Command::printBriefUsage(){
     std::cerr << "                                                                              "  << std::endl;
     std::cerr << "General options: " << std::endl;
     std::cerr << "  -u,--pvalue      Input is p-value "                                            << std::endl;
-    std::cerr << "  -d,--direction   File containing the direction of effect "                     << std::endl;
     std::cerr << "  -b,--minBlock    The minimum block size                    [ Default: None ]"  << std::endl;
     std::cerr << "  -B,--maxBlock    The maximum block size                    [ Default: None ]"  << std::endl;
     std::cerr << "  -L,--region      Region information"                                           << std::endl;
@@ -411,11 +404,6 @@ void Command::printUsage(){
     std::cerr << "General options: " << std::endl;
     std::cerr << "  -u,--pvalue      Indicate whether if the input is p-value or test-statistic  " << std::endl;
     std::cerr << "                   Cannot handle p-value of 0 or 1"                              << std::endl;
-    std::cerr << "  -d,--direction   The file containing the direction of significance. If it is " << std::endl;
-    std::cerr << "                   not provided, there will be an upward bias of variance. "     << std::endl;
-    std::cerr << "                   Format of the file should be: "                               << std::endl;
-    std::cerr << "                   <rsID>    <Direction> "                                       << std::endl;
-    std::cerr << "                   where the direction should be represented by +1/-1"           << std::endl;
     std::cerr << "  -b,--minBlock    The minimum block size for the sliding window. A large"       << std::endl;
     std::cerr << "                   number will increase the run time exponentially. Window size" << std::endl;
     std::cerr << "                   is the most important factor affecting the run time and "     << std::endl;

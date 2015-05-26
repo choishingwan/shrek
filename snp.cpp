@@ -1,40 +1,32 @@
 #include "snp.h"
 
+size_t Snp::m_maxSampleSize=0;
+
 Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double original, double beta):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original), m_oriBeta(beta){
 	m_beta = std::make_shared<double>(beta);
-	m_ncp = std::make_shared<double>(0.0);
 	m_heritability = std::make_shared<double>(0.0);
-	m_variance = 0.0;
 	m_effectiveNumber=0.0;
 	m_targetClass = this;
-	m_sign = 1;
+	if(Snp::m_maxSampleSize < m_sampleSize){
+        Snp::m_maxSampleSize = m_sampleSize;
+	}
 }
 
 std::string Snp::Getchr() const { return m_chr; }
 std::string Snp::GetrsId() const { return m_rs; }
 size_t Snp::Getbp() const { return m_bp; }
 size_t Snp::GetregionSize() const {return m_regionFlag.size(); }
-int Snp::Getsign() const { return m_sign; }
 double Snp::GetsampleSize() const { return m_sampleSize; }
 double Snp::Getoriginal() const { return m_original; }
 //double Snp::Geteffective() const { return m_effectiveNumber; }
 double Snp::Getbeta() const {
 	return (*m_beta)/(double)(m_beta.use_count());
 }
-double Snp::Getncp() const{
-    return (*m_ncp)/(double)(m_ncp.use_count());
-}
-double Snp::Getvariance() const{
-	//return (2.0+4.0*m_sampleSize*((*m_beta)/(double)(m_beta.use_count())))/(double)(m_sampleSize*m_sampleSize); //DEBUG
-	return m_variance;
-}
-double Snp::GetvarianceRes() const{
-	return m_variance;
-}
+
 
 void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability;}
+void Snp::Setvariance(double i){ m_variance = i; }
 //void Snp::Seteffective(double i) { m_effectiveNumber = i; }
-void Snp::Setvariance(double i) { m_variance = i; }
 double Snp::GetheritabilityChi() const { return (*m_heritability)/(double)(m_beta.use_count()); }
 double Snp::Getheritability() const {
 	double heritability = (*m_heritability)/(double)(m_beta.use_count());
@@ -49,19 +41,16 @@ void Snp::shareHeritability( Snp* i ){
 		return;
 	}
 	(*i->m_beta) += (*m_beta); //Add up the beta to get an average
-	(*i->m_ncp) += (*m_ncp);
 	(*i->m_heritability) += (*m_heritability);
 	//i is the one who buy
 	//this is the one who sell
     //For this's family, all of them should point to the same location
 	m_beta = (i->m_beta); //They now share the same beta
-	m_ncp = (i->m_ncp);
 	m_heritability = (i->m_heritability);
 	Snp* currentClass = m_targetClass;
 	Snp* prevClass = this;
 	while(currentClass != this){
 		currentClass->m_beta = i->m_beta; //The subsequent stuff are also pointing here
-		currentClass->m_ncp = i->m_ncp;
 		currentClass->m_heritability = i->m_heritability;
         prevClass = currentClass;
         currentClass = currentClass->m_targetClass;
@@ -188,7 +177,6 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const
                     if(regionList[j][k]->Getchr().compare(snpList[i]->Getchr())==0 &&
                        regionList[j][k]->Getstart() <= snpList[i]->Getbp() &&
                        regionList[j][k]->Getend() >= snpList[i]->Getbp()){
-                        //std::cerr << snpList[i]->GetrsId() << "\tWithin region" << std::endl;
                         regionIncrementationIndex[j] = k;
                         snpList[i]->setFlag(j+1, true);
                         break;
@@ -233,11 +221,8 @@ void Snp::computeVarianceExplainedChi(bool isPvalue, double extremeRatio){
     }
     (*m_beta) = (*m_beta)*(*m_beta);
     //Calculate the variance
-	double f_stat = 2.0*(double)m_sampleSize*(double)m_sampleSize*(((*m_beta)*(*m_beta)+(2.0*(*m_beta)-1.0)*(m_sampleSize-2.0))/((m_sampleSize-2.0)*(m_sampleSize-2.0)*(m_sampleSize-4.0)));
-	double bot = m_sampleSize-2.0+(*m_beta);
-	m_variance = ((m_sampleSize-1.0)*(m_sampleSize-1.0)/(bot*bot*bot*bot))*f_stat;
-	(*m_ncp) = (*m_beta)-1.0;
 	(*m_beta) = ((*m_beta)/(m_sampleSize-2.0+(*m_beta)))-1.0/(extremeRatio*m_sampleSize-2.0+(*m_beta));
+	m_sampleSize = m_sampleSize*extremeRatio;
 	m_oriBeta =(*m_beta);
 }
 
@@ -277,26 +262,6 @@ bool Snp::Concordant(std::string chr, size_t bp, std::string rsId) const{
     return chr.compare(m_chr) ==0 && bp==m_bp && rsId.compare(m_rs) == 0;
 }
 
-void Snp::setSnpEffectDirection(SnpIndex *snpIndex, std::vector<Snp*> &snpList, std::string directionFile){
-    std::ifstream direction;
-    direction.open(directionFile.c_str());
-    if(!direction.is_open()){
-		std::cerr << "Direction file: " << directionFile << " cannot be opened" << std::endl;
-		exit(-1);
-    }
-    std::string line;
-    while(std::getline(direction, line)){
-		line = usefulTools::trim(line);
-        std::vector<std::string> token;
-        usefulTools::tokenizer(line, "\t ", &token);
-        if(!line.empty() && token.size()> 1){
-            if(snpIndex->find(token[0])){
-                snpList[snpIndex->value(token[0])]->m_sign = usefulTools::signum(atof(token[1].c_str()));
-            }
-        }
-    }
-    direction.close();
-}
 
 
 

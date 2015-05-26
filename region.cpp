@@ -2,6 +2,7 @@
 
 Region::Region(std::string chr, size_t start, size_t end):m_chr(chr), m_start(start), m_end(end){}
 std::vector<std::string> Region::regionNames;
+std::vector<double> Region::regionVariance;
 
 std::string Region::Getchr() const { return m_chr; }
 size_t Region::Getstart() const { return m_start; }
@@ -13,6 +14,8 @@ Region::~Region()
 }
 
 void Region::generateRegion(std::vector<std::vector<Region*> > &regionOut, std::string regionList){
+    regionNames.push_back("With LD")
+    regionVariance.push_back(0.0);
     if(regionList.empty()) return;
 	regionList = usefulTools::trim(regionList);
     if(regionList.empty()) return;
@@ -38,6 +41,7 @@ void Region::generateRegion(std::vector<std::vector<Region*> > &regionOut, std::
             else{
 				std::vector<Region*> currentRegion;
 				Region::regionNames.push_back(name);
+                regionVariance.push_back(0.0);
                 std::string line;
                 while(std::getline(regionFile, line)){
                     line = usefulTools::trim(line);

@@ -379,12 +379,9 @@ void Linkage::print(){ //DEBUG
 }
 
 
-Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const ncpInfo, Eigen::VectorXd *variance, Eigen::VectorXd const *const sign){
+Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::MatrixXd &variance, size_t sampleSize){
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
-    //*NumTraits<Scalar>::epsilon();
-    //double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().abs().maxCoeff();
     double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().maxCoeff();
-    //Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array().abs() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
     Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
     Eigen::VectorXd result= rInverse*(*betaEstimate).segment(start, length);
     Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);
@@ -393,7 +390,6 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
 
 	double bNorm = (*betaEstimate).segment(start, length).norm();
     double relative_error = error.norm() / bNorm;
-
     double prev_error = relative_error+1;
     Eigen::VectorXd update = result;
     while(relative_error < prev_error){
@@ -402,47 +398,17 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
         relative_error = 0.0;
         error= m_linkage.block(start, start, length, length)*(result+update) - (*betaEstimate).segment(start, length);
         relative_error = error.norm() / bNorm;
-        //if(relative_error < 1e-300) relative_error = 0;
+        if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
 
-
-    Eigen::VectorXcd d = Eigen::VectorXcd::Zero(length);
-    for(size_t i = 0; i < length; ++i){
-        d(i) = std::sqrt((std::complex<double>)(*ncpInfo).segment(start, length)(i) )*(*sign).segment(start, length)(i);
+    Eigen::VectorXd minusF = Eigen::VectorXd::Constant(length, 1.0)-(*betaEstimate).segment(start, length);
+    Eigen::VectorXcd complexF =Eigen::VectorXcd::Zero(length);
+    for(size_t i =0; i < length; ++i){
+        complexF(i) = sqrt(((*betaEstimate).segment(start, length))(i));
     }
-    Eigen::MatrixXd varianceResult =  ((Eigen::VectorXd::Constant(length,1.0)-(*betaEstimate).segment(start, length)).asDiagonal())*((2.0*(m_linkage.block(start, start, length, length))+(d.asDiagonal()*m_linkageSqrt.block(start, start, length, length)*d.adjoint().asDiagonal()).real()*4.0)/(10000*10000))*((Eigen::VectorXd::Constant(length,1.0)-(*betaEstimate).segment(start, length)).asDiagonal());
-    for(size_t i = 0; i < length; ++i){
-        varianceResult(i,i) = (*variance)(i);
-    }
-    std::cout << "Variance: " << (rInverse*varianceResult*rInverse).sum() << std::endl;
+    variance = (rInverse*(((sampleSize-2)/((sampleSize*sampleSize-1)*(sampleSize-1)))*(minusF.asDiagonal()*(2*m_linkage.block(start, start, length, length).cast<std::complex<double> >()+4*(complexF.asDiagonal()*m_linkageSqrt.block(start, start, length, length).cast<std::complex<double> >()*complexF.adjoint().asDiagonal())*((sampleSize-2)*(sampleSize-1)+4)/(sampleSize+3))*minusF.asDiagonal()))*rInverse).real();
 
-
-    //Test again
-
-    //(*variance) = rQi* (*variance);
-    //(*variance) = rInverse*(*variance);
-    //return result;
-
-    //Test Zone
-
-
-
-    Eigen::VectorXd varRes = rInverse*(*variance);
-    error =m_linkage.block(start, start, length, length)*varRes - (*variance);
-    double vNorm = (*variance).norm();
-    relative_error = error.norm()/vNorm;
-    prev_error = relative_error+1;
-    while(relative_error < prev_error){
-        prev_error = relative_error;
-        update=rInverse*(-error);
-        relative_error = 0.0;
-        error= m_linkage.block(start, start, length, length)*(varRes+update) - (*variance);
-        relative_error = error.norm() /vNorm;
-        //if(relative_error < 1e-300) relative_error = 0;
-        varRes = varRes+update;
-    }
-    (*variance) = varRes;
     return result;
 }
 

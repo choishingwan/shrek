@@ -19,22 +19,17 @@ public:
         static void generateSnpList(std::vector<Snp*> &snpList, const std::string &pvalueFile, const size_t index, const size_t sampleSize, const size_t rsIndex, const size_t bpIndex, const size_t chrIndex, const size_t sampleIndex, bool sampleSizeProvided);
         static void generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, std::vector<std::vector<Region*> > &regionList, bool isPvalue, double extremeRatio);
         static void generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const size_t &caseSize, const size_t &controlSize, const double &prevalence, std::vector<std::vector<Region*> > &regionList, bool isPvalue);
-        static void setSnpEffectDirection(SnpIndex *snpIndex, std::vector<Snp*> &snpList, std::string directionFile);
         virtual ~Snp();
         std::string Getchr() const;
         std::string GetrsId() const;
         size_t Getbp() const;
         size_t GetregionSize() const;
-        int Getsign() const;
         double GetsampleSize() const;
         double Getoriginal() const;
         double Getbeta() const;
-        double Getncp() const;
         double Getheritability() const;
         double GetheritabilityChi() const;
         //double Geteffective() const;
-        double Getvariance() const;
-        double GetvarianceRes() const;
         bool Concordant(std::string chr, size_t bp, std::string rsId) const;
         bool GetFlag(size_t index) const;
         void Setheritability(double heritability);
@@ -44,6 +39,7 @@ public:
         void Setvariance(double i );
         static void cleanSnp(std::vector<Snp*> &snpList);
         static bool sortSnp (Snp* i, Snp* j);
+        static size_t m_maxSampleSize;
 protected:
 private:
         std::string m_chr;
@@ -54,8 +50,6 @@ private:
         double m_oriBeta;
         double m_effectiveNumber;
         double m_variance;
-        int m_sign;
-        std::shared_ptr<double> m_ncp;
         std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD
         std::shared_ptr<double> m_heritability; //The master heritability
         Snp* m_targetClass; //The master heritability
