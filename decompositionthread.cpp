@@ -27,13 +27,23 @@ void DecompositionThread::solve(){
         copyEnd += m_length/3;
 	}
 	if(m_lastOfBlock) copyEnd = processLength-copyStart;
+    std::vector<double> regionVariance(Region::regionVariance.size(), 0.0);
     for(size_t i = copyStart; i < copyStart+copyEnd; ++i){
 		(*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability(result(i));
 		(*m_snpList)[(*m_snpLoc)[m_start+i]]->Setvariance(variance(i,i)); //The diagonal of the matrix contain the per snp variance
         for(size_t j = 0; j < processLength; ++j){ //For this snp, go through all the snp partners
-			(*m_snpList)[(*m_snpLoc)[m_start+j]]->Setheritability(result(i));
+			double covariance = variance(i,j);
+			for(size_t regionIndex = 0; regionIndex < regionVariance.size(); ++regionIndex){
+                if((*m_snpList)[(*m_snpLoc)[m_start+i]]->GetFlag(regionIndex)&&(*m_snpList)[(*m_snpLoc)[m_start+j]]->GetFlag(regionIndex)){
+					regionVariance[regionIndex]+= covariance;
+                }
+			}
         }
-
-
 	}
+	decomposeMtx.lock();
+		for(size_t i = 0; i < Region::regionVariance.size(); ++i){
+			Region::regionVariance[i]+=regionVariance[i];
+		}
+	decomposeMtx.unlock();
+
 }

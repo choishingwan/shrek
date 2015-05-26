@@ -8,6 +8,7 @@
 #include <Eigen/SVD>
 #include "snpindex.h"
 #include "snp.h"
+#include "region.h"
 #include "linkage.h"
 #include "genotype.h"
 #include "processcode.h"

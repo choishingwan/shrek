@@ -47,14 +47,14 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
         for(size_t i=copyStart; i < processSize; ++i){
 			(*m_snpList)[snpLoc[i]]->Setheritability(result(i));
 			(*m_snpList)[snpLoc[i]]->Setvariance(variance(i,i)); //The diagonal of the matrix contains the per snp variance
-
-
-
-
-			/*
-                Adding up the covariance
-
-			*/
+			for(size_t j = 0; j < processSize; ++j){ //For this snp, go through all the snp partners
+				double covariance = variance(i,j);
+				for(size_t regionIndex = 0; regionIndex < Region::regionVariance.size(); ++regionIndex){
+					if((*m_snpList)[snpLoc[i]]->GetFlag(regionIndex)&&(*m_snpList)[snpLoc[j]]->GetFlag(regionIndex)){
+						Region::regionVariance[regionIndex]+= covariance;
+					}
+				}
+			}
         }
 
 	}

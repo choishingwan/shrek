@@ -8,6 +8,7 @@
 #include <iostream>
 #include "linkage.h"
 #include "snp.h"
+#include "region.h"
 
 
 

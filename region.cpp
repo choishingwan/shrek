@@ -14,7 +14,7 @@ Region::~Region()
 }
 
 void Region::generateRegion(std::vector<std::vector<Region*> > &regionOut, std::string regionList){
-    regionNames.push_back("With LD")
+    regionNames.push_back("With LD");
     regionVariance.push_back(0.0);
     if(regionList.empty()) return;
 	regionList = usefulTools::trim(regionList);
