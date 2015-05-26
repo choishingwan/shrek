@@ -49,7 +49,7 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpInde
             if(token.size() >= 6){
 				std::string chr = token[0];
                 std::string rs = token[1];
-                size_t bp = std::atoi(token[2].c_str());
+                size_t bp = std::atoi(token[3].c_str());
                 m_chrCount->increment(chr); //Perform the count of items in each chromosome
 				m_inputSnp++;
                 if(m_chrExists.empty()) m_chrExists.push_back(chr);
@@ -364,7 +364,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 				if (snp){
 					int first = b[c++];
 					int second = b[c++];
-					if(first == 1 && second == 0) first = 0; //We consider the missing value to be reference
+					if(first == 1 && second == 0) first = 3; //We consider the missing value to 3
 					genotype.back()->AddsampleGenotype(first+second, indx-1); //0 1 or 2
 					alleleCount += first+second;
 					double value = first+second+0.0;

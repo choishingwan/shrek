@@ -114,3 +114,5 @@ double usefulTools::qnorm(const double p){
 	}
 	return val;
 }
+
+

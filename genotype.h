@@ -12,6 +12,8 @@ class Genotype
 		Genotype();
 		virtual ~Genotype();
         double Getr(Genotype* snpB, bool correction);
+        double GetrSq(Genotype* snpB, bool correction);
+        size_t GetnumSample() const;
         static void SetsampleNum(size_t sampleNum);
         void Setmean(double mean);
         void SetstandardDeviation(double standardDeviation);
@@ -21,9 +23,11 @@ class Genotype
 	private:
         unsigned long long *m_genotypeA;
         unsigned long long *m_genotypeB;
+        unsigned long long *m_missing;
         static size_t m_sampleNum;
         unsigned int m_bitSize;
         unsigned int m_requiredBit;
+        size_t m_numSample;
 		double m_mean;
 		double m_standardDeviation;
         unsigned int m_sum; //Might want to check if it will go out of bound

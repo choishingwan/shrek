@@ -14,6 +14,7 @@ size_t Command::GetrsIndex() const { return m_rsIndex; }
 size_t Command::GetsampleSizeIndex() const { return m_sampleSizeIndex; }
 double Command::Getprevalence() const { return m_prevalence; }
 double Command::Getmaf() const { return m_maf; }
+double Command::GetextremeAdjust() const { return m_extremeAdjust; }
 bool Command::ldCorrect() const { return m_ldCorrection; }
 bool Command::validate() const { return m_validate; }
 bool Command::isPvalue() const { return m_isPvalue; }
@@ -41,6 +42,7 @@ Command::Command(int argc, char* argv[], bool &error)
     int threadDefault = 1;
     bool providedPrevalence = false;
     bool providedMaf= false;
+    bool provideExtremeAdjustment = false;
     m_ldCorrection = true;
     m_validate = false;
 	m_isPvalue = false;
@@ -60,7 +62,19 @@ Command::Command(int argc, char* argv[], bool &error)
     m_pValueFileName = "";
 	m_regionList="";
 	m_programmeName =argv[0];
-	static const char *optString = "t:b:B:s:a:q:c:r:x:k:m:nvuo:p:l:L:h?";
+    m_sampleSize=0;
+	m_caseSize=0;
+	m_controlSize=0;
+	m_cIndex=7;
+    m_tIndex=7;
+    m_prevalence=1.0;
+    m_extremeAdjust=1.0;
+    m_outputPrefix="";
+	m_pValueFileName="";
+    m_ldFilePrefix="";
+	m_regionList="";
+
+	static const char *optString = "t:b:B:s:a:q:c:r:x:k:e:m:nvuo:p:l:L:h?";
 	static const struct option longOpts[]={
 		{"thread", required_argument, NULL, 't'},
         {"minBlock", required_argument, NULL, 'b'},
@@ -83,6 +97,7 @@ Command::Command(int argc, char* argv[], bool &error)
 		{"pfile", required_argument, NULL, 'p'},
 		{"linkage", required_argument, NULL, 'l'},
 		{"region", required_argument, NULL, 'L'},
+		{"extreme", required_argument, NULL, 'e'},
         {"help", no_argument, NULL, 'h'},
 		{NULL, 0, 0, 0}
 	};
@@ -122,6 +137,10 @@ Command::Command(int argc, char* argv[], bool &error)
             case 'a':
 				m_cIndex= atoi(optarg)-1;
 				m_caseControl = true;
+				break;
+            case 'e':
+				m_extremeAdjust = atof(optarg);
+				provideExtremeAdjustment = true;
 				break;
             case 'q':
 				m_tIndex= atoi(optarg)-1;
@@ -268,7 +287,13 @@ Command::Command(int argc, char* argv[], bool &error)
         std::cerr << "We prefer a blockSize that can be divided by 3. Will change the min block size to " << m_minBlock+3-m_minBlock%3 << std::endl;
         m_minBlock = m_minBlock+3-m_minBlock%3;
     }
-
+	if(m_extremeAdjust <= 0.0){
+        error = true;
+        std::cerr << "The extreme adjustment value should always be bigger than 0" << std::endl;
+	}
+	else if(provideExtremeAdjustment && m_caseControl){
+        std::cerr << "Currently there is no support for extreme phenotype in case control study. Extreme adjustment value will have no effect" << std::endl;
+	}
 	if(error){
 		std::cerr << "Type " << argv[0] << " -h for more information" << std::endl;
 		exit(-1);
@@ -302,6 +327,7 @@ void Command::printBriefUsage(){
     std::cerr << "Quantitative trait analysis: "                                                   << std::endl;
     std::cerr << "  --quant          The column of statistic. Quantitative trait    [ Required ]"  << std::endl;
     std::cerr << "  -s,--sampleSize  The number of sample used."                                   << std::endl;
+    std::cerr << "  -e,--extreme     The extreme phenotype adjustment ratio."                      << std::endl;
     std::cerr << "  --sampleIndex    The sample column index.                     [ Default: 4 ]"  << std::endl;
     std::cerr << "                                                                              "  << std::endl;
     std::cerr << "Case Control analysis: "                                                         << std::endl;
@@ -360,6 +386,8 @@ void Command::printUsage(){
     std::cerr << "  -s,--sampleSize  The number of sample used for the analysis. If not provided " << std::endl;
     std::cerr << "                   the programme will try to obtain it directly from the "       << std::endl;
     std::cerr << "                   p-value file based on the sample column index information"    << std::endl;
+    std::cerr << "  -e,--extreme     The extreme phenotype adjustment value. Should be: "          << std::endl;
+    std::cerr << "                   Variance after selection / Variance before selection"         << std::endl;
     std::cerr << "  --sampleIndex    The sample column index. Indicating which column contains "   << std::endl;
     std::cerr << "                   the sample size information "                                 << std::endl;
     std::cerr << "                                                                               " << std::endl;

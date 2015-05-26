@@ -1,43 +1,64 @@
 #include "snp.h"
 
+size_t Snp::m_maxSampleSize=0;
+
 Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double original, double beta):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original), m_oriBeta(beta){
 	m_beta = std::make_shared<double>(beta);
 	m_heritability = std::make_shared<double>(0.0);
 	m_effectiveNumber=0.0;
-}
-Snp::Snp(std::string chr, std::string rs, size_t bp, double original, double beta, double heritability, bool ldFlag):m_chr(chr), m_rs(rs), m_bp(bp),m_original(original){
-    m_beta = std::make_shared<double>(beta);
-	m_heritability = std::make_shared<double>(heritability);
-	m_regionFlag.push_back(ldFlag);
+	m_targetClass = this;
+	if(Snp::m_maxSampleSize < m_sampleSize){
+        Snp::m_maxSampleSize = m_sampleSize;
+	}
 }
 
 std::string Snp::Getchr() const { return m_chr; }
 std::string Snp::GetrsId() const { return m_rs; }
 size_t Snp::Getbp() const { return m_bp; }
-double Snp::GetsampleSize() const { return m_sampleSize; }
 size_t Snp::GetregionSize() const {return m_regionFlag.size(); }
+double Snp::GetsampleSize() const { return m_sampleSize; }
 double Snp::Getoriginal() const { return m_original; }
-double Snp::Geteffective() const { return m_effectiveNumber; }
+//double Snp::Geteffective() const { return m_effectiveNumber; }
 double Snp::Getbeta() const {
 	return (*m_beta)/(double)(m_beta.use_count());
 }
+
+
 void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability;}
-void Snp::Seteffective(double i) { m_effectiveNumber = i; }
-double Snp::Getheritability() const { return (*m_heritability)/(double)(m_beta.use_count()); }
+void Snp::Setvariance(double i){ m_variance = i; }
+//void Snp::Seteffective(double i) { m_effectiveNumber = i; }
+double Snp::GetheritabilityChi() const { return (*m_heritability)/(double)(m_beta.use_count()); }
+double Snp::Getheritability() const {
+	double heritability = (*m_heritability)/(double)(m_beta.use_count());
+    heritability = heritability*heritability-1.0/(m_sampleSize*1.0);
+    //std::cout << m_rs << "\tSample size: " << m_sampleSize << std::endl;
+	return heritability;
+}
+
 
 void Snp::shareHeritability( Snp* i ){
 	if(i->m_beta == m_beta){
 		return;
 	}
 	(*i->m_beta) += (*m_beta); //Add up the beta to get an average
-    m_beta = (i->m_beta); //They now share the same beta
-    if((*i->m_heritability) != 0.0){
-        (*m_heritability) = (*i->m_heritability); //Share the same heritability
+	(*i->m_heritability) += (*m_heritability);
+	//i is the one who buy
+	//this is the one who sell
+    //For this's family, all of them should point to the same location
+	m_beta = (i->m_beta); //They now share the same beta
+	m_heritability = (i->m_heritability);
+	Snp* currentClass = m_targetClass;
+	Snp* prevClass = this;
+	while(currentClass != this){
+		currentClass->m_beta = i->m_beta; //The subsequent stuff are also pointing here
+		currentClass->m_heritability = i->m_heritability;
+        prevClass = currentClass;
+        currentClass = currentClass->m_targetClass;
     }
-    else{
-        (*i->m_heritability) = (*m_heritability);
-    }
-    m_heritability = (i->m_heritability);
+    //Now they are all pointing to the same value
+	//Now prevClass is the last person in chain
+    prevClass->m_targetClass = i->m_targetClass;
+    i->m_targetClass = this;
 }
 
 
@@ -88,6 +109,10 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const std::string &pvalueF
     std::sort(snpList.begin(), snpList.end(), Snp::sortSnp);
     snpList.erase( unique( snpList.begin(), snpList.end() ), snpList.end() );
     std::cerr << "There are a total of " << snpList.size() << " Snps in the input" << std::endl;
+    if(snpList.size() ==0){
+		std::cerr << "Programme terminated as there are no snp provided" << std::endl;
+		exit(-1);
+    }
 }
 
 bool Snp::sortSnp (Snp* i, Snp* j){
@@ -99,13 +124,13 @@ bool Snp::sortSnp (Snp* i, Snp* j){
 	else return (i->Getchr().compare(j->Getchr()) < 0);
 }
 
-void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, std::vector<std::vector<Region*> > &regionList, bool isPvalue){
+void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, std::vector<std::vector<Region*> > &regionList, bool isPvalue, double extremeRatio){
 	std::vector<size_t> regionIncrementationIndex(regionList.size(), 0);
 	size_t duplicate = 0;
 	for(size_t i = 0; i < snpList.size(); ++i){
         if(!snpIndex->find(snpList[i]->GetrsId())){
             snpIndex->set(snpList[i]->GetrsId(), i);
-            snpList[i]->computeVarianceExplained(isPvalue);
+            snpList[i]->computeVarianceExplainedChi(isPvalue, extremeRatio);
             snpList[i]->m_regionFlag.push_back(false);
 
             if(regionList.size() != 0){
@@ -140,7 +165,7 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const
 	for(size_t i = 0; i < snpList.size(); ++i){
         if(!snpIndex->find(snpList[i]->GetrsId())){
             snpIndex->set(snpList[i]->GetrsId(), i);
-            snpList[i]->computeVarianceExplained(caseSize, controlSize, prevalence, isPvalue);;
+            snpList[i]->computeVarianceExplainedChi(caseSize, controlSize, prevalence, isPvalue);;
             snpList[i]->m_regionFlag.push_back(false);
 
             if(regionList.size() != 0){
@@ -152,7 +177,6 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const
                     if(regionList[j][k]->Getchr().compare(snpList[i]->Getchr())==0 &&
                        regionList[j][k]->Getstart() <= snpList[i]->Getbp() &&
                        regionList[j][k]->Getend() >= snpList[i]->Getbp()){
-                        //std::cerr << snpList[i]->GetrsId() << "\tWithin region" << std::endl;
                         regionIncrementationIndex[j] = k;
                         snpList[i]->setFlag(j+1, true);
                         break;
@@ -169,19 +193,40 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const
 
 }
 
-
+//Assuming input is signed
 void Snp::computeVarianceExplained(bool isPvalue){
+	(*m_beta) = (*m_beta);
+	(*m_beta) = ((*m_beta)/std::sqrt(m_sampleSize-2.0+(*m_beta)));
+	m_oriBeta =(*m_beta);
+
+}
+
+//Having work on how to do the correction here yet. Focus on the quantitative trait
+void Snp::computeVarianceExplained(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue){
+    double ncp = ((*m_beta) -1.0);
+	int totalSampleSize = caseSize + controlSize;
+	double portionCase = (caseSize+0.0) / (totalSampleSize+0.0);
+	double i2 = usefulTools::dnorm(usefulTools::qnorm(prevalence))/(prevalence);
+	i2 = i2*i2;
+	m_sampleSize =((1-prevalence)*(1-prevalence))/(i2*portionCase*(1-portionCase)*(totalSampleSize));
+	(*m_beta) = m_sampleSize*ncp;
+	m_oriBeta =(*m_beta);
+
+}
+
+void Snp::computeVarianceExplainedChi(bool isPvalue, double extremeRatio){
     if(isPvalue){
         (*m_beta) = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
         if(!std::isfinite((*m_beta))) (*m_beta) = usefulTools::qnorm(((m_original+0.0)/2.0));
     }
     (*m_beta) = (*m_beta)*(*m_beta);
-	(*m_beta) = ((*m_beta)/(m_sampleSize-2.0+(*m_beta)))-1.0/(m_sampleSize-1.0);
+    //Calculate the variance
+	(*m_beta) = ((*m_beta)/(m_sampleSize-2.0+(*m_beta)))-1.0/(extremeRatio*m_sampleSize-2.0+(*m_beta));
+	m_sampleSize = m_sampleSize*extremeRatio;
 	m_oriBeta =(*m_beta);
-
 }
 
-void Snp::computeVarianceExplained(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue){
+void Snp::computeVarianceExplainedChi(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue){
     if(isPvalue){
         (*m_beta) = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
         if(!std::isfinite((*m_beta))) (*m_beta) =usefulTools::qnorm(((m_original+0.0)/2.0));
@@ -192,10 +237,9 @@ void Snp::computeVarianceExplained(const size_t &caseSize, const size_t &control
 	double portionCase = (caseSize+0.0) / (totalSampleSize+0.0);
 	double i2 = usefulTools::dnorm(usefulTools::qnorm(prevalence))/(prevalence);
 	i2 = i2*i2;
-	m_sampleSize =((1-prevalence)*(1-prevalence))/(i2*portionCase*(1-portionCase)*(totalSampleSize));
-	(*m_beta) = m_sampleSize*ncp;
+	m_sampleSize =(i2*portionCase*(1-portionCase)*(totalSampleSize))/((1-prevalence)*(1-prevalence));
+	(*m_beta) = ncp/m_sampleSize;
 	m_oriBeta =(*m_beta);
-
 }
 
 void Snp::setFlag(size_t index, bool value){
@@ -217,3 +261,9 @@ void Snp::cleanSnp(std::vector<Snp*> &snpList){
 bool Snp::Concordant(std::string chr, size_t bp, std::string rsId) const{
     return chr.compare(m_chr) ==0 && bp==m_bp && rsId.compare(m_rs) == 0;
 }
+
+
+
+
+
+

@@ -12,6 +12,8 @@
 #include "linkage.h"
 #include "region.h"
 
+#include "configure.h"//DEBUG
+
 class SnpEstimation
 {
 	public:

@@ -7,6 +7,12 @@
 #include <iostream>
 #include "usefulTools.h"
 
+
+
+/**
+	TODO:
+		Re-work on this class and the related stuff. Too many static stuff and I don't like it
+**/
 class Region
 {
 	public:
@@ -15,6 +21,8 @@ class Region
         static void generateRegion(std::vector<std::vector<Region*> > &regionOut, std::string regionList);
         static void cleanRegion(std::vector<std::vector<Region*> > &regionList);
         static std::vector<std::string> regionNames;
+        static std::vector<double> regionVariance;
+        static size_t numRegion();
         std::string Getchr() const;
         size_t Getstart() const;
         size_t Getend() const;
