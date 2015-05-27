@@ -1,20 +1,86 @@
-\documentclass{report}
+\documentclass[12pt,a4paper,twoside]{report}
 \usepackage{amsmath}
 \usepackage{bm}
 \usepackage[colorlinks=true,urlcolor=blue]{hyperref}
 \usepackage[table]{colortbl}
 \usepackage{graphicx}
 \usepackage{fullpage}
-\title{Instructions}
+\title{Snp HeRitability Estimation Kit (SHREK) Manual}
 \date{\today}
-\author{Choi Shing Wan, Sam}
-
+\author{Choi Shing Wan, Sam\\
+\texttt{choishingwan@gmail.com}}
 
 \begin{document}
 
 \maketitle
-\section{background}
+\tableofcontents
+\chapter{Background}
+\chapter{Installation}
+\section{Dependencies}
+The programme is dependent on the ISO C++ 2011 standard and Eigen library.
+\section{Tutorial}
+\chapter{Input formats}
+\section{Test statistic file}
+\section{Linkage file}
+The linkage file should be in the binary ped format. 
+\chapter{Examples}
+\chapter{Assumptions and limitations}
 \section{Assumptions}
+\subsection{Calculation of variance}
+There are multiple assumptions when we calculate the variance. 
+First, we assume a big sample size. Only when the sample size is big, can we approximate the distribution of the effects to follow the $\chi^2$ distribution. 
+Therefore, when the sample size is small, our variance estimate can be biased.
+
+Secondly, for simplicity of implementation, when calculating the variance covariance matrix of the effects, we uses the \textbf{maximum sample size} as the $n$.
+So, for example, if 9 out of 10 Snps' association were conducted on 100 samples, yet the remaining 1 Snp were conducted on 10,000 samples, the programme will still use $n= 10000$ in the calculation of the variance covariance of \textbf{all} the Snp pairs.
 \section{Limitations}
+\subsection{Direction of effect}
+If one doesn't provide the direction of effect, the programme will use the direction from the test-statistic. 
+However, if only p-values are provided, all effect will be assumed to be positive. 
+This will lead to a positive bias in the variance explained.
+Therefore it is advised to always provide the direction of effect.
+\subsection{Perfect LD}
+In the case where two or more Snps are in perfect LD, we cannot determine the true underlying heritability explained of each Snps.
+Therefore, in SHREK, Snps in perfect LD will be grouped together and formed one Snp where its effect is the mean of all Snps in the group.
+Decomposition will then be performed on this Snp and the resulting heritability will be \textbf{equally distributed} among the original group of Snps.
+
+So for example:
+Assuming there are 5 Snps, $Snp_1, Snp_2, Snp_3, Snp_4 and Snp_5$ where $Snp_1$, $Snp_2$ and $Snp_3$ are all in perfect LD each with effect $f_1$,$f_2$ and $f_3$ respectively.
+Then we will first get $Snp_\mu$ with effect as $f_\mu = \frac{f_1+f_2+f_3}{3}$. 
+As $Snp_1$, $Snp_2$ and $Snp_3$ has the same LD structure with all other Snps (as they are in perfect LD), we then use the LD structure of $Snp_1$ as a representative of the LD of $Snp_\mu$ with all other Snps. 
+This will then gives us
+\[ \left( \begin{array}{ccc}
+R_{11} & R_{14} & R_{15}\\
+R_{14} & R_{44} & R_{45}\\
+R_{15} & R_{45} & R_{55}
+\end{array} \right)
+%
+\left( \begin{array}{c}
+h_\mu \\
+h_d \\
+h_e
+\end{array} \right)
+=
+\left( \begin{array}{c}
+f_\mu \\
+f_d \\
+f_e
+\end{array} \right)
+\]
+Finally, we will get
+\begin{align*}
+h_1 &= \frac{h_\mu}{3} \\
+h_2 &= \frac{h_\mu}{3} \\
+h_3 &= \frac{h_\mu}{3}
+\end{align*}
+
+It is important to note that for the variance, it is \textbf{NOT} equally divided among the Snps. 
+Instead, it is something like
+
+\begin{align*}
+var(h_1) &= var(h_\mu) \\
+var(h_2) &= var(h_\mu) \\
+var(h_3) &= var(h_\mu)
+\end{align*}
 
 \end{document}

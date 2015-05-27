@@ -1,3 +1,14 @@
-\BOOKMARK [1][-]{section.0.1}{background}{}% 1
-\BOOKMARK [1][-]{section.0.2}{Assumptions}{}% 2
-\BOOKMARK [1][-]{section.0.3}{Limitations}{}% 3
+\BOOKMARK [0][-]{chapter.1}{Background}{}% 1
+\BOOKMARK [0][-]{chapter.2}{Installation}{}% 2
+\BOOKMARK [1][-]{section.2.1}{Dependencies}{chapter.2}% 3
+\BOOKMARK [1][-]{section.2.2}{Tutorial}{chapter.2}% 4
+\BOOKMARK [0][-]{chapter.3}{Input formats}{}% 5
+\BOOKMARK [1][-]{section.3.1}{Test statistic file}{chapter.3}% 6
+\BOOKMARK [1][-]{section.3.2}{Linkage file}{chapter.3}% 7
+\BOOKMARK [0][-]{chapter.4}{Examples}{}% 8
+\BOOKMARK [0][-]{chapter.5}{Assumptions and limitations}{}% 9
+\BOOKMARK [1][-]{section.5.1}{Assumptions}{chapter.5}% 10
+\BOOKMARK [2][-]{subsection.5.1.1}{Calculation of variance}{section.5.1}% 11
+\BOOKMARK [1][-]{section.5.2}{Limitations}{chapter.5}% 12
+\BOOKMARK [2][-]{subsection.5.2.1}{Direction of effect}{section.5.2}% 13
+\BOOKMARK [2][-]{subsection.5.2.2}{Perfect LD}{section.5.2}% 14
