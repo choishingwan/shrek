@@ -24,6 +24,7 @@ public:
         std::string GetrsId() const;
         size_t Getbp() const;
         size_t GetregionSize() const;
+        int Getsign() const;
         double GetsampleSize() const;
         double Getoriginal() const;
         double Getbeta() const;
@@ -45,11 +46,13 @@ private:
         std::string m_chr;
         std::string m_rs;
         size_t m_bp;
+        int m_sign;
         double m_sampleSize;
         double m_original;
         double m_oriBeta;
         double m_effectiveNumber;
         double m_variance;
+        std::shared_ptr<double> m_ncp;
         std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD
         std::shared_ptr<double> m_heritability; //The master heritability
         Snp* m_targetClass; //The master heritability
@@ -57,7 +60,6 @@ private:
         void computeVarianceExplainedChi(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue);
         void computeVarianceExplained(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue);
         void computeVarianceExplainedChi(bool isPvalue, double extremeRatio);
-        void computeVarianceExplained(bool isPvalue);
 
 
 };

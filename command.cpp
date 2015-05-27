@@ -73,10 +73,12 @@ Command::Command(int argc, char* argv[], bool &error)
 	m_pValueFileName="";
     m_ldFilePrefix="";
 	m_regionList="";
+	m_directionFile="";
 
-	static const char *optString = "t:b:B:s:a:q:c:r:x:k:e:m:nvuo:p:l:L:h?";
+	static const char *optString = "t:d:b:B:s:a:q:c:r:x:k:e:m:nvuo:p:l:L:h?";
 	static const struct option longOpts[]={
 		{"thread", required_argument, NULL, 't'},
+		{"dir", required_argument, NULL, 'd'},
         {"minBlock", required_argument, NULL, 'b'},
         {"maxBlock", required_argument, NULL, 'B'},
 		{"sampleSize", required_argument, NULL, 's'},
@@ -95,7 +97,7 @@ Command::Command(int argc, char* argv[], bool &error)
 		{"pvalue", no_argument, NULL, 'u'},
 		{"out", required_argument, NULL, 'o'},
 		{"pfile", required_argument, NULL, 'p'},
-		{"linkage", required_argument, NULL, 'l'},
+		{"bfile", required_argument, NULL, 'l'},
 		{"region", required_argument, NULL, 'L'},
 		{"extreme", required_argument, NULL, 'e'},
         {"help", no_argument, NULL, 'h'},
@@ -130,6 +132,8 @@ Command::Command(int argc, char* argv[], bool &error)
 				m_maxBlock = atoi(optarg);
 				m_maxBlockSet =true;
 				break;
+			case 'd':
+                m_directionFile = optarg;
 			case 's':
 				m_sampleSize= atoi(optarg);
 				m_provideSampleSize = true;
@@ -241,6 +245,10 @@ Command::Command(int argc, char* argv[], bool &error)
         error = true;
         std::cerr << "Cannot open the p-value file, please check that the file exists" << std::endl;
     }
+    if(!m_directionFile.empty() && !usefulTools::fileExists(m_directionFile)){
+        error = true;
+        std::cerr << "Cannot open the direction file, please check that the file exists" << std::endl;
+    }
 
     if(m_quantitative && (m_tIndex == m_bpIndex || m_tIndex == m_chrIndex || m_tIndex == m_rsIndex || m_tIndex == m_sampleSizeIndex ||
        m_bpIndex == m_chrIndex || m_bpIndex == m_rsIndex || m_bpIndex == m_sampleSizeIndex ||
@@ -320,7 +328,7 @@ void Command::printBriefUsage(){
     std::cerr << "  -c,--chr         The column number of chromosome              [ Default: 1 ]"  << std::endl;
     std::cerr << "  --rs             The column number of rsid                    [ Default: 2 ]"  << std::endl;
     std::cerr << "  --bp             The column number of coordinate              [ Default: 3 ]"  << std::endl;
-    std::cerr << "  -l,--linkage     The linkage  file prefix.                      [ Required ]"  << std::endl;
+    std::cerr << "  -l,--bfile       The linkage  file prefix.                      [ Required ]"  << std::endl;
     std::cerr << "  -n,--no_correct  Turn off LD correction. "                                     << std::endl;
     std::cerr << "  -m,--maf         The minor allele frequency filtering.      [ Default: off ]"  << std::endl;
     std::cerr << "                                                                              "  << std::endl;
@@ -364,7 +372,7 @@ void Command::printUsage(){
     std::cerr << "  -c,--chr         The column number of chromosome in the p-value file"          << std::endl;
     std::cerr << "  --rs             The column number of rsid in the p-value file"                << std::endl;
     std::cerr << "  --bp             The column number of rsid coordinate in the p-value file"     << std::endl;
-    std::cerr << "  -l,--linkage     The linkage  file prefix. The programme will use this to "    << std::endl;
+    std::cerr << "  -l,--bfile       The linkage  file prefix. The programme will use this to "    << std::endl;
     std::cerr << "                   calculate the LD matrix. Will require the fam, bim and bed"   << std::endl;
     std::cerr << "                   file. Please try to perform quality control beforehand "      << std::endl;
     std::cerr << "  -n,--no_correct  Turn off LD correction. The LD correction is used when "      << std::endl;

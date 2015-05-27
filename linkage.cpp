@@ -379,15 +379,12 @@ void Linkage::print(){ //DEBUG
 }
 
 
-Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::MatrixXd &variance, size_t sampleSize){
+Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const signValue, Eigen::MatrixXd &variance, size_t sampleSize){
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().maxCoeff();
     Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
     Eigen::VectorXd result= rInverse*(*betaEstimate).segment(start, length);
     Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);
-
-
-
 	double bNorm = (*betaEstimate).segment(start, length).norm();
     double relative_error = error.norm() / bNorm;
     double prev_error = relative_error+1;
@@ -405,10 +402,12 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
     Eigen::VectorXd minusF = Eigen::VectorXd::Constant(length, 1.0)-(*betaEstimate).segment(start, length);
     Eigen::VectorXcd complexF =Eigen::VectorXcd::Zero(length);
     for(size_t i =0; i < length; ++i){
-        complexF(i) = sqrt(((*betaEstimate).segment(start, length))(i));
+        complexF(i) = sqrt(((*betaEstimate).segment(start, length))(i))*((*signValue).segment(start, length))(i);
     }
-    variance = (rInverse*(((sampleSize-2)/((sampleSize*sampleSize-1)*(sampleSize-1)))*(minusF.asDiagonal()*(2*m_linkage.block(start, start, length, length).cast<std::complex<double> >()+4*(complexF.asDiagonal()*m_linkageSqrt.block(start, start, length, length).cast<std::complex<double> >()*complexF.adjoint().asDiagonal())*((sampleSize-2)*(sampleSize-1)+4)/(sampleSize+3))*minusF.asDiagonal()))*rInverse).real();
 
+    //variance = (rInverse*((minusF.asDiagonal()*(2*m_linkage.block(start, start, length, length).cast<std::complex<double> >()+4*(complexF.asDiagonal()*m_linkageSqrt.block(start, start, length, length).cast<std::complex<double> >()*complexF.adjoint().asDiagonal())*((sampleSize-2)*(sampleSize-1)+4)/(sampleSize+3))*minusF.asDiagonal())*((sampleSize-2)/((sampleSize*sampleSize-1)*(sampleSize-1))))*rInverse).real();
+    variance = (rInverse*((minusF.asDiagonal()*(2*m_linkage.block(start, start, length, length).cast<std::complex<double> >()+4*(complexF.asDiagonal()*m_linkageSqrt.block(start, start, length, length).cast<std::complex<double> >()*complexF.adjoint().asDiagonal())-m_linkage.block(start, start, length, length)*m_linkageSqrt.block(start, start, length, length))*minusF.asDiagonal())/((sampleSize*sampleSize)))*rInverse).real();
+    std::cout << "Variance: " << variance.sum() << std::endl;
     return result;
 }
 
