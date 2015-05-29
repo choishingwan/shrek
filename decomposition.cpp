@@ -42,10 +42,10 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
     if(stepSize == 0 || currentBlockSize==processSize){ //no multithreading is required
 		//The Block size is only 3. so We can finish it anyway
 		Eigen::MatrixXd variance = Eigen::MatrixXd::Zero(processSize, processSize);
-		Eigen::VectorXd result = m_linkage->solveChi(0, processSize, &betaEstimate, &signValue, variance, Snp::m_maxSampleSize);
+		Eigen::VectorXd result = m_linkage->solveChi(0, processSize, &betaEstimate, &signValue, &variance, Snp::m_maxSampleSize);
 		size_t copyStart = 0;
 		if(!chromosomeStart) copyStart = blockSize/3;
-
+		std::cerr << "Region size: " << Region::regionVariance.size() << std::endl;
         for(size_t i=copyStart; i < processSize; ++i){
 			(*m_snpList)[snpLoc[i]]->Setheritability(result(i));
 			(*m_snpList)[snpLoc[i]]->Setvariance(variance(i,i)); //The diagonal of the matrix contains the per snp variance

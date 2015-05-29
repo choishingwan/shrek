@@ -18,7 +18,7 @@ void DecompositionThread::solve(){
     size_t processLength = m_length;
     if(m_lastOfBlock) processLength=betaLength-m_start;
     Eigen::MatrixXd variance = Eigen::MatrixXd::Zero(processLength, processLength);
-	Eigen::VectorXd result = m_linkage->solveChi(m_start, processLength, m_betaEstimate, m_signValue, variance, Snp::m_maxSampleSize);
+	Eigen::VectorXd result = m_linkage->solveChi(m_start, processLength, m_betaEstimate, m_signValue, &variance, Snp::m_maxSampleSize);
 
 	size_t copyStart = m_length/3;
 	size_t copyEnd = m_length/3;

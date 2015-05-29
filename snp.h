@@ -52,7 +52,7 @@ private:
         double m_oriBeta;
         double m_effectiveNumber;
         double m_variance;
-        std::shared_ptr<double> m_ncp;
+        //std::shared_ptr<double> m_ncp;
         std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD
         std::shared_ptr<double> m_heritability; //The master heritability
         Snp* m_targetClass; //The master heritability

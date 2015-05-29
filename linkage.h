@@ -36,7 +36,7 @@ class Linkage
 		Eigen::MatrixXd blockSqrt(size_t blockStart, size_t lengthOfBlock);
 		Eigen::MatrixXd varBlock(size_t blockStart, size_t lengthOfBlock);
 		Eigen::VectorXd solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective);
-		Eigen::VectorXd solveChi(size_t start, size_t length, Eigen::VectorXd const* const betaEstimate, Eigen::VectorXd const* const signValue, Eigen::MatrixXd &variance, size_t sampleSize);
+		Eigen::VectorXd solveChi(size_t start, size_t length, Eigen::VectorXd const* const betaEstimate, Eigen::VectorXd const* const signValue, Eigen::MatrixXd *variance, size_t sampleSize);
 		double Geteffective() const;
 		static double VarianceR2(double rSq, size_t numSample, size_t predictor);
 		static double ExpectedR2(double rSq, size_t numSample, size_t predictor);
