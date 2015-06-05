@@ -4,11 +4,14 @@ size_t Snp::m_maxSampleSize=0;
 
 Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double original, double beta):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original), m_oriBeta(beta){
 	m_beta = std::make_shared<double>(beta);
-	//m_ncp = std::make_shared<double>(beta^2-1);
+	m_chiSq = std::make_shared<double>(beta);
 	m_heritability = std::make_shared<double>(0.0);
 	m_effectiveNumber=0.0;
+	m_additionVariance =0.0;
+	m_variance =0.0;
 	m_targetClass = this;
 	m_sign = usefulTools::signum(beta);
+	m_perfectLd =false;
 	if(Snp::m_maxSampleSize < m_sampleSize){
         Snp::m_maxSampleSize = m_sampleSize;
 	}
@@ -16,6 +19,7 @@ Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double o
 
 std::string Snp::Getchr() const { return m_chr; }
 std::string Snp::GetrsId() const { return m_rs; }
+bool Snp::perfectLd() const { return m_perfectLd; }
 size_t Snp::Getbp() const { return m_bp; }
 size_t Snp::GetregionSize() const {return m_regionFlag.size(); }
 int Snp::Getsign() const { return m_sign; }
@@ -25,6 +29,9 @@ double Snp::Getoriginal() const { return m_original; }
 double Snp::Getbeta() const {
 	return (*m_beta)/(double)(m_beta.use_count());
 }
+double Snp::GetchiSq() const {
+	return (*m_chiSq)/(double)(m_chiSq.use_count());
+}
 //double Snp::Getncp() const {
 //	return (*m_ncp)/(double)(m_ncp.use_count());
 //}
@@ -32,6 +39,7 @@ double Snp::Getbeta() const {
 
 void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability;}
 void Snp::Setvariance(double i){ m_variance = i; }
+void Snp::SetadditionVariance(double i){ m_additionVariance = i; }
 //void Snp::Seteffective(double i) { m_effectiveNumber = i; }
 double Snp::GetheritabilityChi() const { return (*m_heritability)/(double)(m_beta.use_count()); }
 double Snp::Getheritability() const {
@@ -46,19 +54,24 @@ void Snp::shareHeritability( Snp* i ){
 	if(i->m_beta == m_beta){
 		return;
 	}
+	m_perfectLd = true;
+	i->m_perfectLd = true;
 	(*i->m_beta) += (*m_beta); //Add up the beta to get an average
+	(*i->m_chiSq) += (*m_chiSq);
 	//(*i->m_ncp) += (*m_ncp); //Add up the beta to get an average
 	(*i->m_heritability) += (*m_heritability);
 	//i is the one who buy
 	//this is the one who sell
     //For this's family, all of them should point to the same location
 	m_beta = (i->m_beta); //They now share the same beta
+	m_chiSq = (i->m_chiSq); //They now share the same beta
 	//m_ncp = (i->m_ncp); //They now share the same beta
 	m_heritability = (i->m_heritability);
 	Snp* currentClass = m_targetClass;
 	Snp* prevClass = this;
 	while(currentClass != this){
 		currentClass->m_beta = i->m_beta; //The subsequent stuff are also pointing here
+		currentClass->m_chiSq = i->m_chiSq;
 		//currentClass->m_ncp = i->m_ncp;
 		currentClass->m_heritability = i->m_heritability;
         prevClass = currentClass;
@@ -68,6 +81,7 @@ void Snp::shareHeritability( Snp* i ){
 	//Now prevClass is the last person in chain
     prevClass->m_targetClass = i->m_targetClass;
     i->m_targetClass = this;
+
 }
 
 
@@ -221,8 +235,9 @@ void Snp::computeVarianceExplainedChi(bool isPvalue, double extremeRatio){
         if(!std::isfinite((*m_beta))) (*m_beta) = usefulTools::qnorm(((m_original+0.0)/2.0));
     }
     (*m_beta) = (*m_beta)*(*m_beta);
+    (*m_chiSq)= (*m_beta);
     //Calculate the variance
-	(*m_beta) = ((*m_beta)/(m_sampleSize-2.0+(*m_beta)))-1.0/(extremeRatio*m_sampleSize-2.0+(*m_beta));
+	(*m_beta) = ((*m_beta)-1)/(m_sampleSize-2.0+(*m_beta));
 	m_sampleSize = m_sampleSize*extremeRatio;
 	m_oriBeta =(*m_beta);
 }
@@ -233,6 +248,7 @@ void Snp::computeVarianceExplainedChi(const size_t &caseSize, const size_t &cont
         if(!std::isfinite((*m_beta))) (*m_beta) =usefulTools::qnorm(((m_original+0.0)/2.0));
         (*m_beta) = (*m_beta)*(*m_beta);
     }
+    (*m_chiSq)= (*m_beta);
     double ncp = ((*m_beta) -1.0);
     //(*m_ncp) = ncp;
 	int totalSampleSize = caseSize + controlSize;

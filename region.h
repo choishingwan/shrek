@@ -22,6 +22,7 @@ class Region
         static void cleanRegion(std::vector<std::vector<Region*> > &regionList);
         static std::vector<std::string> regionNames;
         static std::vector<double> regionVariance;
+        static std::vector<double> regionAdditionVariance;
         static size_t numRegion();
         std::string Getchr() const;
         size_t Getstart() const;

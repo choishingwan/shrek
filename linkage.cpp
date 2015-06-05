@@ -379,7 +379,7 @@ void Linkage::print(){ //DEBUG
 }
 
 
-Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const signValue, Eigen::MatrixXd *variance, size_t sampleSize){
+Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const signValue,Eigen::VectorXd const *const chiSq, Eigen::MatrixXd *variance,Eigen::MatrixXd *additionVariance, size_t sampleSize){
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().maxCoeff();
     Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
@@ -398,15 +398,22 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
         if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
-
+    //Eigen::VectorXd minusF = (((*chiSq).segment(start, length))+Eigen::VectorXd::Constant(length, sampleSize-2.0)).array()*(((*chiSq).segment(start, length))+Eigen::VectorXd::Constant(length, sampleSize-2.0)).array();
     Eigen::VectorXd minusF = Eigen::VectorXd::Constant(length, 1.0)-(*betaEstimate).segment(start, length);
-    Eigen::VectorXcd complexF =Eigen::VectorXcd::Zero(length);
-    for(size_t i =0; i < length; ++i){
-        complexF(i) = sqrt(std::complex<double>(((*betaEstimate).segment(start, length))(i)))*((*signValue).segment(start, length))(i);
-    }
-    (*variance) = (rInverse*((minusF.asDiagonal()*(2.0*m_linkage.block(start, start, length, length).cast<std::complex<double> >()+4.0*(complexF.asDiagonal()*m_linkageSqrt.block(start, start, length, length).cast<std::complex<double> >()*complexF.adjoint().asDiagonal())*((sampleSize-2.0)*(sampleSize-1.0)+4.0)/(sampleSize+3.0))*minusF.asDiagonal())*((sampleSize-2.0)/((sampleSize*sampleSize-1.0)*(sampleSize-1.0))))*rInverse).real();
+    //for(size_t i = 0; i < length; ++i){
+    //    minusF(i) = (sampleSize-1.0)/minusF(i);
+    //}
+    //Eigen::VectorXd minusF = Eigen::VectorXd::Constant(length, 1.0)-(*betaEstimate).segment(start, length);
+
+    Eigen::VectorXd signedChiSq =((*signValue).segment(start, length)).array()*((*chiSq).segment(start, length)).array().sqrt();
+    Eigen::MatrixXd ncpEstimate = (4.0*m_linkageSqrt.block(start, start, length, length)).array()*(signedChiSq*signedChiSq.transpose()-m_linkageSqrt.block(start, start, length, length)).array();
+
+    (*variance) = (rInverse*(minusF.asDiagonal()*(ncpEstimate)*minusF.asDiagonal())*rInverse)/(double)(sampleSize*sampleSize);
+    (*additionVariance) =2*rInverse*(minusF.asDiagonal()*m_linkage.block(start, start, length, length)*minusF.asDiagonal())*rInverse/(double)(sampleSize*sampleSize);
+    //std::cout << ((*variance)+(*additionVariance)).sum() << std::endl;
+    //(*variance) = (rInverse*((minusF.asDiagonal()*(2.0*m_linkage.block(start, start, length, length)+4.0*(((*tstat).segment(start, length)).asDiagonal()*m_linkageSqrt.block(start, start, length, length)*((*tstat).segment(start, length)).adjoint().asDiagonal()))*minusF.asDiagonal())*((sampleSize-2.0)/((sampleSize*sampleSize-1.0)*(sampleSize-1.0))))*rInverse).real();
     //variance = (rInverse*((minusF.asDiagonal()*(2*m_linkage.block(start, start, length, length).cast<std::complex<double> >()+4*(complexF.asDiagonal()*m_linkageSqrt.block(start, start, length, length).cast<std::complex<double> >()*complexF.adjoint().asDiagonal())-m_linkage.block(start, start, length, length)*m_linkageSqrt.block(start, start, length, length))*minusF.asDiagonal())/((sampleSize*sampleSize)))*rInverse).real();
-    std::cout << "Variance: " << (*variance).sum() << std::endl;
+
 
     return result;
 }

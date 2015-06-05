@@ -30,6 +30,8 @@ public:
         double Getbeta() const;
         double Getheritability() const;
         double GetheritabilityChi() const;
+        double GetchiSq() const;
+        bool perfectLd () const;
         //double Geteffective() const;
         bool Concordant(std::string chr, size_t bp, std::string rsId) const;
         bool GetFlag(size_t index) const;
@@ -38,6 +40,7 @@ public:
         void shareHeritability( Snp* i );
         //void Seteffective(double i );
         void Setvariance(double i );
+        void SetadditionVariance(double i );
         static void cleanSnp(std::vector<Snp*> &snpList);
         static bool sortSnp (Snp* i, Snp* j);
         static size_t m_maxSampleSize;
@@ -52,8 +55,11 @@ private:
         double m_oriBeta;
         double m_effectiveNumber;
         double m_variance;
+        double m_additionVariance;
+        bool m_perfectLd;
         //std::shared_ptr<double> m_ncp;
         std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD
+        std::shared_ptr<double> m_chiSq;
         std::shared_ptr<double> m_heritability; //The master heritability
         Snp* m_targetClass; //The master heritability
         std::vector<bool> m_regionFlag;

@@ -4,6 +4,7 @@
 #include <vector>
 #include <deque>
 #include <fstream>
+#include <complex>
 #include <iomanip>
 #include "processcode.h"
 #include "decomposition.h"

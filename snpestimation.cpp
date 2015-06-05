@@ -125,11 +125,11 @@ void SnpEstimation::Getresult(std::string outputPrefix){
         }
 
     }
+
 	if(outputPrefix.empty()){
         std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
-        std::cout << "With LD\t" << regionEstimate[0] << "\t" << totalSum-regionEstimate[0] << "\t" << ((1-regionEstimate[0])*Region::regionVariance[0]) << std::endl;
-        for(size_t i =1; i < regionEstimate.size(); ++i){
-            std::cout << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << (1-regionEstimate[i])*Region::regionVariance[i] << std::endl;
+        for(size_t i =0; i < regionEstimate.size(); ++i){
+            std::cout << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << (1.0-sqrt(std::complex<double>(regionEstimate[i])).real())*( Region::regionVariance[i]+(1-sqrt(std::complex<double>(regionEstimate[i])).real())*Region::regionAdditionVariance[i]) << std::endl;
         }
     }
     else{
@@ -146,7 +146,7 @@ void SnpEstimation::Getresult(std::string outputPrefix){
         }
         else{
 			//We want the output in sorted format. So we will have to do extra works just to make sure the result is sorted
-            resOut << "Chr\tLoc\trsID\tOriginal\tBeta\tEstimate\tWithLD" << std::endl;
+            resOut << "Chr\tLoc\trsID\tOriginal\tBeta\tEstimate\tWithLD\tPerfectLD" << std::endl;
             m_snpIndex->init();
             size_t index;
             std::vector<Snp*> resultSnps;
@@ -159,7 +159,7 @@ void SnpEstimation::Getresult(std::string outputPrefix){
             }
             std::sort(resultSnps.begin(), resultSnps.end(), Snp::sortSnp);
             for(size_t i =0; i < resultSnps.size(); ++i){
-				resOut << resultSnps[i]->Getchr() << "\t" << resultSnps[i]->Getbp() << "\t" << resultSnps[i]->GetrsId() << "\t" << resultSnps[i]->Getoriginal()<< "\t" << resultSnps[i]->Getbeta() << "\t" <<  resultSnps[i]->GetheritabilityChi() << "\t" << resultSnps[i]->GetFlag(0) << std::endl;
+				resOut << resultSnps[i]->Getchr() << "\t" << resultSnps[i]->Getbp() << "\t" << resultSnps[i]->GetrsId() << "\t" << resultSnps[i]->Getoriginal()<< "\t" << resultSnps[i]->Getbeta() << "\t" <<  resultSnps[i]->GetheritabilityChi() << "\t" << resultSnps[i]->GetFlag(0) << "\t" <<  resultSnps[i]->perfectLd() << std::endl;
                 //delete resultSnps[i]; //Avoid double deletion
             }
             resultSnps.clear();
@@ -169,19 +169,17 @@ void SnpEstimation::Getresult(std::string outputPrefix){
             std::cerr << "Cannot open summary file: " << resSumName << " for write" << std::endl;
             std::cerr << "Will display on screen" << std::endl;
             std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
-            std::cout << "With LD\t" << regionEstimate[0] << "\t" << totalSum-regionEstimate[0] << "\t" << (1-regionEstimate[0])*Region::regionVariance[0] << std::endl;
-			for(size_t i =1; i < regionEstimate.size(); ++i){
-				std::cout << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << (1-regionEstimate[i])*Region::regionVariance[i] << std::endl;
+
+			for(size_t i =0; i < regionEstimate.size(); ++i){
+				std::cout << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << (1.0-sqrt(std::complex<double>(regionEstimate[i])).real())*( Region::regionVariance[i]+(1-sqrt(std::complex<double>(regionEstimate[i])).real())*Region::regionAdditionVariance[i]) << std::endl;
 			}
         }
         else{
             resSum << "Category\tPositive\tNegative\tVariance" << std::endl;
-            resSum << "With LD\t" << regionEstimate[0] << "\t" << totalSum-regionEstimate[0] << "\t" << (1-regionEstimate[0])*Region::regionVariance[0] << std::endl;
             std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
-            std::cout << "With LD\t" << regionEstimate[0] << "\t" << totalSum-regionEstimate[0] << "\t" << (1-regionEstimate[0])*Region::regionVariance[0] << std::endl;
-            for(size_t i =1; i < regionEstimate.size(); ++i){
-				resSum << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << (1-regionEstimate[i])*Region::regionVariance[i]<< std::endl;
-				std::cout << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << (1-regionEstimate[i])*Region::regionVariance[i] << std::endl;
+			for(size_t i =0; i < regionEstimate.size(); ++i){
+				std::cout << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << (1.0-sqrt(std::complex<double>(regionEstimate[i])).real())*( Region::regionVariance[i]+(1-sqrt(std::complex<double>(regionEstimate[i])).real())*Region::regionAdditionVariance[i]) << std::endl;
+				resSum << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << (1.0-sqrt(std::complex<double>(regionEstimate[i])).real())*( Region::regionVariance[i]+(1-sqrt(std::complex<double>(regionEstimate[i])).real())*Region::regionAdditionVariance[i]) << std::endl;
 			}
             resSum.close();
         }

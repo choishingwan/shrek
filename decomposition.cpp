@@ -19,6 +19,7 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
     }
     //std::cerr << "Chromosome is end: " << chromosomeEnd << std::endl;
     //std::cerr << "snpLoc size: " << snpLoc.size() << std::endl;
+    Eigen::VectorXd chiSq = Eigen::VectorXd::Zero(processSize);
     Eigen::VectorXd betaEstimate = Eigen::VectorXd::Zero(processSize);
     Eigen::VectorXd signValue = Eigen::VectorXd::Constant(processSize, 1.0);
 	for(size_t i=0;i < processSize; ++i){
@@ -28,6 +29,7 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
         }
         else{
 			betaEstimate(i) = (*m_snpList)[snpLoc[i]]->Getbeta();
+			chiSq(i) = (*m_snpList)[snpLoc[i]]->GetchiSq();
 			signValue(i) = (*m_snpList)[snpLoc[i]]->Getsign();
         }
     }
@@ -42,18 +44,22 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
     if(stepSize == 0 || currentBlockSize==processSize){ //no multithreading is required
 		//The Block size is only 3. so We can finish it anyway
 		Eigen::MatrixXd variance = Eigen::MatrixXd::Zero(processSize, processSize);
-		Eigen::VectorXd result = m_linkage->solveChi(0, processSize, &betaEstimate, &signValue, &variance, Snp::m_maxSampleSize);
+		Eigen::MatrixXd additionVariance = Eigen::MatrixXd::Zero(processSize, processSize);
+		Eigen::VectorXd result = m_linkage->solveChi(0, processSize, &betaEstimate, &signValue, &chiSq, &variance, &additionVariance,Snp::m_maxSampleSize);
 		size_t copyStart = 0;
 		if(!chromosomeStart) copyStart = blockSize/3;
 		std::cerr << "Region size: " << Region::regionVariance.size() << std::endl;
         for(size_t i=copyStart; i < processSize; ++i){
 			(*m_snpList)[snpLoc[i]]->Setheritability(result(i));
 			(*m_snpList)[snpLoc[i]]->Setvariance(variance(i,i)); //The diagonal of the matrix contains the per snp variance
+			(*m_snpList)[snpLoc[i]]->SetadditionVariance(additionVariance(i,i)); //The diagonal of the matrix contains the per snp variance
 			for(size_t j = 0; j < processSize; ++j){ //For this snp, go through all the snp partners
 				double covariance = variance(i,j);
+				double additionCovariance = additionVariance(i,j);
 				for(size_t regionIndex = 0; regionIndex < Region::regionVariance.size(); ++regionIndex){
 					if((*m_snpList)[snpLoc[i]]->GetFlag(regionIndex)&&(*m_snpList)[snpLoc[j]]->GetFlag(regionIndex)){
 						Region::regionVariance[regionIndex]+= covariance;
+						Region::regionAdditionVariance[regionIndex]+= additionCovariance;
 					}
 				}
 			}
@@ -82,9 +88,9 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
             //std::cerr << "Extra" << std::endl;
             //We will first do the appropriate amount, then do the remaining;
             for(size_t i =0; i < m_thread; ++i){
-				garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &signValue, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
-				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate,&signValue, m_linkage, &snpLoc, m_snpList, chromosomeStart, true));
-				else garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate,&signValue, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
+				garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &signValue, &chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
+				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &signValue ,&chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, true));
+				else garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &signValue ,&chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
 				pthread_t *thread1 = new pthread_t();
 				threadList.push_back(thread1);
 				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::ThreadProcesser, garbageCollection.back());
@@ -100,8 +106,8 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
             threadList.clear();
             //Now we do the extra job
 			for(size_t i=m_thread; i < startLoc.size(); ++i){
-				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate,&signValue, m_linkage, &snpLoc, m_snpList, chromosomeStart, true));
-				else garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate,&signValue, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
+				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &signValue,&chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, true));
+				else garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &signValue,&chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
 				pthread_t *thread1 = new pthread_t();
 				threadList.push_back(thread1);
 				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::ThreadProcesser, garbageCollection.back());
@@ -119,8 +125,8 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 		}
 		else{
 			for(size_t i = 0; i < startLoc.size(); ++i){
-				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate,&signValue,m_linkage, &snpLoc, m_snpList, chromosomeStart, true));
-				else garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate,&signValue, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
+				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &signValue ,&chiSq,m_linkage, &snpLoc, m_snpList, chromosomeStart, true));
+				else garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &signValue ,&chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
 				pthread_t *thread1 = new pthread_t();
 				threadList.push_back(thread1);
 				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::ThreadProcesser, garbageCollection.back());
