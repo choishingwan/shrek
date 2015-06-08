@@ -24,21 +24,18 @@ public:
         std::string GetrsId() const;
         size_t Getbp() const;
         size_t GetregionSize() const;
-        int Getsign() const;
         double GetsampleSize() const;
         double Getoriginal() const;
         double Getbeta() const;
         double Getheritability() const;
         double GetheritabilityChi() const;
-        double GetchiSq() const;
+        double GetsignedSqrtChiSq() const;
         bool perfectLd () const;
-        //double Geteffective() const;
         bool Concordant(std::string chr, size_t bp, std::string rsId) const;
         bool GetFlag(size_t index) const;
         void Setheritability(double heritability);
         void setFlag(size_t index, bool value);
         void shareHeritability( Snp* i );
-        //void Seteffective(double i );
         void Setvariance(double i );
         void SetadditionVariance(double i );
         static void cleanSnp(std::vector<Snp*> &snpList);
@@ -59,7 +56,7 @@ private:
         bool m_perfectLd;
         //std::shared_ptr<double> m_ncp;
         std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD
-        std::shared_ptr<double> m_chiSq;
+        std::shared_ptr<double> m_sqrtChiSq; //Sqrt of the chiSquare, considered the sign.
         std::shared_ptr<double> m_heritability; //The master heritability
         Snp* m_targetClass; //The master heritability
         std::vector<bool> m_regionFlag;

@@ -4,7 +4,7 @@ size_t Snp::m_maxSampleSize=0;
 
 Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double original, double beta):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original), m_oriBeta(beta){
 	m_beta = std::make_shared<double>(beta);
-	m_chiSq = std::make_shared<double>(beta);
+	m_sqrtChiSq = std::make_shared<double>(beta);
 	m_heritability = std::make_shared<double>(0.0);
 	m_effectiveNumber=0.0;
 	m_additionVariance =0.0;
@@ -22,15 +22,14 @@ std::string Snp::GetrsId() const { return m_rs; }
 bool Snp::perfectLd() const { return m_perfectLd; }
 size_t Snp::Getbp() const { return m_bp; }
 size_t Snp::GetregionSize() const {return m_regionFlag.size(); }
-int Snp::Getsign() const { return m_sign; }
 double Snp::GetsampleSize() const { return m_sampleSize; }
 double Snp::Getoriginal() const { return m_original; }
 //double Snp::Geteffective() const { return m_effectiveNumber; }
 double Snp::Getbeta() const {
 	return (*m_beta)/(double)(m_beta.use_count());
 }
-double Snp::GetchiSq() const {
-	return (*m_chiSq)/(double)(m_chiSq.use_count());
+double Snp::GetsignedSqrtChiSq() const {
+	return (*m_sqrtChiSq)/(double)(m_sqrtChiSq.use_count());
 }
 //double Snp::Getncp() const {
 //	return (*m_ncp)/(double)(m_ncp.use_count());
@@ -57,21 +56,21 @@ void Snp::shareHeritability( Snp* i ){
 	m_perfectLd = true;
 	i->m_perfectLd = true;
 	(*i->m_beta) += (*m_beta); //Add up the beta to get an average
-	(*i->m_chiSq) += (*m_chiSq);
+	(*i->m_sqrtChiSq) += (*m_sqrtChiSq);
 	//(*i->m_ncp) += (*m_ncp); //Add up the beta to get an average
 	(*i->m_heritability) += (*m_heritability);
 	//i is the one who buy
 	//this is the one who sell
     //For this's family, all of them should point to the same location
 	m_beta = (i->m_beta); //They now share the same beta
-	m_chiSq = (i->m_chiSq); //They now share the same beta
+	m_sqrtChiSq = (i->m_sqrtChiSq); //They now share the same beta
 	//m_ncp = (i->m_ncp); //They now share the same beta
 	m_heritability = (i->m_heritability);
 	Snp* currentClass = m_targetClass;
 	Snp* prevClass = this;
 	while(currentClass != this){
 		currentClass->m_beta = i->m_beta; //The subsequent stuff are also pointing here
-		currentClass->m_chiSq = i->m_chiSq;
+		currentClass->m_sqrtChiSq = i->m_sqrtChiSq;
 		//currentClass->m_ncp = i->m_ncp;
 		currentClass->m_heritability = i->m_heritability;
         prevClass = currentClass;
@@ -235,7 +234,7 @@ void Snp::computeVarianceExplainedChi(bool isPvalue, double extremeRatio){
         if(!std::isfinite((*m_beta))) (*m_beta) = usefulTools::qnorm(((m_original+0.0)/2.0));
     }
     (*m_beta) = (*m_beta)*(*m_beta);
-    (*m_chiSq)= (*m_beta);
+    (*m_sqrtChiSq)= sqrt((*m_beta))*m_sign;
     //Calculate the variance
 	(*m_beta) = ((*m_beta)-1)/(m_sampleSize-2.0+(*m_beta));
 	m_sampleSize = m_sampleSize*extremeRatio;
@@ -248,7 +247,7 @@ void Snp::computeVarianceExplainedChi(const size_t &caseSize, const size_t &cont
         if(!std::isfinite((*m_beta))) (*m_beta) =usefulTools::qnorm(((m_original+0.0)/2.0));
         (*m_beta) = (*m_beta)*(*m_beta);
     }
-    (*m_chiSq)= (*m_beta);
+    (*m_sqrtChiSq)= sqrt((*m_beta))*m_sign;
     double ncp = ((*m_beta) -1.0);
     //(*m_ncp) = ncp;
 	int totalSampleSize = caseSize + controlSize;

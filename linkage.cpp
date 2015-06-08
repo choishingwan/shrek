@@ -27,42 +27,6 @@ Linkage::~Linkage()
 	//dtor
 }
 
-double Linkage::ExpectedR2(double rSq, size_t numSample, size_t predictor){
-    return 0;
-    /*gsl_sf_result result;
-    int status = gsl_sf_hyperg_2F1_e(1, 1, 0.5 * (numSample + 1), rSq, &result);
-    if(status == GSL_SUCCESS) {
-        double y = result.val;
-        double value = 1.0 - ((numSample - predictor- 1.0)/(numSample - 1.0)) * (1.0 - rSq) * y;
-        (value>0) ? value=value : value=0.0;
-        (value<1) ? value=value : value=1.0;
-        return value;
-    }
-    else{
-        std::cerr << "Problem with calculating the variance of Rsq" << std::endl;
-        exit(-1);
-    }
-    */
-}
-
-double Linkage::VarianceR2(double rSq, size_t numSample, size_t predictor){
-    return 0; //Deactivate the variance of R2 at the moment to avoid problem
-    /*
-    gsl_sf_result result;
-    int status = gsl_sf_hyperg_2F1_e(2, 2, 0.5 * (numSample + 3), rSq, &result);
-    if(status == GSL_SUCCESS){
-        double y = result.val;
-        double expected =(ExpectedR2(rSq,numSample,predictor) - 1);
-        double value =(((numSample -predictor -1.0)*((double)numSample-predictor+1.0))/((double)numSample*(double)numSample-1.0)) * ((1.0 - rSq)*(1.0 - rSq)) *y-(expected*expected);
-        return value;
-    }
-    else{
-        std::cerr << "Problem with calculating the variance of Rsq" << std::endl;
-        exit(-1);
-    }
-    */
-}
-
 size_t Linkage::rows() const { return m_linkage.rows(); }
 size_t Linkage::cols() const { return m_linkage.cols(); }
 Eigen::MatrixXd Linkage::block(size_t blockStart, size_t lengthOfBlock){ return m_linkage.block(blockStart, blockStart, lengthOfBlock, lengthOfBlock); }
@@ -374,12 +338,7 @@ void Linkage::Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc
 
 }
 
-void Linkage::print(){ //DEBUG
-    std::cout << m_linkage << std::endl;
-}
-
-
-Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const signValue,Eigen::VectorXd const *const chiSq, Eigen::MatrixXd *variance,Eigen::MatrixXd *additionVariance, size_t sampleSize){
+Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::MatrixXd *variance,Eigen::MatrixXd *additionVariance, size_t sampleSize){
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().maxCoeff();
     Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
@@ -398,62 +357,20 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
         if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
-    //Eigen::VectorXd minusF = (((*chiSq).segment(start, length))+Eigen::VectorXd::Constant(length, sampleSize-2.0)).array()*(((*chiSq).segment(start, length))+Eigen::VectorXd::Constant(length, sampleSize-2.0)).array();
     Eigen::VectorXd minusF = Eigen::VectorXd::Constant(length, 1.0)-(*betaEstimate).segment(start, length);
-    //for(size_t i = 0; i < length; ++i){
-    //    minusF(i) = (sampleSize-1.0)/minusF(i);
-    //}
-    //Eigen::VectorXd minusF = Eigen::VectorXd::Constant(length, 1.0)-(*betaEstimate).segment(start, length);
+    for(size_t i = 0; i < length; ++i){
+        minusF(i) = minusF(i)/(sampleSize-2.0+((*sqrtChiSq).segment(start, length))(i));
+    }
 
-    Eigen::VectorXd signedChiSq =((*signValue).segment(start, length)).array()*((*chiSq).segment(start, length)).array().sqrt();
-    Eigen::MatrixXd ncpEstimate = (4.0*m_linkageSqrt.block(start, start, length, length)).array()*(signedChiSq*signedChiSq.transpose()-m_linkageSqrt.block(start, start, length, length)).array();
+    Eigen::MatrixXd ncpEstimate = (4.0*(*sqrtChiSq).segment(start, length).matrix().asDiagonal()*m_linkageSqrt.block(start, start, length, length)*(*sqrtChiSq).segment(start, length).matrix().asDiagonal());
 
-    (*variance) = (rInverse*(minusF.asDiagonal()*(ncpEstimate)*minusF.asDiagonal())*rInverse)/(double)(sampleSize*sampleSize);
-    (*additionVariance) =2*rInverse*(minusF.asDiagonal()*m_linkage.block(start, start, length, length)*minusF.asDiagonal())*rInverse/(double)(sampleSize*sampleSize);
+    (*variance) = (rInverse*(minusF.asDiagonal()*(ncpEstimate)*minusF.asDiagonal())*rInverse);
+    (*additionVariance) =-2*rInverse*(minusF.asDiagonal()*m_linkage.block(start, start, length, length)*minusF.asDiagonal())*rInverse;
     //std::cout << ((*variance)+(*additionVariance)).sum() << std::endl;
     //(*variance) = (rInverse*((minusF.asDiagonal()*(2.0*m_linkage.block(start, start, length, length)+4.0*(((*tstat).segment(start, length)).asDiagonal()*m_linkageSqrt.block(start, start, length, length)*((*tstat).segment(start, length)).adjoint().asDiagonal()))*minusF.asDiagonal())*((sampleSize-2.0)/((sampleSize*sampleSize-1.0)*(sampleSize-1.0))))*rInverse).real();
     //variance = (rInverse*((minusF.asDiagonal()*(2*m_linkage.block(start, start, length, length).cast<std::complex<double> >()+4*(complexF.asDiagonal()*m_linkageSqrt.block(start, start, length, length).cast<std::complex<double> >()*complexF.adjoint().asDiagonal())-m_linkage.block(start, start, length, length)*m_linkageSqrt.block(start, start, length, length))*minusF.asDiagonal())/((sampleSize*sampleSize)))*rInverse).real();
 
 
-    return result;
-}
-
-Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd *betaEstimate, Eigen::VectorXd *effective){
-    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
-    double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().abs().maxCoeff();
-    Eigen::MatrixXd rInverse = (es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().sqrt().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
-    Eigen::MatrixXd r = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().sqrt(), 0).matrix().asDiagonal();
-    Eigen::VectorXd result= rInverse*(*betaEstimate).segment(start, length);
-    double relative_error = 0.0;
-	Eigen::VectorXd error =r*result - (*betaEstimate).segment(start, length);
-    relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
-    double prev_error = relative_error+1;
-    Eigen::VectorXd update = result;
-    while(relative_error < prev_error){
-        prev_error = relative_error;
-
-        update=rInverse*(-error);
-        relative_error = 0.0;
-        error= r*(result+update) - (*betaEstimate).segment(start, length);
-        relative_error = error.norm() / (*betaEstimate).segment(start, length).norm();
-        if(relative_error < 1e-300) relative_error = 0;
-        result = result+update;
-    }
-
-    Eigen::VectorXd ones = Eigen::VectorXd::Constant(length, 1.0);
-    (*effective)=rInverse*ones;
-    error =r*(*effective) - ones;
-    relative_error = error.norm()/ones.norm();
-    prev_error = relative_error+1;
-    while(relative_error < prev_error){
-        prev_error = relative_error;
-        update=rInverse*(-error);
-        relative_error = 0.0;
-        error=r*((*effective)+update) - ones;
-        relative_error = error.norm() / ones.norm();
-        if(relative_error < 1e-300) relative_error = 0;
-        (*effective) = (*effective)+update;
-    }
     return result;
 }
 
