@@ -22,27 +22,20 @@ bool Command::provideSampleSize() const { return m_provideSampleSize; }
 bool Command::quantitative() const { return m_quantitative; }
 bool Command::caseControl() const { return m_caseControl; }
 bool Command::maxBlockSet() const { return m_maxBlockSet; }
+bool Command::hasHeader() const {return m_hasHeader; }
 std::string Command::GetoutputPrefix() const { return m_outputPrefix; }
 std::string Command::GetpValueFileName() const { return m_pValueFileName; }
 std::string Command::GetldFilePrefix() const { return m_ldFilePrefix; }
 std::string Command::GetregionList() const { return m_regionList; }
+std::string Command::GetdirectionFile() const {return m_directionFile; }
 std::string Command::GetprogrammeName() const { return m_programmeName; }
 
 
-
-Command::Command(int argc, char* argv[], bool &error)
-{
-    error = false;
-    if(argc == 1){
-		std::cerr << "You have not provided any arguments. Please provide all the required arguments" << std::endl;
-		printBriefUsage();
-		error = true;
-		return;
-	}
-    int threadDefault = 1;
-    bool providedPrevalence = false;
-    bool providedMaf= false;
-    bool provideExtremeAdjustment = false;
+Command::Command(){
+    m_hasHeader =true;
+	m_provideExtremeAdjustment = false;
+	m_providedPrevalence = false;
+    m_providedMaf= false;
     m_ldCorrection = true;
     m_validate = false;
 	m_isPvalue = false;
@@ -50,7 +43,7 @@ Command::Command(int argc, char* argv[], bool &error)
     m_quantitative = false;
     m_caseControl = false;
     m_maxBlockSet = false;
-    m_thread = threadDefault;
+    m_thread = 1;
     m_chrIndex = 0;
     m_rsIndex = 1;
     m_bpIndex = 2;
@@ -61,7 +54,6 @@ Command::Command(int argc, char* argv[], bool &error)
     m_ldFilePrefix = "";
     m_pValueFileName = "";
 	m_regionList="";
-	m_programmeName =argv[0];
     m_sampleSize=0;
 	m_caseSize=0;
 	m_controlSize=0;
@@ -74,168 +66,24 @@ Command::Command(int argc, char* argv[], bool &error)
     m_ldFilePrefix="";
 	m_regionList="";
 	m_directionFile="";
+}
 
-	static const char *optString = "t:d:b:B:s:a:q:c:r:x:k:e:m:nvuo:p:l:L:h?";
-	static const struct option longOpts[]={
-		{"thread", required_argument, NULL, 't'},
-		{"dir", required_argument, NULL, 'd'},
-        {"minBlock", required_argument, NULL, 'b'},
-        {"maxBlock", required_argument, NULL, 'B'},
-		{"sampleSize", required_argument, NULL, 's'},
-		{"case", required_argument, NULL, 0},
-		{"control", required_argument, NULL, 0},
-        {"cc", required_argument, NULL, 'a'},
-        {"quant", required_argument, NULL, 'q'},
-		{"bp", required_argument, NULL, 0},
-        {"chr", required_argument, NULL, 'c'},
-		{"rs", required_argument, NULL, 'r'},
-		{"sampleIndex", required_argument, NULL, 'x'},
-		{"prevalence", required_argument, NULL, 'k'},
-		{"maf", required_argument, NULL, 'm'},
-		{"no_correct", no_argument, NULL, 'n'},
-		{"validate", no_argument, NULL, 'v'},
-		{"pvalue", no_argument, NULL, 'u'},
-		{"out", required_argument, NULL, 'o'},
-		{"pfile", required_argument, NULL, 'p'},
-		{"bfile", required_argument, NULL, 'l'},
-		{"region", required_argument, NULL, 'L'},
-		{"extreme", required_argument, NULL, 'e'},
-        {"help", no_argument, NULL, 'h'},
-		{NULL, 0, 0, 0}
-	};
-
-    int longIndex;
-	int opt = 0;
-	std::string interpret="";
-	opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
-    while(opt!=-1){
-		switch(opt){
-			case 0:
-				interpret = longOpts[longIndex].name;
-				if(interpret.compare("control") == 0){
-					m_controlSize= atoi(optarg);
-				}
-				if(interpret.compare("case") == 0){
-					m_caseSize= atoi(optarg);
-				}
-				if(interpret.compare("bp")==0){
-                    m_bpIndex=atoi(optarg)-1;
-				}
-				break;
-			case 't':
-				m_thread = atoi(optarg);
-				break;
-			case 'b':
-				m_minBlock = atoi(optarg);
-				break;
-			case 'B':
-				m_maxBlock = atoi(optarg);
-				m_maxBlockSet =true;
-				break;
-			case 'd':
-                m_directionFile = optarg;
-			case 's':
-				m_sampleSize= atoi(optarg);
-				m_provideSampleSize = true;
-				break;
-            case 'a':
-				m_cIndex= atoi(optarg)-1;
-				m_caseControl = true;
-				break;
-            case 'e':
-				m_extremeAdjust = atof(optarg);
-				provideExtremeAdjustment = true;
-				break;
-            case 'q':
-				m_tIndex= atoi(optarg)-1;
-				m_quantitative = true;
-				break;
-            case 'c':
-                m_chrIndex = atoi(optarg)-1;
-                break;
-			case 'r':
-				m_rsIndex = atoi(optarg)-1;
-				break;
-			case 'x':
-				m_sampleSizeIndex = atoi(optarg)-1;
-				break;
-			case 'k':
-				m_prevalence = atof(optarg);
-				providedPrevalence =true;
-				break;
-            case 'm':
-                m_maf = atof(optarg);
-                providedMaf= true;
-                break;
-			case 'n':
-				m_ldCorrection = false;
-				break;
-			case 'v':
-				m_validate = true;
-				break;
-            case 'u':
-                m_isPvalue = true;
-                break;
-			case 'o':
-				m_outputPrefix = optarg;
-				break;
-			case 'p':
-				m_pValueFileName = optarg;
-				break;
-            case 'l':
-                m_ldFilePrefix = optarg;
-                break;
-            case 'L':
-				m_regionList = optarg;
-                break;
-			case 'h':
-			case '?':
- 				printUsage();
-				exit(0);
-				break;
-			default:
-				std::cerr << "Undefined operator, please use --help for more information!" << std::endl;
-				std::cerr << optarg << std::endl;
-				printBriefUsage();
-				exit(-1);
-		}
-		opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
+bool Command::generalCheck(){
+	bool error = false;
+    if(m_thread < 1){
+        std::cerr << "Undefined number of thread(s): " << m_thread << ". Number of thread(s) must be greater than 0, set number of thread(s) to default: 1" << std::endl;
+		m_thread = 1;
     }
-
-	if(m_thread <= 0){
-		std::cerr << "Undefined number of thread(s): " << m_thread << ". Number of thread(s) must be greater than 0, set number of thread(s) to default: " << threadDefault << std::endl;
-		m_thread = threadDefault;
-	}
-
-    if(m_maxBlockSet && m_minBlock > m_maxBlock){ //Enabled max block, so we need to have minBlock smaller than maxBlock
+    /** When maximum block is set, we need to make sure the max and min block size are reasonable */
+    if(m_maxBlockSet && m_minBlock > m_maxBlock){
         error = true;
         std::cerr << "Maximum block size enabled. Therefore minimum block size must be smaller than or equal to maximum block size" << std::endl;
         std::cerr << "Minimum block size: " << m_minBlock << std::endl;
         std::cerr << "Maximum block size: " << m_maxBlock << std::endl;
     }
-
     if(m_maxBlockSet && m_maxBlock == 0){
 		error = true;
         std::cerr << "Maximum block size enabled. The maximum block size must be bigger than 0" << std::endl;
-    }
-    if(m_caseControl && m_caseSize == 0){
-        error = true;
-        std::cerr << "Your case control study has 0 case and we cannot perform the analysis on such type of study." << std::endl;
-        std::cerr << "Please check your input is correct. Sorry." << std::endl;
-    }
-    else if(m_caseControl && m_controlSize == 0){
-        std::cerr << "Warning! Your case control study has 0 control and we are uncertain how will this affect the result." << std::endl;
-        std::cerr << "Please be cautious with the result" << std::endl;
-    }
-    if(m_quantitative && m_caseControl){
-        error = true;
-        std::cerr << "You may specify the study as either quantitative or case control study but not both." << std::endl;
-        std::cerr << "Please make sure you have the correct input" << std::endl;
-    }
-    if(m_quantitative && m_provideSampleSize && m_sampleSize <= 0){
-        error = true;
-        std::cerr << "Sample size provided for the quantitative study is less than or equal to zero" << std::endl;
-        std::cerr << "Please check you have the correct input" << std::endl;
     }
     if(m_pValueFileName.empty()){
         error = true;
@@ -245,15 +93,69 @@ Command::Command(int argc, char* argv[], bool &error)
         error = true;
         std::cerr << "Cannot open the p-value file, please check that the file exists" << std::endl;
     }
+    if(m_directionFile.empty() && (m_isPvalue || m_caseControl )){
+		std::cerr << "WARNING: If direction of the effect are not provided, the variance estimated will likely to be bias" << std::endl;
+    }
     if(!m_directionFile.empty() && !usefulTools::fileExists(m_directionFile)){
         error = true;
         std::cerr << "Cannot open the direction file, please check that the file exists" << std::endl;
     }
+    if(m_providedMaf && (m_maf < 0.0 || m_maf > 1.0)){
+        error = true;
+        std::cerr << "maf must be between 0.0 and 1.0" << std::endl;
+        std::cerr << "maf input: " << m_maf << std::endl;
+    }
+    if(m_ldFilePrefix.empty()){
+        error = true;
+        std::cerr << "Genotype files must be provided for ld calculation" << std::endl;
+    }
+    return error;
+}
 
-    if(m_quantitative && (m_tIndex == m_bpIndex || m_tIndex == m_chrIndex || m_tIndex == m_rsIndex || m_tIndex == m_sampleSizeIndex ||
+bool Command::caseControlCheck(){
+	bool error = false;
+	if(m_caseSize == 0){
+        error = true;
+        std::cerr << "Your case control study has 0 case and we cannot perform the analysis on such type of study." << std::endl;
+        std::cerr << "Please check your input is correct. Sorry." << std::endl;
+    }
+    else if(m_controlSize == 0){
+        std::cerr << "WARNING! Your case control study has 0 control and we are uncertain how will this affect the result." << std::endl;
+        std::cerr << "Please be cautious with the result" << std::endl;
+    }
+    if(m_cIndex == m_bpIndex || m_cIndex == m_chrIndex || m_cIndex == m_rsIndex ||
+			m_bpIndex==m_chrIndex || m_bpIndex == m_rsIndex ||
+            m_chrIndex == m_rsIndex){
+        error = true;
+        std::cerr << "Duplicated index! Please make sure the index are not duplicated!" << std::endl;
+        std::cerr << "Statistic index: " << m_cIndex << std::endl;
+        std::cerr << "bp index: " << m_bpIndex << std::endl;
+        std::cerr << "chr index: " << m_chrIndex << std::endl;
+        std::cerr << "rsId index: " << m_rsIndex << std::endl;
+    }
+    if(m_providedPrevalence ){
+        error = true;
+        std::cerr << "You must provide the prevalence for case control study." << std::endl;
+    }
+
+	else if(m_provideExtremeAdjustment){
+        std::cerr << "Currently there is no support for extreme phenotype in case control study. Extreme adjustment value will have no effect" << std::endl;
+	}
+	return error;
+}
+
+bool Command::quantitativeCheck(){
+	bool error =false;
+	if(m_provideSampleSize && m_sampleSize <= 0){
+        error = true;
+        std::cerr << "Sample size provided for the quantitative study is less than or equal to zero" << std::endl;
+        std::cerr << "Please check you have the correct input" << std::endl;
+    }
+
+    if(m_tIndex == m_bpIndex || m_tIndex == m_chrIndex || m_tIndex == m_rsIndex || m_tIndex == m_sampleSizeIndex ||
        m_bpIndex == m_chrIndex || m_bpIndex == m_rsIndex || m_bpIndex == m_sampleSizeIndex ||
        m_chrIndex == m_rsIndex || m_chrIndex == m_sampleSizeIndex ||
-       m_rsIndex == m_sampleSizeIndex)){
+       m_rsIndex == m_sampleSizeIndex){
         error = true;
         std::cerr << "Duplicated index! Please make sure the index are not duplicated!" << std::endl;
         std::cerr << "Statistic index: " << m_tIndex << std::endl;
@@ -263,49 +165,171 @@ Command::Command(int argc, char* argv[], bool &error)
         std::cerr << "sample size index: " << m_sampleSizeIndex << std::endl;
 
     }
-    else if(m_caseControl && (m_cIndex == m_bpIndex || m_cIndex == m_chrIndex || m_cIndex == m_rsIndex ||
-                              m_bpIndex==m_chrIndex || m_bpIndex == m_rsIndex ||
-                              m_chrIndex == m_rsIndex)){
-        error = true;
-        std::cerr << "Duplicated index! Please make sure the index are not duplicated!" << std::endl;
-        std::cerr << "Statistic index: " << m_cIndex << std::endl;
-        std::cerr << "bp index: " << m_bpIndex << std::endl;
-        std::cerr << "chr index: " << m_chrIndex << std::endl;
-        std::cerr << "rsId index: " << m_rsIndex << std::endl;
-    }
-    if(m_caseControl && !providedPrevalence ){
-        error = true;
-        std::cerr << "You must provide the prevalence for case control study." << std::endl;
-    }
-    if(providedMaf && (m_maf < 0.0 || m_maf > 1.0)){
-        error = true;
-        std::cerr << "maf must be between 0.0 and 1.0" << std::endl;
-        std::cerr << "maf input: " << m_maf << std::endl;
-    }
-
-    if(m_ldFilePrefix.empty()){
-        error = true;
-        std::cerr << "Genotype files must be provided for ld calculation" << std::endl;
-    }
-    if(!error && m_maxBlockSet && m_maxBlock%3 != 0){
-        std::cerr << "We prefer a blockSize that can be divided by 3. Will change the max block size to " << m_maxBlock+3-m_maxBlock%3 << std::endl;
-        m_maxBlock = m_maxBlock+3-m_maxBlock%3;
-    }
-	if(!error && m_minBlock > 0 && m_minBlock%3 != 0){
-        std::cerr << "We prefer a blockSize that can be divided by 3. Will change the min block size to " << m_minBlock+3-m_minBlock%3 << std::endl;
-        m_minBlock = m_minBlock+3-m_minBlock%3;
-    }
 	if(m_extremeAdjust <= 0.0){
         error = true;
         std::cerr << "The extreme adjustment value should always be bigger than 0" << std::endl;
 	}
-	else if(provideExtremeAdjustment && m_caseControl){
-        std::cerr << "Currently there is no support for extreme phenotype in case control study. Extreme adjustment value will have no effect" << std::endl;
+	if(m_providedPrevalence ){
+        std::cerr << "Prevalence is currently not considered in quantitative study. The value of prevalence will therefore have no effect" << std::endl;
+    }
+    return error;
+
+}
+
+void Command::initialize(int argc, char* argv[]){
+    if(argc==1){
+        throw "You have not provided any arguments. Please provide all the required arguments";
+    }
+	m_programmeName =argv[0];
+	static const char *optString = "a:b:c:C:d:e:f:Hh?k:l:L:M:m:no:p:q:R:r:t:s:uvx:";
+	static const struct option longOpts[]={
+		{"case",required_argument,NULL,'a'},
+		{"bfile",required_argument,NULL,'b'},
+		{"caseControl",required_argument,NULL,'c'},
+		{"chr",required_argument,NULL,'C'},
+		{"dir",required_argument,NULL,'d'},
+		{"extreme",required_argument,NULL,'e'},
+		{"maf",required_argument,NULL,'f'},
+		{"prevalence",required_argument,NULL,'k'},
+		{"loc",required_argument,NULL,'l'},
+		{"region",required_argument,NULL,'L'},
+		{"maxBlock",required_argument,NULL,'M'},
+		{"minBlock",required_argument,NULL,'m'},
+		{"no_correct",no_argument,NULL,'n'},
+		{"out",required_argument,NULL,'o'},
+		{"pfile",required_argument,NULL,'p'},
+		{"quant",required_argument,NULL,'q'},
+		{"control",required_argument,NULL,'R'},
+		{"rs",required_argument,NULL,'r'},
+		{"sampleSize",required_argument,NULL,'s'},
+		{"thread",required_argument,NULL,'t'},
+		{"pvalue",no_argument,NULL,'u'},
+		{"validate",no_argument,NULL,'v'},
+		{"sampleIndex",required_argument,NULL,'x'},
+		{"header",no_argument,NULL,'H'},
+		{"help",no_argument,NULL,'h'},
+		{NULL, 0, 0, 0}
+	};
+	int longIndex;
+	int opt = 0;
+	std::string interpret="";
+	opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
+    while(opt!=-1){
+		switch(opt){
+			case 'a':
+				m_caseSize= atoi(optarg);
+				break;
+			case 'b':
+                m_ldFilePrefix = optarg;
+                break;
+			case 'c':
+				m_cIndex= atoi(optarg)-1;
+				m_caseControl = true;
+				break;
+			case 'C':
+                m_chrIndex = atoi(optarg)-1;
+                break;
+			case 'd':
+                m_directionFile = optarg;
+                break;
+			case 'e':
+				m_extremeAdjust = atof(optarg);
+				m_provideExtremeAdjustment = true;
+				break;
+			case 'f':
+                m_maf = atof(optarg);
+                m_providedMaf= true;
+                break;
+            case 'H':
+                m_hasHeader=true;
+                break;
+			case 'h':
+			case '?':
+ 				printUsage();
+                throw 0;
+				break;
+			case 'k':
+				m_prevalence = atof(optarg);
+				m_providedPrevalence =true;
+				break;
+			case 'l':
+				m_bpIndex=atoi(optarg)-1;
+				break;
+			case 'L':
+				m_regionList = optarg;
+                break;
+			case 'M':
+				m_maxBlock = atoi(optarg);
+				m_maxBlockSet =true;
+				break;
+			case 'm':
+				m_minBlock = atoi(optarg);
+				break;
+			case 'n':
+				m_ldCorrection = false;
+				break;
+			case 'o':
+				m_outputPrefix = optarg;
+				break;
+			case 'p':
+				m_pValueFileName = optarg;
+				break;
+			case 'q':
+				m_tIndex= atoi(optarg)-1;
+				m_quantitative = true;
+				break;
+			case 'R':
+				m_controlSize= atoi(optarg);
+				break;
+			case 'r':
+				m_rsIndex = atoi(optarg)-1;
+				break;
+			case 't':
+				m_thread = atoi(optarg);
+				break;
+			case 's':
+				m_sampleSize= atoi(optarg);
+				m_provideSampleSize = true;
+				break;
+			case 'u':
+                m_isPvalue = true;
+                break;
+			case 'v':
+				m_validate = true;
+				break;
+			case 'x':
+				m_sampleSizeIndex = atoi(optarg)-1;
+				break;
+			default:
+				throw "Undefined operator, please use --help for more information!";
+		}
+		opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
+    }
+	if(m_caseControl && m_quantitative){
+		throw "You may specify the study as either quantitative or case control study but not both.";
 	}
-	if(error){
-		std::cerr << "Type " << argv[0] << " -h for more information" << std::endl;
-		exit(-1);
+	else{
+		bool error = generalCheck();
+		if(m_caseControl){
+			error = error || caseControlCheck();
+		}
+		else if(m_quantitative){
+			error = error || quantitativeCheck();
+		}
+		if(!error && m_maxBlockSet && m_maxBlock%3 != 0){
+			std::cerr << "We prefer a blockSize that can be divided by 3. Will change the max block size to " << m_maxBlock+3-m_maxBlock%3 << std::endl;
+			m_maxBlock = m_maxBlock+3-m_maxBlock%3;
+		}
+		if(!error && m_minBlock > 0 && m_minBlock%3 != 0){
+			std::cerr << "We prefer a blockSize that can be divided by 3. Will change the min block size to " << m_minBlock+3-m_minBlock%3 << std::endl;
+			m_minBlock = m_minBlock+3-m_minBlock%3;
+		}
+		if(error){
+			throw "There is(are) error in the parameter input(s). Please check if you have the correct input";
+		}
 	}
+
+
 }
 
 Command::~Command()
@@ -321,8 +345,8 @@ void Command::printBriefUsage(){
     std::cerr << "| The University of Hong Kong                                                 |" << std::endl;
     std::cerr << "| Haven't figure out which license                                            |" << std::endl;
     std::cerr << "------------------------------------------------------------------------------"  << std::endl;
-    std::cerr << "usage: ./Jest [-p <p-value_file>] [--tstat <t-stat_index> | --chi <chi_index>]"  << std::endl;
-    std::cerr << "              [ --g <linkage_file_prefix> ] ..."                << std::endl;
+    std::cerr << "usage: ./SHREK [-p <p-value_file>] [--quant <t-stat_index> | --cc <chi_index>]"  << std::endl;
+    std::cerr << "               [-b <linkage_file_prefix> ] ..."                << std::endl;
     std::cerr << "Required options: "                                                              << std::endl;
     std::cerr << "  -p,--pfile       The p-value file.                              [ Required ]"  << std::endl;
     std::cerr << "  -c,--chr         The column number of chromosome              [ Default: 1 ]"  << std::endl;
@@ -446,12 +470,10 @@ void Command::printRunSummary(std::string regionMessage){
 		<< "Essential Input  " <<std::endl;
 		std::cerr	<< "Genotype File Prefix : " << m_ldFilePrefix << std::endl;
 	    std::cerr 	<< "P-Value File         : " << m_pValueFileName << std::endl;
-    if(m_isPvalue){
-	    std::cerr 	<< "Input is P-value     : True" << std::endl;
-    }
-    else{
-        std::cerr 	<< "Input is P-value     : False" << std::endl;
-    }
+	if(!m_directionFile.empty())std::cerr   << "Direction File       : " << m_directionFile << std::endl;
+	    std::cerr   << "Input is P-Value     : ";
+    if(m_isPvalue) std::cerr << "True" << std::endl;
+    else std::cerr << "False" << std::endl;
     if(!m_outputPrefix.empty()){
         std::cerr   << "Output File          : " << m_outputPrefix << std::endl;
     }
@@ -463,7 +485,8 @@ void Command::printRunSummary(std::string regionMessage){
 	}
 	else{
 		std::cerr	<< "Mode                 : Quantitative Trait" << std::endl;
-		if(m_provideSampleSize) std::cerr	<< "Sample Size          : " << m_sampleSize << std::endl <<std::endl;
+		if(m_provideSampleSize) std::cerr	<< "Sample Size          : " << m_sampleSize << std::endl;
+		if(m_provideExtremeAdjustment) std::cerr <<   "Extreme Adjustment   : " << m_extremeAdjust << std::endl << std::endl;
 	}
     std::cerr	<< "===============================================================" << std::endl
 				<< "Options " << std::endl

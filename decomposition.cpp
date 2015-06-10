@@ -1,6 +1,6 @@
 #include "decomposition.h"
 
-Decomposition::Decomposition(SnpIndex *snpIndex, std::vector<Snp*> *snpList, Linkage *linkageMatrix, size_t thread):m_snpIndex(snpIndex), m_snpList(snpList), m_linkage(linkageMatrix), m_thread(thread){}
+Decomposition::Decomposition(SnpIndex *snpIndex, std::vector<Snp*> *snpList, Linkage *linkageMatrix, size_t thread, Region *regionInfo):m_snpIndex(snpIndex), m_snpList(snpList), m_linkage(linkageMatrix), m_thread(thread), m_regionInfo(regionInfo){}
 
 Decomposition::~Decomposition()
 {
@@ -17,14 +17,11 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
     if(!chromosomeEnd){ //We have not reached the end, so we need to remove the last two blocks from the processing
         processSize = blockSize/3*m_thread+2*(blockSize/3);
     }
-    //std::cerr << "Chromosome is end: " << chromosomeEnd << std::endl;
-    //std::cerr << "snpLoc size: " << snpLoc.size() << std::endl;
     Eigen::VectorXd chiSq = Eigen::VectorXd::Zero(processSize);
     Eigen::VectorXd betaEstimate = Eigen::VectorXd::Zero(processSize);
 	for(size_t i=0;i < processSize; ++i){
         if(snpLoc[i] < 0){
-			std::cerr << "ERROR! Undefined behaviour. The location index is negative!" << std::endl;
-			return fatalError;
+			throw "ERROR! Undefined behaviour. The location index is negative!";
         }
         else{
 			betaEstimate(i) = (*m_snpList)[snpLoc[i]]->Getbeta();
@@ -53,10 +50,10 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 			for(size_t j = 0; j < processSize; ++j){ //For this snp, go through all the snp partners
 				double covariance = variance(i,j);
 				double additionCovariance = additionVariance(i,j);
-				for(size_t regionIndex = 0; regionIndex < Region::regionVariance.size(); ++regionIndex){
+				for(size_t regionIndex = 0; regionIndex < m_regionInfo->GetnumRegion(); ++regionIndex){
 					if((*m_snpList)[snpLoc[i]]->GetFlag(regionIndex)&&(*m_snpList)[snpLoc[j]]->GetFlag(regionIndex)){
-						Region::regionVariance[regionIndex]+= covariance;
-						Region::regionAdditionVariance[regionIndex]+= additionCovariance;
+                        m_regionInfo->Addvariance(covariance, regionIndex);
+                        m_regionInfo->AddadditionVariance(additionCovariance, regionIndex);
 					}
 				}
 			}
@@ -64,7 +61,6 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 
 	}
 	else if(stepSize > 0){
-			//std::cerr << "Multithread " << std::endl;
 		//Normal situation
 		for(size_t i = 0; i < processSize; i+= stepSize){
 			if(i+currentBlockSize <= processSize){
@@ -85,15 +81,13 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
             //std::cerr << "Extra" << std::endl;
             //We will first do the appropriate amount, then do the remaining;
             for(size_t i =0; i < m_thread; ++i){
-				garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
-				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, true));
-				else garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
+				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, true, m_regionInfo));
+				else garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, false, m_regionInfo));
 				pthread_t *thread1 = new pthread_t();
 				threadList.push_back(thread1);
 				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::ThreadProcesser, garbageCollection.back());
 				if(threadStatus != 0){
-					std::cerr << "Failed to spawn thread with status: " << threadStatus << std::endl;
-					return fatalError;
+					throw "Failed to spawn thread with status: "+std::to_string(threadStatus);
 				}
             }
 			for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter) pthread_join(*threadList[threadIter], NULL);
@@ -103,14 +97,13 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
             threadList.clear();
             //Now we do the extra job
 			for(size_t i=m_thread; i < startLoc.size(); ++i){
-				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, true));
-				else garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
+				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, true, m_regionInfo));
+				else garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, false, m_regionInfo));
 				pthread_t *thread1 = new pthread_t();
 				threadList.push_back(thread1);
 				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::ThreadProcesser, garbageCollection.back());
 				if(threadStatus != 0){
-					std::cerr << "Failed to spawn thread with status: " << threadStatus << std::endl;
-					return fatalError;
+					throw "Failed to spawn thread with status: "+std::to_string(threadStatus);
 				}
             }
             for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter) pthread_join(*threadList[threadIter], NULL);
@@ -122,14 +115,13 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 		}
 		else{
 			for(size_t i = 0; i < startLoc.size(); ++i){
-				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate,&chiSq,m_linkage, &snpLoc, m_snpList, chromosomeStart, true));
-				else garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, false));
+				if(i == startLoc.size()-1) garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate,&chiSq,m_linkage, &snpLoc, m_snpList, chromosomeStart, true, m_regionInfo));
+				else garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate, &chiSq, m_linkage, &snpLoc, m_snpList, chromosomeStart, false, m_regionInfo));
 				pthread_t *thread1 = new pthread_t();
 				threadList.push_back(thread1);
 				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::ThreadProcesser, garbageCollection.back());
 				if(threadStatus != 0){
-					std::cerr << "Failed to spawn thread with status: " << threadStatus << std::endl;
-					return fatalError;
+					throw "Failed to spawn thread with status: "+std::to_string(threadStatus);
 				}
 			}
 			for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter) pthread_join(*threadList[threadIter], NULL);
@@ -140,8 +132,7 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 		}
 	}
 	else{
-        std::cerr << "Undefined behaviour! Step size should never be negative as block size is positive" << std::endl;
-        return fatalError;
+        throw "Undefined behaviour! Step size should never be negative as block size is positive";
 	}
 
 	return completed;

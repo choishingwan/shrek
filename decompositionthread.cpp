@@ -2,7 +2,7 @@
 
 std::mutex DecompositionThread::decomposeMtx;
 
-DecompositionThread::DecompositionThread(size_t start, size_t length, Eigen::VectorXd const * const betaEstimate, Eigen::VectorXd const * const sqrtChiSq, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, bool lastOfBlock):m_start(start), m_length(length), m_betaEstimate(betaEstimate), m_sqrtChiSq(sqrtChiSq),m_linkage(linkage), m_snpLoc(snpLoc), m_snpList(snpList), m_chrStart(chrStart), m_lastOfBlock(lastOfBlock){}
+DecompositionThread::DecompositionThread(size_t start, size_t length, Eigen::VectorXd const * const betaEstimate, Eigen::VectorXd const * const sqrtChiSq, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, bool lastOfBlock, Region *regionInfo):m_start(start), m_length(length), m_betaEstimate(betaEstimate), m_sqrtChiSq(sqrtChiSq),m_linkage(linkage), m_snpLoc(snpLoc), m_snpList(snpList), m_chrStart(chrStart), m_lastOfBlock(lastOfBlock), m_regionInfo(regionInfo){}
 
 DecompositionThread::~DecompositionThread()
 {}
@@ -28,13 +28,13 @@ void DecompositionThread::solve(){
         copyEnd += m_length/3;
 	}
 	if(m_lastOfBlock) copyEnd = processLength-copyStart;
-    std::vector<double> regionVariance(Region::regionVariance.size(), 0.0);
-    std::vector<double> regionAdditionVariance(Region::regionAdditionVariance.size(), 0.0);
+    std::vector<double> regionVariance(m_regionInfo->GetnumRegion(), 0.0);
+    std::vector<double> regionAdditionVariance(m_regionInfo->GetnumRegion(), 0.0);
+    std::cerr << result << std::endl;
     for(size_t i = copyStart; i < copyStart+copyEnd; ++i){
 		(*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability(result(i));
 		(*m_snpList)[(*m_snpLoc)[m_start+i]]->Setvariance(variance(i,i)); //The diagonal of the matrix contain the per snp variance
 		(*m_snpList)[(*m_snpLoc)[m_start+i]]->SetadditionVariance(additionVariance(i,i)); //The diagonal of the matrix contain the per snp variance
-
         for(size_t j = 0; j < processLength; ++j){ //For this snp, go through all the snp partners
 			double covariance = variance(i,j);
 			double additionCovariance = additionVariance(i,j);
@@ -47,9 +47,9 @@ void DecompositionThread::solve(){
         }
 	}
 	decomposeMtx.lock();
-		for(size_t i = 0; i < Region::regionVariance.size(); ++i){
-			Region::regionVariance[i]+=regionVariance[i];
-			Region::regionAdditionVariance[i]+=regionAdditionVariance[i];
+		for(size_t i = 0; i < m_regionInfo->GetnumRegion(); ++i){
+            m_regionInfo->Addvariance(regionVariance[i], i);
+            m_regionInfo->AddadditionVariance(regionAdditionVariance[i], i);
 		}
 	decomposeMtx.unlock();
 

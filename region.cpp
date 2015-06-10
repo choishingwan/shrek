@@ -1,31 +1,106 @@
 #include "region.h"
 
-Region::Region(std::string chr, size_t start, size_t end):m_chr(chr), m_start(start), m_end(end){}
-std::vector<std::string> Region::regionNames;
-std::vector<double> Region::regionVariance;
-std::vector<double> Region::regionAdditionVariance;
 
-std::string Region::Getchr() const { return m_chr; }
-size_t Region::Getstart() const { return m_start; }
-size_t Region::Getend() const { return m_end; }
+Region::Region(){
+    m_names.push_back("With LD");
+    m_variance.push_back(0.0);
+    m_additionVariance.push_back(0.0);
+}
 
 Region::~Region()
 {
 	//dtor
 }
 
-void Region::generateRegion(std::vector<std::vector<Region*> > &regionOut, std::string regionList){
-    regionNames.push_back("With LD");
-    regionVariance.push_back(0.0);
-    regionAdditionVariance.push_back(0.0);
-    if(regionList.empty()) return;
-	regionList = usefulTools::trim(regionList);
+void Region::Addvariance(double const var, size_t i){
+    if(i >= m_variance.size()){
+        throw std::out_of_range("Region was out of bound");
+    }
+    m_variance[i] += var;
+}
+
+void Region::AddadditionVariance(double const addVar, size_t i){
+    if(i >= m_additionVariance.size()){
+        throw std::out_of_range("Region was out of bound");
+    }
+    m_additionVariance[i] += addVar;
+}
+
+std::string Region::Getname(size_t i) const{
+    if(i >= m_names.size()) throw std::out_of_range("Region was out of bound");
+    return m_names[i];
+}
+
+double Region::Getvariance(double heritability, size_t i) const{
+    if(i >= m_variance.size()) throw std::out_of_range("Region was out of bound");
+    double adjust = (1.0-sqrt(std::complex<double>(heritability)).real());
+    return adjust*m_variance[i] + heritability*heritability*m_additionVariance[i];
+}
+
+std::string  Region::Getchr(size_t i, size_t j) const{
+    if(i > m_intervalList.size()) {
+        throw std::out_of_range ("Interval list was out of bound");
+    }
+    else if(j > m_intervalList[i].size()){
+        throw std::out_of_range ("Interval list was out of bound");
+    }
+    else{
+        return m_intervalList[i][j]->Getchr();
+    }
+}
+
+size_t Region::Getstart(size_t i, size_t j) const{
+    if(i > m_intervalList.size()) {
+        throw std::out_of_range ("Interval list was out of bound");
+    }
+    else if(j > m_intervalList[i].size()){
+        throw std::out_of_range ("Interval list was out of bound");
+    }
+    else{
+        return m_intervalList[i][j]->Getstart();
+    }
+}
+size_t Region::Getend(size_t i, size_t j) const{
+    if(i > m_intervalList.size()) {
+        throw std::out_of_range ("Interval list was out of bound");
+    }
+    else if(j > m_intervalList[i].size()){
+        throw std::out_of_range ("Interval list was out of bound");
+    }
+    else{
+        return m_intervalList[i][j]->Getend();
+    }
+}
+
+size_t Region::GetintervalSize(size_t i) const{
+    if(i>= m_intervalList.size()){
+        throw std::out_of_range ("Interval list was out of bound");
+    }
+    return m_intervalList[i].size();
+}
+size_t Region::GetnumRegion() const {return m_names.size(); }
+
+void Region::clean(){
+    for(size_t i = 0; i < m_intervalList.size(); ++i){
+        for(size_t j = 0; j < m_intervalList[i].size(); ++j){
+            delete m_intervalList[i][j];
+        }
+        m_intervalList[i].clear();
+    }
+    m_intervalList.clear();
+}
+
+
+void Region::generateRegion(std::string regionList){
+    std::vector<Interval*> padRegion; //For the default region
+    m_intervalList.push_back(padRegion);
+
+
+    regionList = usefulTools::trim(regionList);
     if(regionList.empty()) return;
     std::vector<std::string> seperateFiles;
-    usefulTools::tokenizer(regionList, ",", &seperateFiles);
-    if(seperateFiles.size() == 0) return;
-    size_t seperateFileSize =seperateFiles.size();
-    for(size_t i = 0; i < seperateFileSize; ++i){
+    usefulTools::tokenizer(regionList, ", ", &seperateFiles);
+    for(size_t i = 0; i < seperateFiles.size(); ++i){
         std::vector<std::string> fileInfo;
         usefulTools::tokenizer(seperateFiles[i], ":", &fileInfo);
         if(fileInfo.size() != 2){
@@ -41,33 +116,23 @@ void Region::generateRegion(std::vector<std::vector<Region*> > &regionOut, std::
                 std::cerr << "Will skip this region" << std::endl;
             }
             else{
-				std::vector<Region*> currentRegion;
-				Region::regionNames.push_back(name);
-                regionVariance.push_back(0.0);
+				std::vector<Interval* > currentRegion;
+				m_names.push_back(name);
+                m_variance.push_back(0.0);
+                m_additionVariance.push_back(0.0);
                 std::string line;
                 while(std::getline(regionFile, line)){
                     line = usefulTools::trim(line);
 					std::vector<std::string> bedToken;
                     usefulTools::tokenizer(line, "\t ", &bedToken );
                     if(bedToken.size() > 2){
-						currentRegion.push_back(new Region(bedToken[0], atoi(bedToken[1].c_str()), atoi(bedToken[2].c_str())));
+						currentRegion.push_back(new Interval(bedToken[0], atoi(bedToken[1].c_str()), atoi(bedToken[2].c_str())));
 					}
                 }
                 regionFile.close();
-				regionOut.push_back(currentRegion);
+				m_intervalList.push_back(currentRegion);
             }
-
         }
     }
-}
 
-
-void Region::cleanRegion(std::vector<std::vector<Region*> > &regionList){
-    for(unsigned int i = 0; i < regionList.size(); ++i){
-        for(unsigned int j = 0; j < regionList[i].size(); ++j){
-            delete regionList[i][j];
-        }
-        regionList[i].clear();
-    }
-    regionList.clear();
 }

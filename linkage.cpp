@@ -1,17 +1,13 @@
 #include "linkage.h"
 
-std::mutex Linkage::mtx; //DEBUG
+
 Linkage::Linkage(){
     m_perfectLd =std::vector<size_t>();
     m_snpLoc = nullptr;
     m_snpList = nullptr;
     m_thread = 1;
 }
-/*
-Linkage::Linkage(size_t thread, std::vector<Snp*> *snpList, std::deque<size_t> *snpLoc):m_thread(thread), m_snpList(snpList), m_snpLoc(snpLoc){
-    m_perfectLd=std::vector<size_t>();
-}
-*/
+
 void Linkage::setSnpList(std::vector<Snp*> *snpList){
     m_snpList = snpList;
 }
@@ -30,7 +26,6 @@ Linkage::~Linkage()
 size_t Linkage::rows() const { return m_linkage.rows(); }
 size_t Linkage::cols() const { return m_linkage.cols(); }
 Eigen::MatrixXd Linkage::block(size_t blockStart, size_t lengthOfBlock){ return m_linkage.block(blockStart, blockStart, lengthOfBlock, lengthOfBlock); }
-Eigen::MatrixXd Linkage::varBlock(size_t blockStart, size_t lengthOfBlock){ return m_varLinkage.block(blockStart, blockStart, lengthOfBlock, lengthOfBlock); }
 Eigen::MatrixXd Linkage::blockSqrt(size_t blockStart, size_t lengthOfBlock){ return m_linkageSqrt.block(blockStart, blockStart, lengthOfBlock, lengthOfBlock); }
 void Linkage::triangularThread( const size_t startBlock, const size_t endBlock, bool correction, std::deque<Genotype*> &genotype){
     //Make the thread region
@@ -51,8 +46,7 @@ void Linkage::triangularThread( const size_t startBlock, const size_t endBlock, 
         threadList.push_back(thread1);
         int threadStatus = pthread_create( thread1, NULL, &LinkageThread::triangularProcess, garbageCollection[i]);
         if(threadStatus != 0){
-            std::cerr << "Failed to spawn thread with status: " << threadStatus << std::endl;
-            exit(-1);
+            throw "Failed to spawn thread with status: "+std::to_string(threadStatus);
         }
     }
     for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter){
@@ -83,8 +77,7 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
             threadList.push_back(thread1);
             int threadStatus = pthread_create( thread1, NULL, &LinkageThread::rectangularProcess, garbageCollection.back());
             if(threadStatus != 0){
-                std::cerr << "Failed to spawn thread with status: " << threadStatus << std::endl;
-                exit(-1);
+                throw "Failed to spawn thread with status: "+std::to_string(threadStatus);
             }
         }
     }
@@ -108,8 +101,7 @@ void Linkage::rectangularThread(const size_t start, const size_t width, const si
             threadList.push_back(thread1);
             int threadStatus = pthread_create( thread1, NULL, &LinkageThread::rectangularProcess, garbageCollection.back());
             if(threadStatus != 0){
-                std::cerr << "Failed to spawn thread with status: " << threadStatus << std::endl;
-                exit(-1);
+                throw "Failed to spawn thread with status: "+std::to_string(threadStatus);
             }
             current += step;
         }
@@ -140,7 +132,6 @@ ProcessCode Linkage::Initialize(std::deque<Genotype*> &genotype, const size_t &p
     if(prevResiduals == 0){
         m_linkage = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
         m_linkageSqrt = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
-        //m_varLinkage = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
     }
     else{
 		Eigen::MatrixXd temp = m_linkage.bottomRightCorner(prevResiduals,prevResiduals);
@@ -150,9 +141,6 @@ ProcessCode Linkage::Initialize(std::deque<Genotype*> &genotype, const size_t &p
 		m_linkageSqrt= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
 		m_linkageSqrt.topLeftCorner(prevResiduals, prevResiduals) = temp;
 
-		//temp = m_varLinkage.bottomRightCorner(prevResiduals,prevResiduals);
-		//m_varLinkage= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
-		//m_varLinkage.topLeftCorner(prevResiduals, prevResiduals) = temp;
     }
     return continueProcess;
 }
@@ -161,9 +149,8 @@ ProcessCode Linkage::Reinitialize(size_t &genotypeSize){
     m_perfectLd.clear();
 
 	if(genotypeSize == 0){
-        std::cerr << "This is not possible unless there are some complicated undetected bug. Please contact the author with the input" << std::endl;
-        std::cerr << "No genotype left after removing perfect LDs" << std::endl;
-        return fatalError;
+        throw "This is not possible unless there are some complicated undetected bug. Please contact the author with the input\nNo genotype left after removing perfect LDs";
+
     }
     else if(genotypeSize < (unsigned) m_linkage.cols()){
         m_linkage.conservativeResize(genotypeSize, genotypeSize);
@@ -263,8 +250,7 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
         startLoc.clear();
     }
     else{
-        std::cerr << "Undefined behaviour! Step size should never be negative as block size is positive" << std::endl;
-        return fatalError;
+        throw "Undefined behaviour! Step size should never be negative as block size is positive";
 	}
 
     std::sort(m_perfectLd.begin(), m_perfectLd.end());
@@ -275,12 +261,12 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
 size_t Linkage::Remove(){
     if(m_perfectLd.empty()) return 0;
     else{
-            //Do something stupid first to make it easier for me for now
+        //Do something stupid first to make it easier for me for now
         std::map<size_t, bool> requireRemove;
         for(size_t i=0; i < m_perfectLd.size(); ++i){
             requireRemove[m_perfectLd[i]] = true;
         }
-        //Eigen::Matrix(row, col)
+        //Eigen::Matrix(row, col) (Just so I remember)
         size_t rowIndex = 0;
         size_t colIndex = 0;
         size_t numRow = m_linkage.rows();
@@ -295,8 +281,6 @@ size_t Linkage::Remove(){
                         m_linkage(colIndex,rowIndex ) = m_linkage(j, i);
                         m_linkageSqrt(rowIndex, colIndex) = m_linkageSqrt(i, j);
                         m_linkageSqrt(colIndex,rowIndex ) = m_linkageSqrt(j, i);
-                        //m_varLinkage(rowIndex, colIndex) = m_varLinkage(i, j);
-                        //m_varLinkage(colIndex,rowIndex ) = m_varLinkage(j, i);
                         colIndex++;
                     }
                 }
@@ -305,8 +289,6 @@ size_t Linkage::Remove(){
                     m_linkage(j, rowIndex) = 0.0;
                     m_linkageSqrt(rowIndex, j) = 0.0;
                     m_linkageSqrt(j, rowIndex) = 0.0;
-                    //m_varLinkage(rowIndex, j) = 0.0;
-                    //m_varLinkage(j, rowIndex) = 0.0;
                 }
                 rowIndex++;
             }
@@ -317,8 +299,6 @@ size_t Linkage::Remove(){
                 m_linkage(j, i) = 0.0;
                 m_linkageSqrt(i, j)  = 0.0;
                 m_linkageSqrt(j, i) = 0.0;
-                //m_varLinkage(i, j)  = 0.0;
-                //m_varLinkage(j, i) = 0.0;
             }
         }
         return m_perfectLd.size();
@@ -339,15 +319,22 @@ void Linkage::Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc
 }
 
 Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::MatrixXd *variance,Eigen::MatrixXd *additionVariance, size_t sampleSize){
+    /** Perform the eigen value decomposition here */
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
+    /** Calculate the tolerance threshold */
     double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().maxCoeff();
+    /** Generate the pseudo inverse by removing any eigenvalues less than the tolerance threshold */
     Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
+
     Eigen::VectorXd result= rInverse*(*betaEstimate).segment(start, length);
+    /** Here we try to perform the iterative adjustment to reduce the relative error */
     Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);
 	double bNorm = (*betaEstimate).segment(start, length).norm();
     double relative_error = error.norm() / bNorm;
     double prev_error = relative_error+1;
     Eigen::VectorXd update = result;
+// TODO (swchoi#1#): Might actually want to add a hard termination here. E.g. terminate after X cycles ...
+//
     while(relative_error < prev_error){
         prev_error = relative_error;
         update=rInverse*(-error);
@@ -357,6 +344,8 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
         if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
+
+    /** Here we try to calculate the variance */
     Eigen::VectorXd minusF = Eigen::VectorXd::Constant(length, 1.0)-(*betaEstimate).segment(start, length);
     for(size_t i = 0; i < length; ++i){
         minusF(i) = minusF(i)/(sampleSize-2.0+((*sqrtChiSq).segment(start, length))(i));
@@ -366,11 +355,6 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
 
     (*variance) = (rInverse*(minusF.asDiagonal()*(ncpEstimate)*minusF.asDiagonal())*rInverse);
     (*additionVariance) =-2*rInverse*(minusF.asDiagonal()*m_linkage.block(start, start, length, length)*minusF.asDiagonal())*rInverse;
-    //std::cout << ((*variance)+(*additionVariance)).sum() << std::endl;
-    //(*variance) = (rInverse*((minusF.asDiagonal()*(2.0*m_linkage.block(start, start, length, length)+4.0*(((*tstat).segment(start, length)).asDiagonal()*m_linkageSqrt.block(start, start, length, length)*((*tstat).segment(start, length)).adjoint().asDiagonal()))*minusF.asDiagonal())*((sampleSize-2.0)/((sampleSize*sampleSize-1.0)*(sampleSize-1.0))))*rInverse).real();
-    //variance = (rInverse*((minusF.asDiagonal()*(2*m_linkage.block(start, start, length, length).cast<std::complex<double> >()+4*(complexF.asDiagonal()*m_linkageSqrt.block(start, start, length, length).cast<std::complex<double> >()*complexF.adjoint().asDiagonal())-m_linkage.block(start, start, length, length)*m_linkageSqrt.block(start, start, length, length))*minusF.asDiagonal())/((sampleSize*sampleSize)))*rInverse).real();
-
-
     return result;
 }
 

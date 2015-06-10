@@ -3,6 +3,7 @@
 
 std::string usefulTools::clean(const std::string seq) {
 	// clean out the special characters at the end of the sequence
+	if(seq.empty()) return "";
 	size_t j = seq.length()-1;
 	while ((j>=0) && ((seq.at(j)<'!') || (seq.at(j)>='~')))
 		j--;
@@ -13,6 +14,7 @@ std::string usefulTools::clean(const std::string seq) {
 
 std::string usefulTools::trim(const std::string seq) {
 	std::string cleanSeq = clean(seq);
+	if(cleanSeq.empty()) return "";
 	size_t i = 0;
 	while((i < cleanSeq.length()) && ((cleanSeq.at(i)<'!') || (cleanSeq.at(i)>='~'))) i++;
 	if(i == cleanSeq.length()) return "";

@@ -1,6 +1,6 @@
 #include "snpestimation.h"
 
-SnpEstimation::SnpEstimation(GenotypeFileHandler *genotypeFileHandler, SnpIndex *snpIndex, std::vector<Snp*> *snpList, size_t thread, double maf, bool correction):m_genotypeFileHandler(genotypeFileHandler), m_snpIndex(snpIndex), m_snpList(snpList), m_thread(thread), m_maf(maf), m_correction(correction){};
+SnpEstimation::SnpEstimation(GenotypeFileHandler *genotypeFileHandler, SnpIndex *snpIndex, std::vector<Snp*> *snpList, size_t thread, double maf, bool correction, Region *regionInfo):m_genotypeFileHandler(genotypeFileHandler), m_snpIndex(snpIndex), m_snpList(snpList), m_thread(thread), m_maf(maf), m_correction(correction), m_regionInfo(regionInfo){};
 
 void SnpEstimation::Estimate(){
 	Genotype::SetsampleNum(m_genotypeFileHandler->GetsampleSize());
@@ -15,54 +15,50 @@ void SnpEstimation::Estimate(){
     linkageMatrix->setSnpList(m_snpList);
     linkageMatrix->setSnpLoc(&snpLoc);
     linkageMatrix->setThread(m_thread);
-    Decomposition *decompositionHandler = new Decomposition( m_snpIndex, m_snpList, linkageMatrix, m_thread);
+    Decomposition *decompositionHandler = new Decomposition( m_snpIndex, m_snpList, linkageMatrix, m_thread,m_regionInfo);
     size_t numProcessed = 0;
-    size_t totalNum = m_genotypeFileHandler->GetestimateSnpTotal();
+    size_t totalNum = m_genotypeFileHandler->GetestimateSnpTotal()*3;
 	while(process != completed && process != fatalError){
 		/** Will have terrible problem if the input is corrupted */
+// TODO (swchoi#1#): Work on the loading bar, it is currently not working ...
         SnpEstimation::loadbar(numProcessed,totalNum);
-        std::cerr << "Get snps" << std::endl;
+        //std::cerr << "Get snps" << std::endl;
 		process = m_genotypeFileHandler->getSnps(genotype, snpLoc, m_snpList, chromosomeStart, chromosomeEnd, m_maf,prevResidual, blockSize);
 		size_t workSize = blockSize/3*m_thread;
 		if(chromosomeStart) workSize +=2/3*blockSize+blockSize;
 		if(workSize > snpLoc.size()) workSize = snpLoc.size();
 		numProcessed+= workSize;
-		if(process == fatalError){
-            exit(-1);
-		}
 		if(process == completed && prevResidual==genotype.size()){
 			//Nothing was updated
+			std::cerr << std::endl;
 			std::cerr << "completed" << std::endl;
 		}
 		else{
 			//Now calculate the LD matrix
 			std::cerr << "Build linkage" << std::endl;
 			ProcessCode linkageProcess = linkageMatrix->Initialize(genotype, prevResidual, blockSize);
+			std::cerr << prevResidual << "\t" << blockSize << std::endl;
 			linkageProcess = linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction);
-			if(linkageProcess == fatalError){
-                exit(-1);
-            }
             //Trying to remove the perfect LD using my method?
 			size_t numRemove =0;
             while(numRemove =linkageMatrix->Remove(), numRemove!=0){ //We still have some perfect LD to remove
                 //Update snpLoc and genotype"
 				linkageMatrix->Update(genotype, snpLoc);
 				process = m_genotypeFileHandler->getSnps(genotype, snpLoc, m_snpList, chromosomeStart,chromosomeEnd, m_maf, numRemove);
-                if(process == fatalError){
-                    exit(-1);
-                }
                 size_t genotypeSize = genotype.size();
                 linkageProcess = linkageMatrix->Reinitialize(genotypeSize);
 				linkageProcess = linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction);
                 if(linkageProcess == fatalError || linkageProcess == continueProcess){
-                    std::cerr << "Something abnormal happened where some of my assumption are violated. Please contact the author with the input"<<std::endl;
-                    std::cerr << "Perfect LD removable, blockSize == 0 or no genotype" << std::endl;
-                    exit(-1);
+                    throw "Something abnormal happened where some of my assumption are violated. Please contact the author with the input\nPerfect LD cannot be removed, blockSize == 0 or no genotype";
+
                 }
-				//numProcessed+=numRemove;
             }
-            std::cerr << "Decomposition" << std::endl;
+            numProcessed+= workSize; //Finished the LD construction
+            SnpEstimation::loadbar(numProcessed,totalNum);
+            //std::cerr << "Decomposition" << std::endl;
             ProcessCode decomposeProcess = decompositionHandler->Decompose(blockSize, snpLoc, genotype, chromosomeStart, chromosomeEnd);
+            numProcessed+= workSize; //Finished the LD construction
+            SnpEstimation::loadbar(numProcessed,totalNum);
 			if(decomposeProcess == fatalError) exit(-1);
             if(!chromosomeEnd){
 				if(blockSize > genotype.size()) blockSize= genotype.size();
@@ -99,19 +95,16 @@ SnpEstimation::~SnpEstimation()
 }
 
 void SnpEstimation::Getresult(std::string outputPrefix){
-    size_t regionSize = m_snpList->front()->GetregionSize();
+    size_t regionSize = m_regionInfo->GetnumRegion();
     std::vector<double> regionEstimate(regionSize, 0.0);
     size_t nSnp = 0;
     m_snpIndex->init();
-    //m_effective=0.0;
     size_t index;
     double totalSum = 0.0;
        while(m_snpIndex->valid()){
 		index = m_snpIndex->value();
         double num = (*m_snpList)[index]->GetheritabilityChi();
         totalSum+= num;
-        //m_effective +=(*m_snpList)[index]->Geteffective();
-        //variance +=(*m_snpList)[index]->GetvarianceRes();
         if((*m_snpList)[index]->GetFlag(0)){
 			nSnp++;
             for(size_t j = 0; j < regionSize;++j){
@@ -129,7 +122,7 @@ void SnpEstimation::Getresult(std::string outputPrefix){
 	if(outputPrefix.empty()){
         std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
         for(size_t i =0; i < regionEstimate.size(); ++i){
-            std::cout << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << (1.0-sqrt(std::complex<double>(regionEstimate[i])).real())*( Region::regionVariance[i]+(1-sqrt(std::complex<double>(regionEstimate[i])).real())*Region::regionAdditionVariance[i]) << std::endl;
+            std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i) << std::endl;
         }
     }
     else{
@@ -159,35 +152,35 @@ void SnpEstimation::Getresult(std::string outputPrefix){
             }
             std::sort(resultSnps.begin(), resultSnps.end(), Snp::sortSnp);
             for(size_t i =0; i < resultSnps.size(); ++i){
-				resOut << resultSnps[i]->Getchr() << "\t" << resultSnps[i]->Getbp() << "\t" << resultSnps[i]->GetrsId() << "\t" << resultSnps[i]->Getoriginal()<< "\t" << resultSnps[i]->Getbeta() << "\t" <<  resultSnps[i]->GetheritabilityChi() << "\t" << resultSnps[i]->GetFlag(0) << "\t" <<  resultSnps[i]->perfectLd() << std::endl;
+				resOut << resultSnps[i]->Getchr() << "\t" << resultSnps[i]->Getbp() << "\t" << resultSnps[i]->GetrsId() << "\t" << resultSnps[i]->Getoriginal()<< "\t" << resultSnps[i]->Getbeta() << "\t" <<  resultSnps[i]->GetheritabilityChi() << "\t" << resultSnps[i]->GetFlag(0) << "\t" <<  resultSnps[i]->GetperfectId() << std::endl;
                 //delete resultSnps[i]; //Avoid double deletion
             }
             resultSnps.clear();
         }
-        std::cerr << Region::regionVariance[0] <<std::endl;
         if(!resSum.is_open()){
             std::cerr << "Cannot open summary file: " << resSumName << " for write" << std::endl;
             std::cerr << "Will display on screen" << std::endl;
             std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
 
 			for(size_t i =0; i < regionEstimate.size(); ++i){
-				std::cout << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << (1.0-sqrt(std::complex<double>(regionEstimate[i])).real())*( Region::regionVariance[i]+(1-sqrt(std::complex<double>(regionEstimate[i])).real())*Region::regionAdditionVariance[i]) << std::endl;
+				std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i) << std::endl;
 			}
         }
         else{
             resSum << "Category\tPositive\tNegative\tVariance" << std::endl;
             std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
 			for(size_t i =0; i < regionEstimate.size(); ++i){
-				std::cout << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << (1.0-sqrt(std::complex<double>(regionEstimate[i])).real())*( Region::regionVariance[i]+(1-sqrt(std::complex<double>(regionEstimate[i])).real())*Region::regionAdditionVariance[i]) << std::endl;
-				resSum << Region::regionNames[i] << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << (1.0-sqrt(std::complex<double>(regionEstimate[i])).real())*( Region::regionVariance[i]+(1-sqrt(std::complex<double>(regionEstimate[i])).real())*Region::regionAdditionVariance[i]) << std::endl;
+				std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i) << std::endl;
+				resSum << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i) << std::endl;
 			}
             resSum.close();
         }
     }
+
 }
 
  void SnpEstimation::loadbar(size_t x, size_t n){
- 	/*
+
  	size_t w = 50;
     if ( (x != n) && (x % (n/100+1) != 0) ) return;
 	double percent  =  x/(double)n;
@@ -196,5 +189,5 @@ void SnpEstimation::Getresult(std::string outputPrefix){
     for (size_t i=0; i<c; i++) std::cerr << "=";
     for (size_t i=c; i<w; i++) std::cerr << " ";
     std::cerr << "]\r" << std::flush;
-    */
+
 }

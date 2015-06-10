@@ -2,19 +2,25 @@
 
 size_t GenotypeFileHandler::GetsampleSize() const { return m_ldSampleSize; }
 size_t GenotypeFileHandler::GetestimateSnpTotal() const { return m_estimateTotal; }
-GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpIndex *snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock, size_t thread):m_genotypeFilePrefix(genotypeFilePrefix), m_thread(thread){
-	m_blockSizeTract = new SnpIndex();
+
+GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, size_t thread):m_genotypeFilePrefix(genotypeFilePrefix), m_thread(thread){
+    m_blockSizeTract = new SnpIndex();
 	m_chrCount = new SnpIndex();
+	m_defaultDistance=1000000;
 	m_ldSampleSize = 0;
 	m_expectedNumberOfSnp = 0;
     m_inputSnp =0;
 	m_snpIter =0;
 	m_estimateTotal=0;
-    std::string famFileName = genotypeFilePrefix +".fam";
-    std::ifstream famFile(famFileName.c_str(), std::ios::in);
+}
+
+void GenotypeFileHandler::initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock){
+
+    std::string famFileName = m_genotypeFilePrefix +".fam";
+    std::ifstream famFile;
+    famFile.open(famFileName.c_str());
     if(!famFile.is_open()){
-        std::cerr << "Cannot open fam file: " << famFileName << std::endl;
-        exit(-1);
+        throw "Cannot open the fam file";
     }
     std::string line;
     while(std::getline(famFile, line)){
@@ -25,11 +31,11 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpInde
     std::cerr << "A total of " << m_ldSampleSize << " samples were found in the genotype file for LD construction" << std::endl << std::endl;
     Genotype::SetsampleNum(m_ldSampleSize);
 
-    std::string bimFileName = genotypeFilePrefix+".bim";
-    std::ifstream bimFile(bimFileName.c_str(), std::ios::in);
+    std::string bimFileName = m_genotypeFilePrefix+".bim";
+    std::ifstream bimFile;
+    bimFile.open(bimFileName.c_str());
     if(!bimFile.is_open()){
-        std::cerr << "Cannot open bim file: " << bimFileName << std::endl;
-        exit(-1);
+        throw "Cannot open bim file";
     }
 	std::map<std::string, bool> duplicateCheck;
     int duplicateCount = 0;
@@ -70,9 +76,9 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpInde
 								locList.push_back(bp);
 							}
 							else if(prevChr.compare(chr) == 0){
-								if(bp-locList.front() > 1000000){
+								if(bp-locList.front() > m_defaultDistance){
 									if(currentMaxBlock < locList.size()*2) currentMaxBlock = locList.size()*2;
-									while(bp-locList.front() > 1000000 && !locList.empty()){
+									while(bp-locList.front() > m_defaultDistance && !locList.empty()){
 										locList.pop_front();
 									}
 									locList.push_back(bp);
@@ -126,21 +132,16 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, SnpInde
     }
 	std::cerr << std::endl;
 
-    std::string bedFileName = genotypeFilePrefix+".bed";
+    std::string bedFileName = m_genotypeFilePrefix+".bed";
 	bool bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_bedFile); //We will try to open the connection to bedFile
     if(bfile_SNP_major){
         //This is ok
     }
     else{
-        std::cerr << "We currently have no plan of implementing the individual-major mode. Please use the snp-major format" << std::endl;
-        exit(-1);
+        throw "We currently have no plan of implementing the individual-major mode. Please use the snp-major format";
     }
-    //std::cerr << chrCheck_.size() << "\t" << chrCount->Getsize() << std::endl;
-    //chrCount->printContent();
     if(m_chrExists.size() != m_blockSizeTract->size()){
-        std::cerr << "The programme require the SNPs to be sorted according to their chromosome. Sorry."  << std::endl;
-        std::cerr << "Programme terminated" << std::endl;
-        exit(-1);
+        throw "The programme require the SNPs to be sorted according to their chromosome. Sorry.";
     }
 
 	//Initialize the variable for getSnps
@@ -159,8 +160,7 @@ GenotypeFileHandler::~GenotypeFileHandler(){
 bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream & BIT){
 	BIT.open(s.c_str(), std::ios::in | std::ios::binary);
 	if(!BIT.is_open()){
-		std::cerr << "Cannot open the bed file: " << s << std::endl;
-		exit(-1);
+        throw "Cannot open the bed file";
 	}
 	//std::cerr << "BIT open" << std::endl;
 	// 1) Check for magic number
@@ -208,7 +208,7 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 	if ( (!v1_bfile) && ( b[1] || b[2] || b[3] || b[4] || b[5] || b[6] || b[7] ) ){
 		std::cerr << std::endl << " *** Possible problem: guessing that BED is < v0.99      *** " << std::endl;
 		std::cerr << " *** High chance of data corruption, spurious results    *** " << std::endl;
-		std::cerr << " *** Unles you are _sure_ this really is an old BED file *** " << std::endl;
+		std::cerr << " *** Unless you are _sure_ this really is an old BED file *** " << std::endl;
 		std::cerr << " *** you should recreate PED -> BED                      *** " << std::endl << std::endl;
 		bfile_SNP_major = false;
 		BIT.close();
@@ -237,6 +237,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
         processSize+= blockSize/3*2;
         processSize+= blockSize; //DEBUG //This is to avoid problem with the perfect LD thingy, so that now we will have one extra block ahead of time //This extra part will stay until the end of chromosome
     }
+    std::cerr << "Going to get: " << processSize << std::endl;
 	while (m_snpIter < m_inputSnp){ //While there are still Snps to read
 		bool snp = false;
 		if(m_inclusion[m_snpIter] != -1){//indicate whether if we need this snp
@@ -254,8 +255,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 			char ch[1];
 			m_bedFile.read(ch,1); //Read the information
 			if (!m_bedFile){
-				std::cerr << "Problem with the BED file...has the FAM/BIM file been changed?" << std::endl;
-				return fatalError;
+				throw "Problem with the BED file...has the FAM/BIM file been changed?";
 			}
 			b = ch[0];
 			int c=0;
@@ -293,10 +293,9 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 
 			double currentMaf = (alleleCount+0.0)/(2*m_ldSampleSize*1.0);
 			currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
-			//remove snps with maf too low or that has 0 variance
-			if(std::sqrt(newS/(indx - 1.0))==0 ||
-				(maf >= 0.0 && maf < currentMaf)){
-				std::cerr << "Snp: " << (*snpList)[snpLoc.back()]->GetrsId() << " not included due to maf filtering or 0 variance" << std::endl;
+			//remove snps with maf too low
+			if(maf >= 0.0 && maf > currentMaf){
+				std::cerr << "Snp: " << (*snpList)[snpLoc.back()]->GetrsId() << " not included due to maf filtering" << std::endl;
 				Genotype *temp = genotype.back();
 				genotype.pop_back();
                 (*snpList)[snpLoc.back()]->setFlag(0, false);
@@ -352,8 +351,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 			char ch[1];
 			m_bedFile.read(ch,1); //Read the information
 			if (!m_bedFile){
-				std::cerr << "Problem with the BED file...has the FAM/BIM file been changed?" << std::endl;
-				return fatalError;
+				throw "Problem with the BED file...has the FAM/BIM file been changed?";
 			}
 			b = ch[0];
 			int c=0;
@@ -392,9 +390,8 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 			double currentMaf = (alleleCount+0.0)/(2*m_ldSampleSize*1.0);
 			currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
 			//remove snps with maf too low or that has 0 variance
-			if(std::sqrt(newS/(indx - 1.0))==0 ||
-				(maf >= 0.0 && maf < currentMaf)){
-				std::cerr << "Snp: " << (*snpList)[snpLoc.back()]->GetrsId() << " not included due to maf filtering or 0 variance" << std::endl;
+			if(maf >= 0.0 && maf < currentMaf){
+				std::cerr << "Snp: " << (*snpList)[snpLoc.back()]->GetrsId() << " not included due to maf filtering" << std::endl;
 				Genotype *temp = genotype.back();
 				genotype.pop_back();
                 (*snpList)[snpLoc.back()]->setFlag(0, false);
