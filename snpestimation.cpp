@@ -28,17 +28,18 @@ void SnpEstimation::Estimate(){
 		if(chromosomeStart) workSize +=2/3*blockSize+blockSize;
 		if(workSize > snpLoc.size()) workSize = snpLoc.size();
 		numProcessed+= workSize;
+        SnpEstimation::loadbar(numProcessed,totalNum);
 		if(process == completed && prevResidual==genotype.size()){
 			//Nothing was updated
 			std::cerr << std::endl;
+			m_regionInfo->Debuffer();
 			std::cerr << "completed" << std::endl;
 		}
 		else{
 			//Now calculate the LD matrix
-			std::cerr << "Build linkage" << std::endl;
+			//std::cerr << "Build linkage" << std::endl;
 			ProcessCode linkageProcess = linkageMatrix->Initialize(genotype, prevResidual, blockSize);
-			std::cerr << prevResidual << "\t" << blockSize << std::endl;
-			linkageProcess = linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction);
+			linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction);
             //Trying to remove the perfect LD using my method?
 			size_t numRemove =0;
             while(numRemove =linkageMatrix->Remove(), numRemove!=0){ //We still have some perfect LD to remove
@@ -47,7 +48,7 @@ void SnpEstimation::Estimate(){
 				process = m_genotypeFileHandler->getSnps(genotype, snpLoc, m_snpList, chromosomeStart,chromosomeEnd, m_maf, numRemove);
                 size_t genotypeSize = genotype.size();
                 linkageProcess = linkageMatrix->Reinitialize(genotypeSize);
-				linkageProcess = linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction);
+				linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction);
                 if(linkageProcess == fatalError || linkageProcess == continueProcess){
                     throw "Something abnormal happened where some of my assumption are violated. Please contact the author with the input\nPerfect LD cannot be removed, blockSize == 0 or no genotype";
 
@@ -68,6 +69,7 @@ void SnpEstimation::Estimate(){
 				for(size_t i = 0; i < removeCount; ++i)	snpLoc.pop_front();
             }
             else{
+                m_regionInfo->Debuffer();
                 Genotype::clean(genotype, genotype.size());
                 snpLoc.clear();
             }
@@ -77,11 +79,19 @@ void SnpEstimation::Estimate(){
             chromosomeStart =false;
         }
         else if(chromosomeEnd){
+            m_regionInfo->Debuffer();
             chromosomeStart = true;
             chromosomeEnd = false;
         }
 
 	}
+
+	std::cerr << "Here" << std::endl;
+	std::cout << DecompositionThread::checking << std::endl;
+    linkageMatrix->print();
+	exit(-1);
+
+	m_regionInfo->Debuffer();
     SnpEstimation::loadbar(totalNum, totalNum);
 	std::cerr << std::endl;
 	delete linkageMatrix;
@@ -180,14 +190,18 @@ void SnpEstimation::Getresult(std::string outputPrefix){
 }
 
  void SnpEstimation::loadbar(size_t x, size_t n){
-
- 	size_t w = 50;
-    if ( (x != n) && (x % (n/100+1) != 0) ) return;
+    //std::cerr << "Calling load bar" << std::endl;
+ 	size_t w =60;
+	//std::cerr <<  (x % (n/100+1)) << "\t" << x << "\t" << n << "\t" << w << std::endl;
+    //if ( (x != n) && (x % (n/100+1) != 0) ) return;
 	double percent  =  x/(double)n;
+	//std::cerr << percent << "\t" << x << "\t" << n << "\t" << w << std::endl;
     size_t c = percent * w;
+
     std::cerr << std::setw(3) << (size_t)(percent*100) << "% [";
     for (size_t i=0; i<c; i++) std::cerr << "=";
     for (size_t i=c; i<w; i++) std::cerr << " ";
     std::cerr << "]\r" << std::flush;
+
 
 }

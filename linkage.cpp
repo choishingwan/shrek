@@ -1,6 +1,6 @@
 #include "linkage.h"
 
-
+size_t Linkage::DEBUG = 0;
 Linkage::Linkage(){
     m_perfectLd =std::vector<size_t>();
     m_snpLoc = nullptr;
@@ -160,14 +160,14 @@ ProcessCode Linkage::Reinitialize(size_t &genotypeSize){
     return continueProcess;
 }
 
-ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResiduals, const size_t &blockSize, bool correction){
+void Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResiduals, const size_t &blockSize, bool correction){
     m_perfectLd.clear();
 	if(genotype.empty()){
-        return continueProcess;
+        throw "There is no genotype to work on";
 	}
 	if(blockSize == 0){
         //Doesn't have to build the LD matrix when the block size is 0
-        return continueProcess;
+        throw "Block size is 0, something must be wrong.";
 	}
 
 
@@ -179,12 +179,10 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
 	}
     size_t stepSize = currentBlockSize/3;
     //If stepsize == 0 -> Block size < 3, just do the whole thing directly
-
     if(stepSize == 0){
         for(size_t i = 0; i < genotype.size(); ++i){
-            m_linkage(i,i) = 1.0; //When linkage is self, there is no variance
+            m_linkage(i,i) = 1.0;
             m_linkageSqrt(i,i) = 1.0;
-            //m_varLinkage(i,i) = Linkage::VarianceR2(1.0,genotype[i]->GetnumSample(),0);
             for(size_t j = genotype.size()-1; j > i; --j){ //invert the direction
                 if(m_linkage(i,j) == 0.0){
                     double rSquare = genotype[i]->GetrSq(genotype[j], correction);
@@ -255,8 +253,8 @@ ProcessCode Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &pr
 
     std::sort(m_perfectLd.begin(), m_perfectLd.end());
     m_perfectLd.erase( std::unique( m_perfectLd.begin(), m_perfectLd.end() ), m_perfectLd.end() );
-	return completed;
 }
+
 
 size_t Linkage::Remove(){
     if(m_perfectLd.empty()) return 0;
@@ -326,6 +324,7 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
     /** Generate the pseudo inverse by removing any eigenvalues less than the tolerance threshold */
     Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
 
+
     Eigen::VectorXd result= rInverse*(*betaEstimate).segment(start, length);
     /** Here we try to perform the iterative adjustment to reduce the relative error */
     Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);
@@ -337,9 +336,9 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
 //
     while(relative_error < prev_error){
         prev_error = relative_error;
-        update=rInverse*(-error);
+        update.noalias()=rInverse*(-error);
         relative_error = 0.0;
-        error= m_linkage.block(start, start, length, length)*(result+update) - (*betaEstimate).segment(start, length);
+        error.noalias()= m_linkage.block(start, start, length, length)*(result+update) - (*betaEstimate).segment(start, length);
         relative_error = error.norm() / bNorm;
         if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
@@ -347,14 +346,32 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
 
     /** Here we try to calculate the variance */
     Eigen::VectorXd minusF = Eigen::VectorXd::Constant(length, 1.0)-(*betaEstimate).segment(start, length);
+    //Eigen::VectorXd minusF = Eigen::VectorXd::Constant(length, 1.0);
     for(size_t i = 0; i < length; ++i){
         minusF(i) = minusF(i)/(sampleSize-2.0+((*sqrtChiSq).segment(start, length))(i));
+        //minusF(i) = minusF(i)/(sampleSize);
     }
 
-    Eigen::MatrixXd ncpEstimate = (4.0*(*sqrtChiSq).segment(start, length).matrix().asDiagonal()*m_linkageSqrt.block(start, start, length, length)*(*sqrtChiSq).segment(start, length).matrix().asDiagonal());
 
-    (*variance) = (rInverse*(minusF.asDiagonal()*(ncpEstimate)*minusF.asDiagonal())*rInverse);
-    (*additionVariance) =-2*rInverse*(minusF.asDiagonal()*m_linkage.block(start, start, length, length)*minusF.asDiagonal())*rInverse;
+    //Eigen::MatrixXd ncpEstimate = (4*m_linkageSqrt.block(start, start, length, length)).array()*((*sqrtChiSq).segment(start, length)*(*sqrtChiSq).segment(start, length).transpose()-m_linkageSqrt.block(start, start, length, length)).array();
+    Eigen::MatrixXd ncpEstimate = (4*m_linkageSqrt.block(start, start, length, length)).array()*((*sqrtChiSq).segment(start, length)*(*sqrtChiSq).segment(start, length).transpose()).array();
+
+    (*variance).noalias() = (rInverse*(minusF.asDiagonal()*(ncpEstimate)*minusF.asDiagonal())*rInverse);
+    (*additionVariance).noalias() =-2*rInverse*(minusF.asDiagonal()*m_linkage.block(start, start, length, length)*minusF.asDiagonal())*rInverse;
+    (*variance)= rInverse; //DEBUG
+    //std::ofstream testing;
+    //std::string testName = "test"+std::to_string(Linkage::DEBUG)+".var";
+   // testing.open(testName.c_str());
+    //testing << (*variance) << std::endl;
+    //testing.close();
+    //Linkage::DEBUG++;
+    //std::cerr << "Variance " << (*variance).sum() << " " << (*additionVariance).sum() << std::endl;
     return result;
 }
 
+void Linkage::print(){
+    std::ofstream testing;
+    testing.open("TESTING");
+    testing << m_linkageSqrt << std::endl;
+    testing.close();
+}

@@ -17,6 +17,7 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
     if(!chromosomeEnd){ //We have not reached the end, so we need to remove the last two blocks from the processing
         processSize = blockSize/3*m_thread+2*(blockSize/3);
     }
+    DecompositionThread::checking = Eigen::MatrixXd::Zero(processSize, processSize); //DEBUG
     Eigen::VectorXd chiSq = Eigen::VectorXd::Zero(processSize);
     Eigen::VectorXd betaEstimate = Eigen::VectorXd::Zero(processSize);
 	for(size_t i=0;i < processSize; ++i){
@@ -38,25 +39,64 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 	size_t stepSize = currentBlockSize/3;
     if(stepSize == 0 || currentBlockSize==processSize){ //no multithreading is required
 		//The Block size is only 3. so We can finish it anyway
+		//std::cerr << "Single thread" << std::endl;
 		Eigen::MatrixXd variance = Eigen::MatrixXd::Zero(processSize, processSize);
 		Eigen::MatrixXd additionVariance = Eigen::MatrixXd::Zero(processSize, processSize);
 		Eigen::VectorXd result = m_linkage->solveChi(0, processSize, &betaEstimate, &chiSq, &variance, &additionVariance,Snp::m_maxSampleSize);
 		size_t copyStart = 0;
-		if(!chromosomeStart) copyStart = blockSize/3;
-        for(size_t i=copyStart; i < processSize; ++i){
+		size_t endOfProcess = blockSize /3*2;
+		if(!chromosomeStart){
+            copyStart = blockSize/3;
+		}
+		if(endOfProcess > processSize){ //If we encountered this, it means that it is the absolute end.
+            endOfProcess = processSize;
+		}
+        for(size_t i=copyStart; i < endOfProcess; ++i){ /** I changed processSize to endOfProcess here */
 			(*m_snpList)[snpLoc[i]]->Setheritability(result(i));
 			(*m_snpList)[snpLoc[i]]->Setvariance(variance(i,i)); //The diagonal of the matrix contains the per snp variance
 			(*m_snpList)[snpLoc[i]]->SetadditionVariance(additionVariance(i,i)); //The diagonal of the matrix contains the per snp variance
+
 			for(size_t j = 0; j < processSize; ++j){ //For this snp, go through all the snp partners
 				double covariance = variance(i,j);
 				double additionCovariance = additionVariance(i,j);
+				//DecompositionThread::checking(i,j) = variance(i,j);
+				//DecompositionThread::checking(j,i) = variance(j,i);
 				for(size_t regionIndex = 0; regionIndex < m_regionInfo->GetnumRegion(); ++regionIndex){
-					if((*m_snpList)[snpLoc[i]]->GetFlag(regionIndex)&&(*m_snpList)[snpLoc[j]]->GetFlag(regionIndex)){
+					if((*m_snpList)[snpLoc[i]]->GetFlag(regionIndex)&&
+                        (*m_snpList)[snpLoc[j]]->GetFlag(regionIndex)){
                         m_regionInfo->Addvariance(covariance, regionIndex);
                         m_regionInfo->AddadditionVariance(additionCovariance, regionIndex);
 					}
 				}
 			}
+        }
+        std::vector<double> regionBufferVariance(m_regionInfo->GetnumRegion(), 0.0);
+        std::vector<double> regionBufferAdditionVariance(m_regionInfo->GetnumRegion(), 0.0);
+
+        for(size_t i = endOfProcess; i < processSize; ++i){
+            /** Doesn't matter with these three as if we are indeed not the last
+             *  block of the chromosome, they will be re-wrote
+             */
+            (*m_snpList)[snpLoc[i]]->Setheritability(result(i));
+			(*m_snpList)[snpLoc[i]]->Setvariance(variance(i,i));
+			(*m_snpList)[snpLoc[i]]->SetadditionVariance(additionVariance(i,i));
+            for(size_t j =  0; j < processSize; ++j){
+                double covariance = variance(i,j);
+                double additionCovariance = additionVariance(i,j);
+				//DecompositionThread::checking(i,j) = variance(i,j);
+				//DecompositionThread::checking(j,i) = variance(j,i);
+                for(size_t regionIndex = 0; regionIndex < m_regionInfo->GetnumRegion(); ++regionIndex){
+                    if((*m_snpList)[snpLoc[i]]->GetFlag(regionIndex)&&
+                       (*m_snpList)[snpLoc[j]]->GetFlag(regionIndex)){
+                        regionBufferVariance[regionIndex]+= covariance;
+                        regionBufferAdditionVariance[regionIndex]+= additionCovariance;
+                    }
+                }
+            }
+        }
+        for(size_t i = 0; i < m_regionInfo->GetnumRegion(); ++i){
+            m_regionInfo->SetbufferVariance(regionBufferVariance[i],i);
+            m_regionInfo->SetbufferAdditionVariance(regionBufferAdditionVariance[i], i);
         }
 
 	}

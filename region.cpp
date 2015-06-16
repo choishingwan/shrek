@@ -5,6 +5,8 @@ Region::Region(){
     m_names.push_back("With LD");
     m_variance.push_back(0.0);
     m_additionVariance.push_back(0.0);
+    m_bufferVariance.push_back(0.0);
+    m_bufferAdditionVariance.push_back(0.0);
 }
 
 Region::~Region()
@@ -26,6 +28,31 @@ void Region::AddadditionVariance(double const addVar, size_t i){
     m_additionVariance[i] += addVar;
 }
 
+void Region::SetbufferAdditionVariance(double const addVar, size_t i){
+    if(i >= m_bufferAdditionVariance.size()){
+        throw std::out_of_range("Region was out of bound");
+    }
+    m_bufferAdditionVariance[i] = addVar;
+
+}
+
+void Region::SetbufferVariance(double const var, size_t i){
+    if(i >= m_bufferVariance.size()){
+        throw std::out_of_range("Region was out of bound");
+    }
+    m_bufferVariance[i] = var;
+
+}
+
+void Region::Debuffer(){
+    for(size_t i = 0; i < m_bufferAdditionVariance.size(); ++i){
+        m_variance[i]+= m_bufferVariance[i];
+        m_additionVariance[i]+= m_bufferAdditionVariance[i];
+        m_bufferVariance[i] = 0;
+        m_bufferAdditionVariance[i] = 0;
+    }
+}
+
 std::string Region::Getname(size_t i) const{
     if(i >= m_names.size()) throw std::out_of_range("Region was out of bound");
     return m_names[i];
@@ -34,7 +61,7 @@ std::string Region::Getname(size_t i) const{
 double Region::Getvariance(double heritability, size_t i) const{
     if(i >= m_variance.size()) throw std::out_of_range("Region was out of bound");
     double adjust = (1.0-sqrt(std::complex<double>(heritability)).real());
-    return adjust*m_variance[i] + heritability*heritability*m_additionVariance[i];
+    return adjust*m_variance[i] + adjust*adjust*m_additionVariance[i];
 }
 
 std::string  Region::Getchr(size_t i, size_t j) const{
@@ -120,6 +147,8 @@ void Region::generateRegion(std::string regionList){
 				m_names.push_back(name);
                 m_variance.push_back(0.0);
                 m_additionVariance.push_back(0.0);
+                m_bufferVariance.push_back(0.0);
+                m_bufferAdditionVariance.push_back(0.0);
                 std::string line;
                 while(std::getline(regionFile, line)){
                     line = usefulTools::trim(line);

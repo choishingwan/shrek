@@ -15,7 +15,7 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, size_t 
 }
 
 void GenotypeFileHandler::initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock){
-
+    size_t safeBlockRange = 2.0; //Use to multiply the #Snp in 1mb region to make sure the block will always include everything within the region
     std::string famFileName = m_genotypeFilePrefix +".fam";
     std::ifstream famFile;
     famFile.open(famFileName.c_str());
@@ -77,7 +77,7 @@ void GenotypeFileHandler::initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpL
 							}
 							else if(prevChr.compare(chr) == 0){
 								if(bp-locList.front() > m_defaultDistance){
-									if(currentMaxBlock < locList.size()*2) currentMaxBlock = locList.size()*2;
+									if(currentMaxBlock < locList.size()*safeBlockRange) currentMaxBlock = locList.size()*safeBlockRange;
 									while(bp-locList.front() > m_defaultDistance && !locList.empty()){
 										locList.pop_front();
 									}
@@ -86,7 +86,7 @@ void GenotypeFileHandler::initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpL
 								else locList.push_back(bp);
 							}
 							else{
-								if(currentMaxBlock < locList.size()*2) currentMaxBlock = locList.size()*2;
+								if(currentMaxBlock < locList.size()*safeBlockRange) currentMaxBlock = locList.size()*safeBlockRange;
 								if(currentMaxBlock%3 != 0) currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
 								std::cerr << "Recommended block size for chromosome "<< prevChr << ": " << currentMaxBlock << std::endl;
 								if(maxBlockSet && maxBlock < currentMaxBlock ){
@@ -114,7 +114,7 @@ void GenotypeFileHandler::initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpL
 		}
     }
 
-    if(currentMaxBlock < locList.size()*2) currentMaxBlock = locList.size()*2;
+    if(currentMaxBlock < locList.size()*safeBlockRange) currentMaxBlock = locList.size()*safeBlockRange;
     if(currentMaxBlock%3 != 0) currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
 	std::cerr << "Recommended block size for chromosome "<< prevChr << ": " << currentMaxBlock << std::endl;
     if(maxBlockSet && maxBlock < currentMaxBlock ){
@@ -123,6 +123,7 @@ void GenotypeFileHandler::initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpL
 	if(currentMaxBlock < minBlock) currentMaxBlock = minBlock;
 	std::cerr << "Block size for chromosome " << prevChr << ": " << currentMaxBlock << std::endl;
 	m_blockSizeTract->set(prevChr, currentMaxBlock);
+	if(currentMaxBlock == 0) throw "The block size is 0, most likely your input file is problematic. Please check."
 
     bimFile.close();
     if(duplicateCount == 0) std::cerr << "There are no duplicated snps in the LD file" << std::endl;
@@ -237,7 +238,6 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
         processSize+= blockSize/3*2;
         processSize+= blockSize; //DEBUG //This is to avoid problem with the perfect LD thingy, so that now we will have one extra block ahead of time //This extra part will stay until the end of chromosome
     }
-    std::cerr << "Going to get: " << processSize << std::endl;
 	while (m_snpIter < m_inputSnp){ //While there are still Snps to read
 		bool snp = false;
 		if(m_inclusion[m_snpIter] != -1){//indicate whether if we need this snp
@@ -390,7 +390,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 			double currentMaf = (alleleCount+0.0)/(2*m_ldSampleSize*1.0);
 			currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
 			//remove snps with maf too low or that has 0 variance
-			if(maf >= 0.0 && maf < currentMaf){
+			if(maf >= 0.0 && maf > currentMaf){
 				std::cerr << "Snp: " << (*snpList)[snpLoc.back()]->GetrsId() << " not included due to maf filtering" << std::endl;
 				Genotype *temp = genotype.back();
 				genotype.pop_back();

@@ -52,7 +52,7 @@ class Linkage
          *  \param [in] blockSize, restriction on size of LD block
          *  \param [in] correction, whether if we want to correct the bias in R and Rsq
          */
-		ProcessCode Construct(std::deque<Genotype*> &genotype, const size_t &prevResidual, const size_t &blockSize, bool correction);
+		void Construct(std::deque<Genotype*> &genotype, const size_t &prevResidual, const size_t &blockSize, bool correction);
 		/** Initialize the LD matrix */
 		ProcessCode Initialize(std::deque<Genotype*> &genotype, const size_t &prevResiduals, const size_t &blockSize);
 		/** Reinitialize the matrix */
@@ -73,6 +73,8 @@ class Linkage
         void setSnpList(std::vector<Snp* > *snpList);
         void setThread(size_t thread);
 		void print();
+
+		static size_t DEBUG;
 	protected:
 	private:
         Eigen::MatrixXd m_linkage;

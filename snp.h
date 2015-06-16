@@ -75,6 +75,7 @@ public:
         double Getheritability() const;
         double GetheritabilityChi() const;
         double GetsignedSqrtChiSq() const;
+        double Getvariance() const;
         bool Concordant(std::string chr, size_t bp, std::string rsId) const;
         bool GetFlag(size_t index) const;
         void Setheritability(double heritability);
@@ -98,7 +99,6 @@ private:
         int m_sign;
         double m_sampleSize;
         double m_original;
-        double m_oriBeta;
         double m_effectiveNumber;
         double m_variance;
         double m_additionVariance;

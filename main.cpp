@@ -22,6 +22,7 @@
 
 // TODO (swchoi#1#): Need to find a way to output the perfect SNP pairs
 // TODO (swchoi#1#): Update help message in the Command Class ...
+// TODO (swchoi#1#): Not sure if we should do it, should we allow people to specific the block size restriction fro each individual chromosome?
 
 
 

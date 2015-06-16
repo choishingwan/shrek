@@ -51,6 +51,12 @@ class Region
         void Addvariance(double const var, size_t i);
         /** Add the additional variance to the i th region */
         void AddadditionVariance(double const addVar, size_t i);
+        /** Set the buffer variance to the i th region */
+        void SetbufferVariance(double const var, size_t i);
+        /** Set the buffer additional variance of the i th region */
+        void SetbufferAdditionVariance(double const addVar, size_t i);
+        /**add the buffer to the variance vectors and reset them */
+        void Debuffer();
         /** Return the number of regions */
         size_t GetnumRegion() const;
         /** Return the chromosome information of the jth interval in the ith region */
@@ -71,6 +77,8 @@ class Region
         std::vector<std::string> m_names;
         std::vector<double> m_variance;
         std::vector<double> m_additionVariance;
+        std::vector<double> m_bufferVariance;
+        std::vector<double> m_bufferAdditionVariance;
 };
 
 #endif // REGION_H

@@ -29,6 +29,9 @@
 class DecompositionThread
 {
 	public:
+
+	    static Eigen::MatrixXd checking; //DEBUG
+
 		/** Default constructor */
 		DecompositionThread(size_t start, size_t length, Eigen::VectorXd const * const betaEstimate, Eigen::VectorXd const * const chiSq, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, bool lastOfBlock, Region *regionInfo);
 		/** Default destructor */
