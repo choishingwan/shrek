@@ -39,6 +39,13 @@ class Genotype
          *  [out] The square of the Pearson correlation between the two genotypes
          */
         double GetrSq(Genotype* snpB, bool correction);
+        /** \brief Calculate both the Rsq and R in one go
+         *  \param [in] snpB, the other genotype
+         *  \param [in] correction, whether if bias adjustment should be performed
+         *  \param [out] r, the r output
+         *  \param [out] rSq, the rSq output
+         */
+        void GetbothR(Genotype* snpB, bool correction, double &r, double &rSq);
         /** Setting the maximum number of samples used for LD construction */
         static void SetsampleNum(size_t sampleNum);
         /** Set the mean of the genotype */

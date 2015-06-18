@@ -39,6 +39,28 @@ double Genotype::Getr(Genotype* snpB, bool correction){
     return r;
 }
 
+void Genotype::GetbothR(Genotype* snpB, bool correction, double &r, double &rSq){
+	size_t range = (m_requiredBit /(8*m_bitSize))+1;
+    r = 0.0;
+    size_t i = 0;
+    if(snpB->m_standardDeviation != 0 && m_standardDeviation!=0){
+        for(; i < range;){
+            size_t numSampleInBlock = __builtin_popcountll(m_missing[i] & snpB->m_missing[i]);
+            if(numSampleInBlock != 0){
+                r += (__builtin_popcountll(m_genotypeA[i] & snpB->m_genotypeB[i] )- numSampleInBlock*m_mean*snpB->m_mean)/(m_standardDeviation *snpB->m_standardDeviation);
+            }
+            i++;
+        }
+    }
+    r *= 1.0/(m_sampleNum-1.0);
+    rSq = r*r;
+	if(correction){
+        r= r*(1+(1-r*r)/(2*(m_sampleNum-4))); //POPA
+        rSq = 1.0-((m_sampleNum-3.0)/(m_sampleNum-2.0))*(1.0-rSq)*(1.0+(2.0*(1.0-rSq))/(m_sampleNum-3.3));
+	}
+}
+
+
 double Genotype::GetrSq(Genotype* snpB, bool correction){
 	size_t range = (m_requiredBit /(8*m_bitSize))+1;
     double rSquare = 0.0;

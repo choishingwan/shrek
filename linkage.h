@@ -55,8 +55,7 @@ class Linkage
 		void Construct(std::deque<Genotype*> &genotype, const size_t &prevResidual, const size_t &blockSize, bool correction);
 		/** Initialize the LD matrix */
 		ProcessCode Initialize(std::deque<Genotype*> &genotype, const size_t &prevResiduals, const size_t &blockSize);
-		/** Reinitialize the matrix */
-		ProcessCode Reinitialize(size_t &genotypeSize);
+
 		size_t rows() const;
 		size_t cols() const;
 		/** Get the ld matrix of R square */
@@ -69,6 +68,8 @@ class Linkage
         size_t Remove();
         /** Update the matrix after removing the perfect LD */
         void Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc);
+        /** Reinitialize the matrix */
+		void Reinitialize(size_t &genotypeSize);
         void setSnpLoc(std::deque<size_t> *snpLoc);
         void setSnpList(std::vector<Snp* > *snpList);
         void setThread(size_t thread);
@@ -84,7 +85,8 @@ class Linkage
         std::vector<Snp*> *m_snpList;
         std::deque<size_t> *m_snpLoc;
         void triangularThread(const size_t startBlock, const size_t endBlock, bool correction, std::deque<Genotype*> &genotype);
-		void rectangularThread(const size_t start, const size_t width, const size_t height, bool correction, std::deque<Genotype*> &genotype);
+		void rectangularThread(const size_t startSnp, const size_t endSnp, const size_t stepSize, bool correction, std::deque<Genotype*> &genotype);
+		void computeLd(const size_t startBlock, const size_t endBlock, const size_t blockSize, const size_t absoluteBound, bool correction, std::deque<Genotype*> &genotype);
 };
 
 #endif // LINKAGE_H

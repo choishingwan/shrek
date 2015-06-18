@@ -17,7 +17,7 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
     if(!chromosomeEnd){ //We have not reached the end, so we need to remove the last two blocks from the processing
         processSize = blockSize/3*m_thread+2*(blockSize/3);
     }
-    DecompositionThread::checking = Eigen::MatrixXd::Zero(processSize, processSize); //DEBUG
+    //DecompositionThread::checking = Eigen::MatrixXd::Zero(processSize, processSize); //DEBUG
     Eigen::VectorXd chiSq = Eigen::VectorXd::Zero(processSize);
     Eigen::VectorXd betaEstimate = Eigen::VectorXd::Zero(processSize);
 	for(size_t i=0;i < processSize; ++i){

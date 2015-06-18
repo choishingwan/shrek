@@ -123,7 +123,7 @@ void GenotypeFileHandler::initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpL
 	if(currentMaxBlock < minBlock) currentMaxBlock = minBlock;
 	std::cerr << "Block size for chromosome " << prevChr << ": " << currentMaxBlock << std::endl;
 	m_blockSizeTract->set(prevChr, currentMaxBlock);
-	if(currentMaxBlock == 0) throw "The block size is 0, most likely your input file is problematic. Please check."
+	if(currentMaxBlock == 0) throw "The block size is 0, most likely your input file is problematic. Please check.";
 
     bimFile.close();
     if(duplicateCount == 0) std::cerr << "There are no duplicated snps in the LD file" << std::endl;

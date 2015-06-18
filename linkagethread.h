@@ -29,11 +29,13 @@ class LinkageThread
 	public:
 		LinkageThread(bool correction, const size_t blockEnd, Eigen::MatrixXd *ldMatrix, Eigen::MatrixXd *ldMatrixSqrt, std::deque<Genotype* > *genotype, std::deque<size_t> *snpLoc, std::vector<size_t> *perfectLd, std::vector<Snp*> *snpList);
 		LinkageThread(bool correction, const size_t snpStart, const size_t snpEnd, const size_t boundStart, const size_t boundEnd, Eigen::MatrixXd *ldMatrix, Eigen::MatrixXd *ldMatrixSqrt, std::deque<Genotype* > *genotype, std::deque<size_t> *snpLoc, std::vector<size_t> *perfectLd, std::vector<Snp*> *snpList);
+		LinkageThread(bool correction, const size_t snpStart, const size_t snpEnd , const size_t boundEnd, Eigen::MatrixXd *ldMatrix, Eigen::MatrixXd *ldMatrixSqrt, std::deque<Genotype* > *genotype, std::deque<size_t> *snpLoc, std::vector<size_t> *perfectLd, std::vector<Snp*> *snpList);
 		virtual ~LinkageThread();
 
 		void Addstart(size_t i);
-static void *triangularProcess(void *in);
+        static void *triangularProcess(void *in);
         static void *rectangularProcess(void *in);
+        static void *simpleProcess(void *in);
 	protected:
 	private:
         bool m_correction;
@@ -50,6 +52,7 @@ static void *triangularProcess(void *in);
         std::vector<Snp*> *m_snpList;
 		void triangularProcess();
         void rectangularProcess();
+        void simpleProcess();
         static std::mutex mtx;
 };
 

@@ -38,7 +38,7 @@ void SnpEstimation::Estimate(){
 		else{
 			//Now calculate the LD matrix
 			//std::cerr << "Build linkage" << std::endl;
-			ProcessCode linkageProcess = linkageMatrix->Initialize(genotype, prevResidual, blockSize);
+			linkageMatrix->Initialize(genotype, prevResidual, blockSize);
 			linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction);
             //Trying to remove the perfect LD using my method?
 			size_t numRemove =0;
@@ -47,12 +47,10 @@ void SnpEstimation::Estimate(){
 				linkageMatrix->Update(genotype, snpLoc);
 				process = m_genotypeFileHandler->getSnps(genotype, snpLoc, m_snpList, chromosomeStart,chromosomeEnd, m_maf, numRemove);
                 size_t genotypeSize = genotype.size();
-                linkageProcess = linkageMatrix->Reinitialize(genotypeSize);
+                linkageMatrix->Reinitialize(genotypeSize);
 				linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction);
-                if(linkageProcess == fatalError || linkageProcess == continueProcess){
-                    throw "Something abnormal happened where some of my assumption are violated. Please contact the author with the input\nPerfect LD cannot be removed, blockSize == 0 or no genotype";
 
-                }
+
             }
             numProcessed+= workSize; //Finished the LD construction
             SnpEstimation::loadbar(numProcessed,totalNum);
@@ -85,12 +83,12 @@ void SnpEstimation::Estimate(){
         }
 
 	}
-
+/*
 	std::cerr << "Here" << std::endl;
 	std::cout << DecompositionThread::checking << std::endl;
     linkageMatrix->print();
 	exit(-1);
-
+*/
 	m_regionInfo->Debuffer();
     SnpEstimation::loadbar(totalNum, totalNum);
 	std::cerr << std::endl;
@@ -191,11 +189,13 @@ void SnpEstimation::Getresult(std::string outputPrefix){
 
  void SnpEstimation::loadbar(size_t x, size_t n){
     //std::cerr << "Calling load bar" << std::endl;
+    if(n == 0) throw "Total work size should not be zero";
  	size_t w =60;
 	//std::cerr <<  (x % (n/100+1)) << "\t" << x << "\t" << n << "\t" << w << std::endl;
     //if ( (x != n) && (x % (n/100+1) != 0) ) return;
 	double percent  =  x/(double)n;
-	//std::cerr << percent << "\t" << x << "\t" << n << "\t" << w << std::endl;
+
+
     size_t c = percent * w;
 
     std::cerr << std::setw(3) << (size_t)(percent*100) << "% [";

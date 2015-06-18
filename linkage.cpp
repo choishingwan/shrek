@@ -145,7 +145,7 @@ ProcessCode Linkage::Initialize(std::deque<Genotype*> &genotype, const size_t &p
     return continueProcess;
 }
 
-ProcessCode Linkage::Reinitialize(size_t &genotypeSize){
+void Linkage::Reinitialize(size_t &genotypeSize){
     m_perfectLd.clear();
 
 	if(genotypeSize == 0){
@@ -157,11 +157,10 @@ ProcessCode Linkage::Reinitialize(size_t &genotypeSize){
         m_linkageSqrt.conservativeResize(genotypeSize, genotypeSize);
         //m_varLinkage.conservativeResize(genotypeSize, genotypeSize);
     }
-    return continueProcess;
 }
 
 void Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResiduals, const size_t &blockSize, bool correction){
-    m_perfectLd.clear();
+    m_perfectLd.clear(); //this should have served its purpose. Clear and recycle.
 	if(genotype.empty()){
         throw "There is no genotype to work on";
 	}
@@ -170,29 +169,28 @@ void Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResid
         throw "Block size is 0, something must be wrong.";
 	}
 
-
+    size_t numOfSnp = genotype.size();
     //Construct the LD
 	std::vector<int> startLoc;
 	size_t currentBlockSize = blockSize;
-	if(currentBlockSize > genotype.size()){
-        currentBlockSize = genotype.size();
+	if(currentBlockSize > numOfSnp){ //The block contains all the available Snps. Should usually only happen when it is the last block.
+        currentBlockSize = numOfSnp;
 	}
-    size_t stepSize = currentBlockSize/3;
-    //If stepsize == 0 -> Block size < 3, just do the whole thing directly
-    if(stepSize == 0){
-        for(size_t i = 0; i < genotype.size(); ++i){
+    size_t stepSize = currentBlockSize/3; //We want to increment the step by third
+
+    if(stepSize == 0){ //Only possible when there is less than 3 Snps (max, 2x2). Therefore don't bother using multi-thread
+        for(size_t i = 0; i < numOfSnp; ++i){
             m_linkage(i,i) = 1.0;
             m_linkageSqrt(i,i) = 1.0;
-            for(size_t j = genotype.size()-1; j > i; --j){ //invert the direction
-                if(m_linkage(i,j) == 0.0){
-                    double rSquare = genotype[i]->GetrSq(genotype[j], correction);
-                    double r = genotype[i]->Getr(genotype[j], correction);
-                    if(i != j && std::fabs(rSquare-1.0) < G_EPSILON_DBL){
+            for(size_t j = numOfSnp-1; j > i; --j){ //invert the direction so that we can do it faster
+                if(m_linkage(i,j) == 0.0){ //This location was not calculated before else it will not be exactly 0.0;
+                    double rSquare =0.0;
+                    double r = 0.0;
+                    genotype[i]->GetbothR(genotype[j], correction, r, rSquare);
+                    if(i != j && std::fabs(rSquare-1.0) < G_EPSILON_DBL){ //if they are in perfect LD
                         m_perfectLd.push_back(j);
                         (*m_snpList)[(*m_snpLoc)[j]]->shareHeritability((*m_snpList)[(*m_snpLoc)[i]]);
                     }
-                    //m_varLinkage(i,j) = Linkage::VarianceR2(rSquare,numSample,1);
-                    //m_varLinkage(j,i) = m_varLinkage(i,j);
                     m_linkage(i,j) = rSquare;
                     m_linkage(j,i) = rSquare;
                     m_linkageSqrt(i,j) = r;
@@ -202,7 +200,7 @@ void Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResid
             }
         }
     }
-    else if(stepSize > 0){
+    else if(stepSize > 0){ //Trying to work using the multi-threading method
         size_t counting= 0;
         for(size_t i = 0; i < genotype.size(); i+= stepSize){
             if(counting < 2){
@@ -358,10 +356,10 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
 
     (*variance).noalias() = (rInverse*(minusF.asDiagonal()*(ncpEstimate)*minusF.asDiagonal())*rInverse);
     (*additionVariance).noalias() =-2*rInverse*(minusF.asDiagonal()*m_linkage.block(start, start, length, length)*minusF.asDiagonal())*rInverse;
-    (*variance)= rInverse; //DEBUG
+    //(*variance)= (*additionVariance); //DEBUG
     //std::ofstream testing;
     //std::string testName = "test"+std::to_string(Linkage::DEBUG)+".var";
-   // testing.open(testName.c_str());
+    //testing.open("INVERSE");
     //testing << (*variance) << std::endl;
     //testing.close();
     //Linkage::DEBUG++;

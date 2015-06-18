@@ -10,26 +10,25 @@ LinkageThread::LinkageThread(bool correction, const size_t snpStart, const size_
 LinkageThread::~LinkageThread(){}
 
 void LinkageThread::triangularProcess(){
-    size_t sizeOfItem = m_startLoc.size();
+    /** m_boundEnd is the end, not inclusive */
+    size_t numOfSnp = m_startLoc.size(); //Number of snp to work on
     std::vector<size_t> perfectLd;
-    for(size_t i = 0; i < sizeOfItem; ++i){
+    for(size_t i = 0; i < numOfSnp; ++i){
         size_t j = m_startLoc[i];
         (*m_ldMatrix)(j,j) = 1.0;
         (*m_ldMatrixSqrt)(j,j) = 1.0;
-        //(*m_varLdMatrix)(j,j) = Linkage::VarianceR2(1.0,(*m_genotype)[j]->GetnumSample(),0);
+
         for(size_t k = m_boundEnd-1; k > j; --k){
-            if((*m_ldMatrix)(j,k) == 0.0){
-                //size_t numSample=0;
-                double rSquare=(*m_genotype)[j]->GetrSq( (*m_genotype)[k], m_correction);
-                double r=(*m_genotype)[j]->Getr( (*m_genotype)[k], m_correction);
-                if(std::fabs(rSquare-1.0) < G_EPSILON_DBL ){
+            if((*m_ldMatrix)(j,k) == 0.0){ //If 0.0, then it is new and has never been calculated before
+                double rSquare= 0.0;
+                double r = 0.0;
+                (*m_genotype)[j]->GetbothR( (*m_genotype)[k], m_correction, r, rSquare);
+                if(std::fabs(rSquare-1.0) < G_EPSILON_DBL ){ //Perfect LD situation
                     perfectLd.push_back(k);
                     LinkageThread::mtx.lock();
                         (*m_snpList)[(*m_snpLoc)[k]]->shareHeritability((*m_snpList)[(*m_snpLoc)[j]]);
                     LinkageThread::mtx.unlock();
                 }
-                //(*m_varLdMatrix)(j,k) =Linkage::VarianceR2(rSquare,1);
-                //(*m_varLdMatrix)(k,j) = (*m_varLdMatrix)(j,k);
                 (*m_ldMatrix)(j, k) = rSquare;
                 (*m_ldMatrix)(k,j) = rSquare;
                 (*m_ldMatrixSqrt)(j, k) = r;
@@ -51,19 +50,17 @@ void LinkageThread::rectangularProcess(){
             if(j == i){
                 (*m_ldMatrix)(i,i) = 1.0; //Let's just assume that it is duplicated
                 (*m_ldMatrixSqrt)(i,i) = 1.0;
-                //(*m_varLdMatrix)(i,i) = Linkage::VarianceR2(1.0,(*m_genotype)[i]->GetnumSample(),0);
             }
             else if((*m_ldMatrix)(i,j) == 0.0){
-                double rSquare = (*m_genotype)[i]->GetrSq((*m_genotype)[j],m_correction);
-                double r = (*m_genotype)[i]->Getr((*m_genotype)[j],m_correction);
+                double rSquare=0.0;
+                double r =0.0;
+                (*m_genotype)[i]->GetbothR((*m_genotype)[j],m_correction, r, rSquare);
                 if(std::fabs(rSquare-1.0) < G_EPSILON_DBL){
                     perfectLd.push_back(j);
                     LinkageThread::mtx.lock();
                         (*m_snpList)[(*m_snpLoc)[j]]->shareHeritability((*m_snpList)[(*m_snpLoc)[i]]);
                     LinkageThread::mtx.unlock();
                 }
-                //(*m_varLdMatrix)(j,i) = Linkage::VarianceR2(rSquare, numSample,1);
-                //(*m_varLdMatrix)(i,j) = (*m_varLdMatrix)(j,i);
 				(*m_ldMatrix)(i,j) = rSquare;
 				(*m_ldMatrix)(j,i) = rSquare;
 				(*m_ldMatrixSqrt)(i,j) = r;

@@ -49,9 +49,9 @@ void DecompositionThread::solve(){
             double covariance = variance(i,j);
 			double additionCovariance = additionVariance(i,j);
 			for(size_t regionIndex = 0; regionIndex < regionVariance.size(); ++regionIndex){
-                    if(m_lastOfBlock) checking(m_start+i,j+m_start) += covariance; //DEBUG
-                    else checking(m_start+j, i+m_start) += covariance;
-                    if(multiplier> 1.0) checking(m_start+i,j+m_start) += covariance; //DEBUG
+                    //if(m_lastOfBlock) checking(m_start+i,j+m_start) += covariance; //DEBUG
+                    //else checking(m_start+j, i+m_start) += covariance;
+                    //if(multiplier> 1.0) checking(m_start+i,j+m_start) += covariance; //DEBUG
                 if((*m_snpList)[(*m_snpLoc)[m_start+i]]->GetFlag(regionIndex)&&(*m_snpList)[(*m_snpLoc)[m_start+j]]->GetFlag(regionIndex)){
 					regionVariance[regionIndex]+= multiplier*covariance;
 					regionAdditionVariance[regionIndex]+= multiplier*additionCovariance;
@@ -69,7 +69,7 @@ void DecompositionThread::solve(){
 
 			double covariance = variance(i,j);
 			double additionCovariance = additionVariance(i,j);
-			checking(m_start+i,m_start+j) += covariance; //DEBUG
+			//checking(m_start+i,m_start+j) += covariance; //DEBUG
 			for(size_t regionIndex = 0; regionIndex < regionVariance.size(); ++regionIndex){
                 if((*m_snpList)[(*m_snpLoc)[m_start+i]]->GetFlag(regionIndex)&&
                    (*m_snpList)[(*m_snpLoc)[m_start+j]]->GetFlag(regionIndex)){
@@ -99,7 +99,7 @@ void DecompositionThread::solve(){
             for(size_t j =  0; j < processLength; ++j){
                 double covariance = variance(i,j);
                 double additionCovariance = additionVariance(i,j);
-                checking(m_start+i,m_start+j) += covariance; //DEBUG
+                //checking(m_start+i,m_start+j) += covariance; //DEBUG
                 for(size_t regionIndex = 0; regionIndex < m_regionInfo->GetnumRegion(); ++regionIndex){
                     if((*m_snpList)[(*m_snpLoc)[m_start+i]]->GetFlag(regionIndex)&&
                        (*m_snpList)[(*m_snpLoc)[m_start+j]]->GetFlag(regionIndex)){
