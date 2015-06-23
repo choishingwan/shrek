@@ -42,7 +42,7 @@ class SnpIndex
 		/** Add one to the value of the current key */
 		void increment(std::string key);
 		/** Find if the key is within the map */
-		bool find(std::string key);
+		bool contains(std::string key);
 		/** Check if we have reach the end of the map */
 		bool valid();
 		/** Got to the next key */

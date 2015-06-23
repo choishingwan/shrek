@@ -42,7 +42,8 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 		//std::cerr << "Single thread" << std::endl;
 		Eigen::MatrixXd variance = Eigen::MatrixXd::Zero(processSize, processSize);
 		Eigen::MatrixXd additionVariance = Eigen::MatrixXd::Zero(processSize, processSize);
-		Eigen::VectorXd result = m_linkage->solveChi(0, processSize, &betaEstimate, &chiSq, &variance, &additionVariance,Snp::m_maxSampleSize);
+		Eigen::VectorXd result;
+		result = m_linkage->solve(0, processSize, &betaEstimate, &chiSq, &variance, &additionVariance,Snp::GetmaxSampleSize());
 		size_t copyStart = 0;
 		size_t endOfProcess = blockSize /3*2;
 		if(!chromosomeStart){

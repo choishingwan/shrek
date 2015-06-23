@@ -127,10 +127,15 @@ void SnpEstimation::Getresult(std::string outputPrefix){
 
     }
 
+    totalSum *= Snp::Getadjustment();
+    for(size_t i = 0; i <regionEstimate.size(); ++i){
+        regionEstimate[i] *= Snp::Getadjustment();
+    }
+
 	if(outputPrefix.empty()){
         std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
         for(size_t i =0; i < regionEstimate.size(); ++i){
-            std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i) << std::endl;
+            std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i, Snp::Getadjustment()) << std::endl;
         }
     }
     else{
@@ -171,15 +176,15 @@ void SnpEstimation::Getresult(std::string outputPrefix){
             std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
 
 			for(size_t i =0; i < regionEstimate.size(); ++i){
-				std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i) << std::endl;
+				std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i, Snp::Getadjustment()) << std::endl;
 			}
         }
         else{
             resSum << "Category\tPositive\tNegative\tVariance" << std::endl;
             std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
 			for(size_t i =0; i < regionEstimate.size(); ++i){
-				std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i) << std::endl;
-				resSum << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i) << std::endl;
+				std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i, Snp::Getadjustment()) << std::endl;
+				resSum << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i, Snp::Getadjustment()) << std::endl;
 			}
             resSum.close();
         }

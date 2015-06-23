@@ -2,6 +2,7 @@
 
 size_t Snp::m_maxSampleSize=0;
 size_t Snp::m_perfectId=0;
+double Snp::m_adjustment = 1.0;
 
 Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double original):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original){
 	m_beta = std::make_shared<double>(original);
@@ -23,8 +24,10 @@ std::string Snp::GetrsId() const { return m_rs; }
 size_t Snp::GetperfectId() const { return m_perfectLdId; }
 size_t Snp::Getbp() const { return m_bp; }
 size_t Snp::GetregionSize() const {return m_regionFlag.size(); }
+size_t Snp::GetmaxSampleSize() {return Snp::m_maxSampleSize; }
 double Snp::GetsampleSize() const { return m_sampleSize; }
 double Snp::Getoriginal() const { return m_original; }
+double Snp::Getadjustment() {return Snp::m_adjustment; }
 double Snp::Getbeta() const {
 	return (*m_beta)/(double)(m_beta.use_count());
 }
@@ -43,6 +46,13 @@ double Snp::Getheritability() const {
     heritability = heritability*heritability-1.0/(m_sampleSize*1.0);
     //std::cout << m_rs << "\tSample size: " << m_sampleSize << std::endl;
 	return heritability;
+}
+
+void Snp::Setadjustment(const double prevalence, const size_t caseSize, const size_t controlSize){
+    double portionCase = (caseSize+0.0) / (caseSize+controlSize+0.0);
+	double i2 = usefulTools::dnorm(usefulTools::qnorm(prevalence))/(prevalence);
+	i2 = i2*i2;
+    Snp::m_adjustment = (i2*portionCase*(1-portionCase))/((1-prevalence)*(1-prevalence));
 }
 
 
@@ -133,25 +143,6 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
         }
     }
     pValue.close();
-    if(!commander->GetdirectionFile().empty()){
-        //Try to get the direction of effect if provided
-        std::ifstream direction;
-        direction.open(commander->GetdirectionFile().c_str());
-        if(!direction.is_open()){
-            throw "Cannot open the direction file";
-        }
-        size_t iter = 0;
-        while(std::getline(direction, line)){
-            line = usefulTools::trim(line);
-            if(!line.empty()){
-                snpList[iter]->Setsign(atoi(line.c_str()));
-            }
-        }
-        direction.close();
-        if(iter != snpList.size()){
-            throw "Different length of the p-value file and the direction file, please check if the input is correct";
-        }
-    }
     std::sort(snpList.begin(), snpList.end(), Snp::sortSnp);
     snpList.erase( unique( snpList.begin(), snpList.end() ), snpList.end() );
     std::cerr << "There are a total of " << snpList.size() << " Snps in the input" << std::endl;
@@ -173,7 +164,7 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, Regio
 	size_t duplicate = 0;
 	for(size_t i = 0; i < snpList.size(); ++i){
         //If the snp is new
-        if(!snpIndex->find(snpList[i]->GetrsId())){
+        if(!snpIndex->contains(snpList[i]->GetrsId())){
             snpIndex->set(snpList[i]->GetrsId(), i);
             try{
                 snpList[i]->computeVarianceExplainedChi(isPvalue, extremeRatio);
@@ -211,13 +202,42 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, Regio
     else std::cerr <<  "There are a total of " << duplicate << " duplicated rsID(s) in the p-value file" << std::endl << std::endl;
 }
 
-
+void Snp::addDirection(SnpIndex *snpIndex, std::vector<Snp*> &snpList,std::string dirFile){
+    if(dirFile.empty()){
+        throw "Should not happen as we doesn't require the direction file";
+    }
+    std::ifstream direction;
+    direction.open(dirFile.c_str());
+    if(!direction.is_open()){
+        throw "Cannot open the direction file";
+    }
+    //Assume no header
+    std::string line;
+    while(std::getline(direction, line)){
+        line = usefulTools::trim(line);
+        if(!line.empty()){
+            std::vector<std::string> token;
+            usefulTools::tokenizer(line, "\t ", &token);
+            //The first should be rsId, the second should be the direction
+            if(token.size() > 1){
+                if(snpIndex->contains(token[0])){
+                    size_t refId = snpIndex->value(token[0]);
+                    snpList[refId]->Setsign(atoi(line.c_str()));
+                }
+                else{
+                    throw "The direction file contains Snps not found in p-value file. Most likely they are not matched. Please check your input!";
+                }
+            }
+        }
+    }
+    direction.close();
+}
 
 void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const size_t &caseSize, const size_t &controlSize, const double &prevalence, Region *regionList, bool isPvalue){
 	std::vector<size_t> regionIncrementationIndex(regionList->GetnumRegion(), 0);
 	size_t duplicate = 0;
 	for(size_t i = 0; i < snpList.size(); ++i){
-        if(!snpIndex->find(snpList[i]->GetrsId())){
+        if(!snpIndex->contains(snpList[i]->GetrsId())){
             snpIndex->set(snpList[i]->GetrsId(), i);
             try{
                 snpList[i]->computeVarianceExplainedChi(caseSize, controlSize, prevalence, isPvalue);;
@@ -267,8 +287,8 @@ void Snp::computeVarianceExplainedChi(bool isPvalue, double extremeRatio){
     }
     (*m_beta) = (*m_beta)*(*m_beta);
     (*m_sqrtChiSq)= sqrt((*m_beta))*m_sign;
-    m_sampleSize = m_sampleSize*extremeRatio;
 	(*m_beta) = ((*m_beta)-1)/(m_sampleSize-2.0+(*m_beta));
+    Snp::m_adjustment = extremeRatio;
 
 }
 
@@ -288,13 +308,9 @@ void Snp::computeVarianceExplainedChi(const size_t &caseSize, const size_t &cont
         (*m_beta) = (*m_beta)*(*m_beta);
     }
     (*m_sqrtChiSq)= sqrt((*m_beta))*m_sign;
-    double ncp = ((*m_beta) -1.0);
 	int totalSampleSize = caseSize + controlSize;
-	double portionCase = (caseSize+0.0) / (totalSampleSize+0.0);
-	double i2 = usefulTools::dnorm(usefulTools::qnorm(prevalence))/(prevalence);
-	i2 = i2*i2;
-	m_sampleSize =(i2*portionCase*(1-portionCase)*(totalSampleSize))/((1-prevalence)*(1-prevalence));
-	(*m_beta) = ncp/m_sampleSize;
+    (*m_beta) = ((*m_beta)-1.0)/(totalSampleSize -2.0+(*m_beta));
+    Snp::m_maxSampleSize = totalSampleSize;
 }
 
 void Snp::setFlag(size_t index, bool value){

@@ -133,7 +133,7 @@ bool Command::caseControlCheck(){
         std::cerr << "chr index: " << m_chrIndex << std::endl;
         std::cerr << "rsId index: " << m_rsIndex << std::endl;
     }
-    if(m_providedPrevalence ){
+    if(!m_providedPrevalence ){
         error = true;
         std::cerr << "You must provide the prevalence for case control study." << std::endl;
     }

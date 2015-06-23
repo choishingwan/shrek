@@ -45,6 +45,9 @@ int main(int argc, char *argv[]){
     }
     Region *regionInfo = new Region();
     try{
+        /** Preparing the region vectors for storage and also for the
+         *  Snp flag process
+         */
         regionInfo->generateRegion(commander->GetregionList());
     }
     catch(const char *e){
@@ -54,10 +57,15 @@ int main(int argc, char *argv[]){
         delete regionInfo;
         return EXIT_FAILURE;
     }
+    /** Print the run summary */
     commander->printRunSummary(std::to_string(regionInfo->GetnumRegion()));
     std::vector<Snp*> snpList;
     SnpIndex *snpIndex = new SnpIndex();
     try{
+        /** Read all the Snp information from the file and remove the duplications
+         *  Might need to improve the validation as currently it is almost non-
+         *  existent
+         */
         Snp::generateSnpList(snpList, commander);
     }
     catch (const std::ifstream::failure e) {
@@ -80,11 +88,14 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
     }
     try{
+        /** Generate the Snp Index */
         if(commander->quantitative()){
             Snp::generateSnpIndex(snpIndex, snpList, regionInfo, commander->isPvalue(), commander->GetextremeAdjust());
         }
         else if(commander->caseControl()){
             Snp::generateSnpIndex(snpIndex, snpList,commander->GetcaseSize(), commander->GetcontrolSize(), commander->Getprevalence(), regionInfo, commander->isPvalue());
+            /** For case control study, set the liability adjustment */
+            Snp::Setadjustment(commander->Getprevalence(), commander->GetcaseSize(), commander->GetcontrolSize());
         }
         regionInfo->clean();
     }
@@ -96,6 +107,20 @@ int main(int argc, char *argv[]){
         delete snpIndex;
         Snp::cleanSnp(snpList);
         return EXIT_FAILURE;
+    }
+    if(!commander->GetdirectionFile().empty()){
+        try{
+            /** If there is direction information, use it */
+            Snp::addDirection(snpIndex, snpList, commander->GetdirectionFile());
+        }
+        catch(const char *e){
+            std::cerr << e << std::endl;
+            delete commander;
+            delete regionInfo;
+            delete snpIndex;
+            Snp::cleanSnp(snpList);
+            return EXIT_FAILURE;
+        }
     }
 
 	//From now on, we are only allow to iterate through snpList through snpIndex

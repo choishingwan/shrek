@@ -62,7 +62,7 @@ void GenotypeFileHandler::initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpL
                 else if(chr.compare(m_chrExists[m_chrExists.size()-1])!= 0) m_chrExists.push_back(chr);
                 int snpLoc =-1;
                 m_inclusion.push_back(-1);
-                if(snpIndex->find(rs)){
+                if(snpIndex->contains(rs)){
 					snpLoc = snpIndex->value(rs);
                     if(!validate || (*snpList)[snpLoc]->Concordant(chr, bp, rs)){
                         //Check if the snp information is correct

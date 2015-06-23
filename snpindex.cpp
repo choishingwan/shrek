@@ -15,7 +15,7 @@ bool SnpIndex::valid() {
     if(!m_isInitialized) throw "SnpIndex isn't initialized";
     return m_iter != m_index.end();
 }
-bool SnpIndex::find(std::string input) { return m_index.find(input) != m_index.end(); }
+bool SnpIndex::contains(std::string input) { return m_index.find(input) != m_index.end(); }
 size_t SnpIndex::value() const {
     if(!m_isInitialized) throw "SnpIndex isn't initialized";
     return m_iter->second;

@@ -5,8 +5,12 @@ Region::Region(){
     m_names.push_back("With LD");
     m_variance.push_back(0.0);
     m_additionVariance.push_back(0.0);
+    m_sigmaPowerThree.push_back(0.0);
+    m_sigmaPowerFour.push_back(0.0);
     m_bufferVariance.push_back(0.0);
     m_bufferAdditionVariance.push_back(0.0);
+    m_bufferSigmaPowerThree.push_back(0.0);
+    m_bufferSigmaPowerFour.push_back(0.0);
 }
 
 Region::~Region()
@@ -48,8 +52,12 @@ void Region::Debuffer(){
     for(size_t i = 0; i < m_bufferAdditionVariance.size(); ++i){
         m_variance[i]+= m_bufferVariance[i];
         m_additionVariance[i]+= m_bufferAdditionVariance[i];
-        m_bufferVariance[i] = 0;
-        m_bufferAdditionVariance[i] = 0;
+        m_sigmaPowerFour[i] += m_bufferSigmaPowerFour[i];
+        m_sigmaPowerThree[i] += m_bufferSigmaPowerThree[i];
+        m_bufferVariance[i] = 0.0;
+        m_bufferAdditionVariance[i] = 0.0;
+        m_bufferSigmaPowerFour[i] = 0.0;
+        m_bufferSigmaPowerThree[i] = 0.0;
     }
 }
 
@@ -58,10 +66,10 @@ std::string Region::Getname(size_t i) const{
     return m_names[i];
 }
 
-double Region::Getvariance(double heritability, size_t i) const{
+double Region::Getvariance(double heritability, size_t i, double adjustment) const{
     if(i >= m_variance.size()) throw std::out_of_range("Region was out of bound");
-    double adjust = (1.0-sqrt(std::complex<double>(heritability)).real());
-    return adjust*m_variance[i] + adjust*adjust*m_additionVariance[i];
+    double sigma = (1.0-sqrt(std::complex<double>(heritability)).real());
+    return adjustment*adjustment*(sigma*m_variance[i] + sigma*sigma*m_additionVariance[i]);
 }
 
 std::string  Region::Getchr(size_t i, size_t j) const{

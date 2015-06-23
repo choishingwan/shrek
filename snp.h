@@ -84,13 +84,18 @@ public:
         void Setvariance(double i );
         void SetadditionVariance(double i );
         void Setsign(int directionEffect);
+        static void addDirection(SnpIndex *snpIndex, std::vector<Snp*> &snpList,std::string dirFile);
         /** \brief Function use to clean the pointers from the vector
          *  \param [in] snpList, the vector containing the snp pointers
          */
         static void cleanSnp(std::vector<Snp*> &snpList);
         static bool sortSnp (Snp* i, Snp* j);
         /** The maximum sample size */
-        static size_t m_maxSampleSize;
+        static size_t GetmaxSampleSize();
+        static double Getadjustment();
+        static void Setadjustment(const double prevalence, const size_t caseSize, const size_t controlSize);
+
+
 protected:
 private:
         std::string m_chr;
@@ -113,7 +118,8 @@ private:
         void computeVarianceExplainedChi(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue);
         void computeVarianceExplainedChi(bool isPvalue, double extremeRatio);
         static size_t m_perfectId;
-
+        static double m_adjustment;
+        static size_t m_maxSampleSize;
 
 };
 

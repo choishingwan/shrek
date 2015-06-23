@@ -314,7 +314,7 @@ void Linkage::Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc
 
 }
 
-Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::MatrixXd *variance,Eigen::MatrixXd *additionVariance, size_t sampleSize){
+Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::MatrixXd *variance,Eigen::MatrixXd *additionVariance, size_t sampleSize){
     /** Perform the eigen value decomposition here */
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     /** Calculate the tolerance threshold */
@@ -344,26 +344,25 @@ Eigen::VectorXd Linkage::solveChi(size_t start, size_t length, Eigen::VectorXd c
 
     /** Here we try to calculate the variance */
     Eigen::VectorXd minusF = Eigen::VectorXd::Constant(length, 1.0)-(*betaEstimate).segment(start, length);
-    //Eigen::VectorXd minusF = Eigen::VectorXd::Constant(length, 1.0);
+
     for(size_t i = 0; i < length; ++i){
-        minusF(i) = minusF(i)/(sampleSize-2.0+((*sqrtChiSq).segment(start, length))(i));
-        //minusF(i) = minusF(i)/(sampleSize);
+        minusF(i) = minusF(i)/(sampleSize-2.0+((*sqrtChiSq).segment(start, length))(i)*((*sqrtChiSq).segment(start, length))(i));
     }
-
-
     //Eigen::MatrixXd ncpEstimate = (4*m_linkageSqrt.block(start, start, length, length)).array()*((*sqrtChiSq).segment(start, length)*(*sqrtChiSq).segment(start, length).transpose()-m_linkageSqrt.block(start, start, length, length)).array();
     Eigen::MatrixXd ncpEstimate = (4*m_linkageSqrt.block(start, start, length, length)).array()*((*sqrtChiSq).segment(start, length)*(*sqrtChiSq).segment(start, length).transpose()).array();
 
     (*variance).noalias() = (rInverse*(minusF.asDiagonal()*(ncpEstimate)*minusF.asDiagonal())*rInverse);
     (*additionVariance).noalias() =-2*rInverse*(minusF.asDiagonal()*m_linkage.block(start, start, length, length)*minusF.asDiagonal())*rInverse;
-    //(*variance)= (*additionVariance); //DEBUG
-    //std::ofstream testing;
-    //std::string testName = "test"+std::to_string(Linkage::DEBUG)+".var";
-    //testing.open("INVERSE");
-    //testing << (*variance) << std::endl;
-    //testing.close();
-    //Linkage::DEBUG++;
-    //std::cerr << "Variance " << (*variance).sum() << " " << (*additionVariance).sum() << std::endl;
+    std::ofstream DEBUG;
+    DEBUG.open("r2.matrix");
+    DEBUG <<m_linkage << std::endl;
+    DEBUG.close();
+    DEBUG.open("r.matrix");
+    DEBUG << m_linkageSqrt << std::endl;
+    DEBUG.close();
+    DEBUG.open("r2Inverse.matrix");
+    DEBUG << rInverse << std::endl;
+    DEBUG.close();
     return result;
 }
 

@@ -18,4 +18,8 @@ enum ProcessCode{
 
 };
 
+enum Status{
+    quantitative,
+    caseControl
+};
 #endif // ENUM
