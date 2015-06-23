@@ -82,6 +82,7 @@ public:
         void setFlag(size_t index, bool value);
         void shareHeritability( Snp* i );
         void Setvariance(double i );
+        void Setvariance(double const sigma, double const sigmaSquared, double const sigmaPowerThree, double const sigmaPowerFour );
         void SetadditionVariance(double i );
         void Setsign(int directionEffect);
         static void addDirection(SnpIndex *snpIndex, std::vector<Snp*> &snpList,std::string dirFile);
@@ -107,6 +108,8 @@ private:
         double m_effectiveNumber;
         double m_variance;
         double m_additionVariance;
+        double m_sigmaPowerThree;
+        double m_sigmaPowerFour;
         size_t m_perfectLdId;
         //std::shared_ptr<double> m_ncp;
         std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD

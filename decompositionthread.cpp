@@ -40,8 +40,8 @@ void DecompositionThread::solve(){
 	*/
 
     std::vector<double> regionVariance(m_regionInfo->GetnumRegion(), 0.0);
-    std::vector<double> regionBufferVariance(m_regionInfo->GetnumRegion(), 0.0);
     std::vector<double> regionAdditionVariance(m_regionInfo->GetnumRegion(), 0.0);
+    std::vector<double> regionBufferVariance(m_regionInfo->GetnumRegion(), 0.0);
     std::vector<double> regionBufferAdditionVariance(m_regionInfo->GetnumRegion(), 0.0);
 
 

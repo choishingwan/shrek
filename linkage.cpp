@@ -353,16 +353,6 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd cons
 
     (*variance).noalias() = (rInverse*(minusF.asDiagonal()*(ncpEstimate)*minusF.asDiagonal())*rInverse);
     (*additionVariance).noalias() =-2*rInverse*(minusF.asDiagonal()*m_linkage.block(start, start, length, length)*minusF.asDiagonal())*rInverse;
-    std::ofstream DEBUG;
-    DEBUG.open("r2.matrix");
-    DEBUG <<m_linkage << std::endl;
-    DEBUG.close();
-    DEBUG.open("r.matrix");
-    DEBUG << m_linkageSqrt << std::endl;
-    DEBUG.close();
-    DEBUG.open("r2Inverse.matrix");
-    DEBUG << rInverse << std::endl;
-    DEBUG.close();
     return result;
 }
 

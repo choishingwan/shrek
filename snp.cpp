@@ -38,6 +38,13 @@ double Snp::GetsignedSqrtChiSq() const {
 void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability;}
 void Snp::Setvariance(double i){ m_variance = i; }
 void Snp::SetadditionVariance(double i){ m_additionVariance = i; }
+void Snp::Setvariance(double const sigma, double const sigmaSquared, double const sigmaPowerThree, double const sigmaPowerFour ){
+    m_variance = sigma;
+    m_additionVariance = sigmaSquared;
+    m_sigmaPowerThree = sigmaPowerThree;
+    m_sigmaPowerFour = sigmaPowerFour;
+}
+
 void Snp::Setsign(int directionEffect){ m_sign = directionEffect; }
 double Snp::GetheritabilityChi() const { return (*m_heritability)/(double)(m_beta.use_count()); }
 double Snp::Getvariance() const { return m_variance; }

@@ -89,6 +89,10 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
                 for(size_t regionIndex = 0; regionIndex < m_regionInfo->GetnumRegion(); ++regionIndex){
                     if((*m_snpList)[snpLoc[i]]->GetFlag(regionIndex)&&
                        (*m_snpList)[snpLoc[j]]->GetFlag(regionIndex)){
+                        if(j < copyStart){ /** This is the lower left corner and should be considered as  the upper right corner*/
+                            m_regionInfo->Addvariance(covariance, regionIndex);
+                            m_regionInfo->AddadditionVariance(additionCovariance, regionIndex);
+                        }
                         regionBufferVariance[regionIndex]+= covariance;
                         regionBufferAdditionVariance[regionIndex]+= additionCovariance;
                     }
