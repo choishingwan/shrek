@@ -5,12 +5,8 @@ Region::Region(){
     m_names.push_back("With LD");
     m_variance.push_back(0.0);
     m_additionVariance.push_back(0.0);
-    m_sigma3.push_back(0.0);
-    m_sigma4.push_back(0.0);
     m_bufferVariance.push_back(0.0);
     m_bufferAdditionVariance.push_back(0.0);
-    m_bufferSigma3.push_back(0.0);
-    m_bufferSigma4.push_back(0.0);
 }
 
 Region::~Region()
@@ -18,15 +14,6 @@ Region::~Region()
 	//dtor
 }
 
-void Region::Addvariance(double const sigma, double const sigma2, double const sigma3, double sigma4, size_t i){
-    if(i>=m_variance.size()){
-        throw std::out_of_range("Region was out of bound");
-    }
-    m_variance.at(i)+= sigma;
-    m_additionVariance.at(i) += sigma2;
-    m_sigma3.at(i) += sigma3;
-    m_sigma4.at(i) += sigma4;
-}
 
 void Region::Addvariance(double const var, size_t i){
     if(i >= m_variance.size()){
@@ -50,16 +37,6 @@ void Region::SetbufferAdditionVariance(double const addVar, size_t i){
 
 }
 
-void Region::SetbufferVariance(double const sigma, double const sigma2, double const sigma3, double const sigma4, size_t i){
-    if(i>= m_bufferVariance.size()){
-        throw std::out_of_range("Region was out of bound");
-    }
-    m_bufferVariance.at(i) = sigma;
-    m_bufferAdditionVariance.at(i) = sigma2;
-    m_bufferSigma3.at(i) = sigma3;
-    m_bufferSigma4.at(i) = sigma4;
-}
-
 void Region::SetbufferVariance(double const var, size_t i){
     if(i >= m_bufferVariance.size()){
         throw std::out_of_range("Region was out of bound");
@@ -72,12 +49,8 @@ void Region::Debuffer(){
     for(size_t i = 0; i < m_bufferAdditionVariance.size(); ++i){
         m_variance.at(i) += m_bufferVariance.at(i);
         m_additionVariance.at(i) += m_bufferAdditionVariance.at(i);
-        m_sigma3.at(i) += m_bufferSigma3.at(i);
-        m_sigma4.at(i) += m_bufferSigma4.at(i);
         m_bufferVariance.at(i) = 0;
         m_bufferAdditionVariance.at(i) = 0;
-        m_bufferSigma3.at(i) = 0.0;
-        m_bufferSigma4.at(i) = 0.0;
     }
 }
 
@@ -90,7 +63,7 @@ double Region::Getvariance(double heritability, size_t i, double adjustment) con
     if(i >= m_variance.size()) throw std::out_of_range("Region was out of bound");
     double adjust = (1.0-sqrt(std::complex<double>(heritability)).real());
     //return adjustment*adjustment*(adjust*m_variance[i] + adjust*adjust*m_additionVariance[i]);
-    return adjustment*adjustment*(adjust*m_variance.at(i) + adjust*adjust*m_additionVariance.at(i)+adjust*adjust*adjust*m_sigma3.at(i) + adjust*adjust*adjust*adjust*m_sigma4.at(i);
+    return adjustment*adjustment*(adjust*m_variance.at(i) + adjust*adjust*m_additionVariance.at(i));
 }
 
 std::string  Region::Getchr(size_t i, size_t j) const{

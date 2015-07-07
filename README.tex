@@ -25,8 +25,6 @@ Henry Chi-Ming, Leung\\
 \section{Programme}
 If time allows, re-structure some of the scripts.
 \begin{enumerate}
-\item{region class need to be re-formatted. There seems to be bugs in the class}
-\item{Clean un-necessary functions from all the classes. esp linkage class}
 \item{Write a better make file. Maybe also include the configure, if I can figure out how to write those}
 \end{enumerate}
 \section{Documentation}
@@ -99,5 +97,10 @@ var(h_1) &= var(h_\mu) \\
 var(h_2) &= var(h_\mu) \\
 var(h_3) &= var(h_\mu)
 \end{align*}
-
+\subsection{Per Snp Heritability}
+Although the programme does produce a per snp heritability estimation, this value only served as an approximation.
+For example, if two causal snps are in perfect LD and each has a different effect size, then per snp heritability will not work as the effect will be equally divided among them.
+We do expect similar situation will occur when there is LD between the causal snps.
+The total heritability estimation will still work, but not the per snp effect size estimation.
+Therefore users should be cautious when they try to interpret the per snp effect.
 \end{document}

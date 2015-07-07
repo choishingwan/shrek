@@ -59,7 +59,7 @@ void Snp::Setadjustment(const double prevalence, const size_t caseSize, const si
     double portionCase = (caseSize+0.0) / (caseSize+controlSize+0.0);
 	double i2 = usefulTools::dnorm(usefulTools::qnorm(prevalence))/(prevalence);
 	i2 = i2*i2;
-    Snp::m_adjustment = (i2*portionCase*(1-portionCase))/((1-prevalence)*(1-prevalence));
+    Snp::m_adjustment = ((1-prevalence)*(1-prevalence))/(i2*portionCase*(1-portionCase));
 }
 
 

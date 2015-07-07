@@ -21,6 +21,9 @@ size_t SnpIndex::value() const {
     return m_iter->second;
 }
 size_t SnpIndex::value (std::string key){
+    //if(m_index.find(key)==m_index.end()){
+    //    throw "Key not found";
+    //}
 	return m_index[key];
 }
 bool SnpIndex::next(){

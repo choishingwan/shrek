@@ -71,22 +71,14 @@ class Region
         std::string Getname(size_t i) const;
         /** Return the variance of the i th region given the heritability */
         double Getvariance(double heritability, size_t i, double adjustment) const;
-
-        void SetbufferVariance(double const sigma, double const sigma2, double const sigma3, double const sigma4, size_t i);
-        void Addvariance(double const sigma, double const sigma2, double const sigma3, double sigma4, size_t i);
-
 	protected:
 	private:
         std::vector<std::vector<Interval*> > m_intervalList;
         std::vector<std::string> m_names;
         std::vector<double> m_variance;
         std::vector<double> m_additionVariance;
-        std::vector<double> m_sigma3;
-        std::vector<double> m_sigma4;
         std::vector<double> m_bufferVariance;
         std::vector<double> m_bufferAdditionVariance;
-        std::vector<double> m_bufferSigma3;
-        std::vector<double> m_bufferSigma4;
 };
 
 #endif // REGION_H

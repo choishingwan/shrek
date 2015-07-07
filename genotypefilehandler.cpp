@@ -15,7 +15,7 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, size_t 
 }
 
 void GenotypeFileHandler::initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock){
-    size_t safeBlockRange = 2.0; //Use to multiply the #Snp in 1mb region to make sure the block will always include everything within the region
+    size_t safeBlockRange = 4.0; //Use to multiply the #Snp in 1mb region to make sure the block will always include everything within the region
     std::string famFileName = m_genotypeFilePrefix +".fam";
     std::ifstream famFile;
     famFile.open(famFileName.c_str());
@@ -37,7 +37,7 @@ void GenotypeFileHandler::initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpL
     if(!bimFile.is_open()){
         throw "Cannot open bim file";
     }
-	std::map<std::string, bool> duplicateCheck;
+	std::map<std::string, bool> duplicateCheck, sortCheck;
     int duplicateCount = 0;
     //check the optimum blockSize here
 
@@ -58,8 +58,17 @@ void GenotypeFileHandler::initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpL
                 size_t bp = std::atoi(token[3].c_str());
                 m_chrCount->increment(chr); //Perform the count of items in each chromosome
 				m_inputSnp++;
-                if(m_chrExists.empty()) m_chrExists.push_back(chr);
-                else if(chr.compare(m_chrExists[m_chrExists.size()-1])!= 0) m_chrExists.push_back(chr);
+                if(m_chrExists.empty()){
+                    m_chrExists.push_back(chr);
+                    sortCheck[chr] = true;
+                }
+                else if(chr.compare(m_chrExists[m_chrExists.size()-1])!= 0 && sortCheck.find(chr)==sortCheck.end()){
+                    m_chrExists.push_back(chr);
+                    sortCheck[chr] = true;
+                }
+                else if(chr.compare(m_chrExists[m_chrExists.size()-1])!= 0 &&sortCheck.find(chr)!=sortCheck.end()){
+                    throw "The programme require the SNPs to be sorted according to their chromosome. Sorry.";
+                }
                 int snpLoc =-1;
                 m_inclusion.push_back(-1);
                 if(snpIndex->contains(rs)){
@@ -141,9 +150,11 @@ void GenotypeFileHandler::initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpL
     else{
         throw "We currently have no plan of implementing the individual-major mode. Please use the snp-major format";
     }
+    /*
     if(m_chrExists.size() != m_blockSizeTract->size()){
         throw "The programme require the SNPs to be sorted according to their chromosome. Sorry.";
     }
+    */
 
 	//Initialize the variable for getSnps
 	m_chrCount->init();
