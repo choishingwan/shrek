@@ -1,23 +1,31 @@
 #include "genotypefilehandler.h"
 
 size_t GenotypeFileHandler::GetsampleSize() const { return m_ldSampleSize; }
-size_t GenotypeFileHandler::GetestimateSnpTotal() const { return m_estimateTotal; }
+size_t GenotypeFileHandler::GetestimateSnpTotal() const { return m_inputSnp; }
 
-GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, size_t thread):m_genotypeFilePrefix(genotypeFilePrefix), m_thread(thread){
-    m_blockSizeTract = new SnpIndex();
-	m_chrCount = new SnpIndex();
+GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, size_t thread, std::string outPrefix):m_genotypeFilePrefix(genotypeFilePrefix), m_thread(thread), m_outPrefix(outPrefix){
 	m_defaultDistance=1000000;
 	m_ldSampleSize = 0;
 	m_expectedNumberOfSnp = 0;
     m_inputSnp =0;
 	m_snpIter =0;
-	m_estimateTotal=0;
 }
 
-void GenotypeFileHandler::initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock){
+
+void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock){
     size_t safeBlockRange = 4.0; //Use to multiply the #Snp in 1mb region to make sure the block will always include everything within the region
     std::string famFileName = m_genotypeFilePrefix +".fam";
     std::ifstream famFile;
+    std::ofstream blockRecommendOut;
+    bool stdOut = true;
+    if(!m_outPrefix.empty()){
+        stdOut = false;
+        std::string blockRecName = m_outPrefix+".block";
+        blockRecommendOut.open(blockRecName.c_str());
+        if(!blockRecommendOut.is_open()){
+            throw "Cannot open the block recommendation log file";
+        }
+    }
     famFile.open(famFileName.c_str());
     if(!famFile.is_open()){
         throw "Cannot open the fam file";
@@ -41,98 +49,141 @@ void GenotypeFileHandler::initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpL
     int duplicateCount = 0;
     //check the optimum blockSize here
 
-
-
+    if(stdOut) std::cerr << "chr\tRecommend\tFinal"<< std::endl;
+    else blockRecommendOut << "chr\tRecommend\tFinal"<< std::endl;
     size_t currentMaxBlock = 0;
 	std::deque<size_t> locList;
-	std::string prevChr;
+	std::string prevChr="";
+	size_t prevSnpLoc = 0;
     while(std::getline(bimFile, line)){
-		line = usefulTools::trim(line);
-		if(!line.empty()){
+        line = usefulTools::trim(line);
+        if(!line.empty()){
             m_expectedNumberOfSnp++;
-			std::vector<std::string> token;
+            std::vector<std::string> token;
             usefulTools::tokenizer(line, "\t ", &token);
-            if(token.size() >= 6){
-				std::string chr = token[0];
+            if(token.size() >=6){
+                std::string chr= token[0];
                 std::string rs = token[1];
+                if(m_chrCount.find(chr)==m_chrCount.end())m_chrCount[chr]=1;
+                else m_chrCount[chr]++;
                 size_t bp = std::atoi(token[3].c_str());
-                m_chrCount->increment(chr); //Perform the count of items in each chromosome
-				m_inputSnp++;
-                if(m_chrExists.empty()){
-                    m_chrExists.push_back(chr);
-                    sortCheck[chr] = true;
-                }
-                else if(chr.compare(m_chrExists[m_chrExists.size()-1])!= 0 && sortCheck.find(chr)==sortCheck.end()){
-                    m_chrExists.push_back(chr);
-                    sortCheck[chr] = true;
-                }
-                else if(chr.compare(m_chrExists[m_chrExists.size()-1])!= 0 &&sortCheck.find(chr)!=sortCheck.end()){
-                    throw "The programme require the SNPs to be sorted according to their chromosome. Sorry.";
-                }
+                m_inputSnp++; //Number of total input Snps
                 int snpLoc =-1;
-                m_inclusion.push_back(-1);
-                if(snpIndex->contains(rs)){
-					snpLoc = snpIndex->value(rs);
-                    if(!validate || (*snpList)[snpLoc]->Concordant(chr, bp, rs)){
-                        //Check if the snp information is correct
-						(*snpList)[snpLoc]->setFlag(0, true);
-						if(duplicateCheck.find(rs)!=duplicateCheck.end()){
-							duplicateCount++;
-						}
-						else{
-							if(prevChr.empty()){
-								prevChr = chr;
-								locList.push_back(bp);
-							}
-							else if(prevChr.compare(chr) == 0){
-								if(bp-locList.front() > m_defaultDistance){
-									if(currentMaxBlock < locList.size()*safeBlockRange) currentMaxBlock = locList.size()*safeBlockRange;
-									while(bp-locList.front() > m_defaultDistance && !locList.empty()){
-										locList.pop_front();
-									}
-									locList.push_back(bp);
-								}
-								else locList.push_back(bp);
-							}
-							else{
-								if(currentMaxBlock < locList.size()*safeBlockRange) currentMaxBlock = locList.size()*safeBlockRange;
-								if(currentMaxBlock%3 != 0) currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
-								std::cerr << "Recommended block size for chromosome "<< prevChr << ": " << currentMaxBlock << std::endl;
-								if(maxBlockSet && maxBlock < currentMaxBlock ){
-									currentMaxBlock = maxBlock;
-								}
-								if(currentMaxBlock < minBlock) currentMaxBlock = minBlock;
-								std::cerr << "Block size for chromosome " << prevChr << ": " << currentMaxBlock << std::endl;
-								m_blockSizeTract->set(prevChr, currentMaxBlock);
-								locList.clear();
-								prevChr = chr;
-								locList.push_back(bp);
-							}
-							m_inclusion.back()=snpLoc;
-							m_estimateTotal++;
-							duplicateCheck[rs] = true;
-						}
+                m_inclusion.push_back(-1); //Default is not including the snp
+                if(prevChr.empty()){
+                    prevChr = chr;
+                    prevSnpLoc = bp;
+                    sortCheck[chr] = true;
+
+                    m_chrExists.push_back(chr);
+                    currentMaxBlock= 0;
+                    if(snpIndex.find(rs)!=snpIndex.end()){
+                        //This is something that we need
+                        if(!validate || (*snpList).at(snpLoc)->Concordant(chr, bp, rs)){
+                            snpLoc = snpIndex.at(rs);
+                            (*snpList).at(snpLoc)->setFlag(0, true); //Now that it is in the genotype file, it contains the LD info.
+                            m_inclusion.back()=snpLoc;
+                            locList.push_back(bp);
+                            duplicateCheck[rs] = true;
+                        }
+                        else{
+                            std::cerr << rs << " has different information from p-value file! Will ignore Snp." << std::endl;
+                            //basically we ignore the snp
+                        }
                     }
-                    else{
-						//Not concordant between p-file and ld file
-						std::cerr << "Require validate and not the same" << std::endl;
-                        m_locTract.push_back(snpLoc);
+                }
+                else if(prevChr.compare(chr)==0){
+                        if(bp < prevSnpLoc){
+                            //The snps were not sorted
+                            throw "The programme require the SNPs to be sorted according to their chromosome. Sorry.";
+                        }
+                        prevSnpLoc = bp;
+                        if(snpIndex.find(rs)!=snpIndex.end() && duplicateCheck.find(rs)==duplicateCheck.end()){
+                            if(!validate || (*snpList).at(snpLoc)->Concordant(chr, bp, rs)){
+                                snpLoc = snpIndex.at(rs);
+                                (*snpList).at(snpLoc)->setFlag(0, true); //Now that it is in the genotype file, it contains the LD info.
+                                m_inclusion.back()=snpLoc;
+                                if(bp-locList.front() > m_defaultDistance){
+                                    if(currentMaxBlock < locList.size()*safeBlockRange) currentMaxBlock = locList.size()*safeBlockRange;
+                                    while(bp-locList.front() > m_defaultDistance && !locList.empty()){
+                                        locList.pop_front();
+                                    }
+                                }
+                                locList.push_back(bp);
+                            }
+                            else{
+                                std::cerr << rs << " has different information from p-value file! Will ignore Snp." << std::endl;
+                                //basically we ignore the snp
+                            }
+                        }
+                        else if(duplicateCheck.find(rs)!=duplicateCheck.end()){
+                            duplicateCount++;
+                        }
+
+                }
+                else if(prevChr.compare(chr) != 0){
+                    if(sortCheck.find(chr)!=sortCheck.end()){
+                        //Unsorted chromosome
+                        throw "The programme require the SNPs to be sorted according to their chromosome. Sorry.";
+                    }
+                    //Valid new chromosome
+
+
+                    if(currentMaxBlock < locList.size()*safeBlockRange) currentMaxBlock = locList.size()*safeBlockRange;
+					if(currentMaxBlock%3 != 0) currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
+					if(stdOut) std::cerr <<prevChr << "\t" << currentMaxBlock <<"\t";
+					else blockRecommendOut << prevChr << "\t" << currentMaxBlock <<"\t";
+					if(maxBlockSet && maxBlock < currentMaxBlock ){
+						currentMaxBlock = maxBlock;
+					}
+					if(currentMaxBlock < minBlock) currentMaxBlock = minBlock;
+					if(stdOut) std::cerr << currentMaxBlock << std::endl;
+					else blockRecommendOut << currentMaxBlock << std::endl;
+					m_blockSizeTract[prevChr]=currentMaxBlock;
+					locList.clear();
+					//All new now
+                    prevChr = chr;
+                    prevSnpLoc = bp;
+                    sortCheck[chr] = true;
+                    m_chrExists.push_back(chr);
+                    currentMaxBlock= 0;
+                    if(snpIndex.find(rs)!=snpIndex.end()){
+                        //This is something that we need
+                        if(!validate || (*snpList).at(snpLoc)->Concordant(chr, bp, rs)){
+                            snpLoc = snpIndex.at(rs);
+                            (*snpList).at(snpLoc)->setFlag(0, true); //Now that it is in the genotype file, it contains the LD info.
+                            m_inclusion.back()=snpLoc;
+                            locList.push_back(bp);
+                            duplicateCheck[rs] = true;
+                        }
+                        else{
+                            std::cerr << rs << " has different information from p-value file! Will ignore Snp." << std::endl;
+                            //basically we ignore the snp
+                        }
                     }
                 }
             }
-		}
+            else{
+                throw "Line in bim file has more incorrect number of dimension";
+            }
+        }
     }
-
+    //Only do this if we still have Snps left
     if(currentMaxBlock < locList.size()*safeBlockRange) currentMaxBlock = locList.size()*safeBlockRange;
     if(currentMaxBlock%3 != 0) currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
-	std::cerr << "Recommended block size for chromosome "<< prevChr << ": " << currentMaxBlock << std::endl;
+    if(stdOut) std::cerr << prevChr << "\t" << currentMaxBlock << "\t";
+    else blockRecommendOut << prevChr << "\t" << currentMaxBlock << "\t";
     if(maxBlockSet && maxBlock < currentMaxBlock ){
-		currentMaxBlock = maxBlock;
-	}
-	if(currentMaxBlock < minBlock) currentMaxBlock = minBlock;
-	std::cerr << "Block size for chromosome " << prevChr << ": " << currentMaxBlock << std::endl;
-	m_blockSizeTract->set(prevChr, currentMaxBlock);
-	if(currentMaxBlock == 0) throw "The block size is 0, most likely your input file is problematic. Please check.";
+        currentMaxBlock = maxBlock;
+    }
+    if(currentMaxBlock < minBlock) currentMaxBlock = minBlock;
+    if(stdOut) std::cerr << currentMaxBlock << std::endl;
+    else blockRecommendOut << currentMaxBlock << std::endl;
+    m_blockSizeTract[prevChr]=currentMaxBlock;
+	//The reason of not using this check is because the currentMaxBlock is used for all chromosome
+	//If the chromosome does not have anything in the p-value file, currentMaxBlock will most likely be 0
+	//if(currentMaxBlock == 0) throw "The block size is 0, most likely your input file is problematic. Please check.";
+    if(!stdOut) blockRecommendOut.close();
 
     bimFile.close();
     if(duplicateCount == 0) std::cerr << "There are no duplicated snps in the LD file" << std::endl;
@@ -150,23 +201,11 @@ void GenotypeFileHandler::initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpL
     else{
         throw "We currently have no plan of implementing the individual-major mode. Please use the snp-major format";
     }
-    /*
-    if(m_chrExists.size() != m_blockSizeTract->size()){
-        throw "The programme require the SNPs to be sorted according to their chromosome. Sorry.";
-    }
-    */
-
 	//Initialize the variable for getSnps
-	m_chrCount->init();
 	m_processed = 0;
-
-
 }
 
-GenotypeFileHandler::~GenotypeFileHandler(){
-	if(m_blockSizeTract != nullptr) delete m_blockSizeTract;
-	if(m_chrCount != nullptr) delete m_chrCount;
-}
+GenotypeFileHandler::~GenotypeFileHandler(){}
 
 
 bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream & BIT){
@@ -241,7 +280,15 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &prevResidual, size_t &blockSize){
 	//We will get snps according to the distance
 	//We want to use flanking distance, e.g. getting the 1mb flanking on the both side
-	blockSize = m_blockSizeTract->value(m_chrExists.front());
+	bool skipChromosome=false;
+	if(m_blockSizeTract.find(m_chrExists.front()) !=m_blockSizeTract.end() && m_blockSizeTract[m_chrExists.front()] == 0){
+        //This chromosome contains nothing useful.
+        skipChromosome = true;
+        blockSize = 0;
+	}
+	else{
+        blockSize = m_blockSizeTract.at(m_chrExists.front());
+	}
     size_t processSize = blockSize/3*m_thread; //This is the expected number of snps to be processed
 
     prevResidual =genotype.size(); //default amount of residule
@@ -249,6 +296,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
         processSize+= blockSize/3*2;
         processSize+= blockSize; //DEBUG //This is to avoid problem with the perfect LD thingy, so that now we will have one extra block ahead of time //This extra part will stay until the end of chromosome
     }
+
 	while (m_snpIter < m_inputSnp){ //While there are still Snps to read
 		bool snp = false;
 		if(m_inclusion[m_snpIter] != -1){//indicate whether if we need this snp
@@ -320,16 +368,41 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 		m_snpIter++;
 		m_processed++;
 		//Check if we have finished the chromosome
-        if(m_processed > m_chrCount->value()){
+        if(m_processed > m_chrCount[m_chrExists.front()]){
+            //std::cerr << "Finished one chromosome " << m_chrExists.front() << "\t" << genotype.size() << std::endl;
+
 			//finished one chromosome
-			chromosomeEnd = true;
+			m_chrExists.pop_front(); //Remove the front
 			m_processed = 0;
-			m_chrCount->next();
-			return continueProcess;
+			if(skipChromosome){
+                chromosomeStart=true;
+                if(m_blockSizeTract.find(m_chrExists.front()) == m_blockSizeTract.end() || (m_blockSizeTract.find(m_chrExists.front())!=m_blockSizeTract.end() && m_blockSizeTract[m_chrExists.front()]==0)){
+                    //This chromosome contains nothing useful.
+                    skipChromosome = true;
+                    blockSize = 0;
+                }
+                else{
+                    skipChromosome = false;
+                    blockSize = m_blockSizeTract.at(m_chrExists.front());
+                }
+                processSize = blockSize/3*m_thread; //This is the expected number of snps to be processed
+                prevResidual =0; //default amount of residule
+                if(genotype.size() != 0){
+                    throw "Unexpected genotype size. If the chromosome is useless, then there shouldn't be any recorded Snps";
+                }
+                if(chromosomeStart){
+                    processSize+= blockSize/3*2;
+                    processSize+= blockSize; //DEBUG //This is to avoid problem with the perfect LD thingy, so that now we will have one extra block ahead of time //This extra part will stay until the end of chromosome
+                }
+
+            }
+            else{
+                chromosomeEnd = true;
+                return continueProcess;
+            }
         }
-        //check if we have used all the snps;
-        if(processSize == 0){
-			return continueProcess;
+        else if(!skipChromosome && processSize == 0){
+            return continueProcess;
         }
 
 	}
@@ -417,11 +490,11 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 		m_snpIter++;
 		m_processed++;
 		//Check if we have finished the chromosome
-        if(m_processed > m_chrCount->value()){
+        if(m_processed > m_chrCount[m_chrExists.front()]){
 			//finished one chromosome
 			chromosomeEnd = true;
 			m_processed = 0;
-			m_chrCount->next();
+			m_chrExists.pop_front();
 			return continueProcess;
         }
         //check if we have used all the snps;

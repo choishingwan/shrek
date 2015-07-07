@@ -127,3 +127,4 @@ void Genotype::clean(std::deque<Genotype*> &genotype, size_t remaining){
         delete temp;
     }
 }
+

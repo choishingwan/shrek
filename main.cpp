@@ -20,9 +20,7 @@
 *   @version 0.01
 */
 
-// TODO (swchoi#1#): Need to find a way to output the perfect SNP pairs
-// TODO (swchoi#1#): Update help message in the Command Class ...
-// TODO (swchoi#1#): Not sure if we should do it, should we allow people to specific the block size restriction fro each individual chromosome?
+// TODO (swchoi#1#): Need to find a way to output the perfect SNP pairs// TODO (swchoi#1#): Not sure if we should do it, should we allow people to specific the block size restriction fro each individual chromosome?
 
 
 
@@ -60,7 +58,7 @@ int main(int argc, char *argv[]){
     /** Print the run summary */
     commander->printRunSummary(std::to_string(regionInfo->GetnumRegion()));
     std::vector<Snp*> snpList;
-    SnpIndex *snpIndex = new SnpIndex();
+    std::map<std::string, size_t> snpIndex;
     try{
         /** Read all the Snp information from the file and remove the duplications
          *  Might need to improve the validation as currently it is almost non-
@@ -74,7 +72,6 @@ int main(int argc, char *argv[]){
         delete commander;
         regionInfo->clean();
         delete regionInfo;
-        delete snpIndex;
         Snp::cleanSnp(snpList);
         return EXIT_FAILURE;
     }
@@ -83,7 +80,6 @@ int main(int argc, char *argv[]){
         delete commander;
         regionInfo->clean();
         delete regionInfo;
-        delete snpIndex;
         Snp::cleanSnp(snpList);
         return EXIT_FAILURE;
     }
@@ -104,7 +100,6 @@ int main(int argc, char *argv[]){
         delete commander;
         regionInfo->clean();
         delete regionInfo;
-        delete snpIndex;
         Snp::cleanSnp(snpList);
         return EXIT_FAILURE;
     }
@@ -117,14 +112,13 @@ int main(int argc, char *argv[]){
             std::cerr << e << std::endl;
             delete commander;
             delete regionInfo;
-            delete snpIndex;
             Snp::cleanSnp(snpList);
             return EXIT_FAILURE;
         }
     }
 
 	//From now on, we are only allow to iterate through snpList through snpIndex
-    GenotypeFileHandler *genotypeFileHandler = new GenotypeFileHandler(commander->GetldFilePrefix(), commander->Getthread());
+    GenotypeFileHandler *genotypeFileHandler = new GenotypeFileHandler(commander->GetldFilePrefix(), commander->Getthread(), commander->GetoutputPrefix());
     try{
         genotypeFileHandler->initialize(snpIndex, &snpList, commander->validate(), commander->maxBlockSet(), commander->GetmaxBlock(), commander->GetminBlock());
     }
@@ -132,13 +126,12 @@ int main(int argc, char *argv[]){
         std::cerr << "Exception encountered when opening genotype files" << std::endl;
         delete commander;
         delete regionInfo;
-        delete snpIndex;
         Snp::cleanSnp(snpList);
         delete genotypeFileHandler;
         return EXIT_FAILURE;
     }
 
-	SnpEstimation *snpEstimation = new SnpEstimation(genotypeFileHandler, snpIndex, &snpList, commander->Getthread(), commander->Getmaf(), commander->ldCorrect(), regionInfo);
+	SnpEstimation *snpEstimation = new SnpEstimation(genotypeFileHandler, &snpIndex, &snpList, commander->Getthread(), commander->Getmaf(), commander->ldCorrect(), regionInfo);
     try{
         snpEstimation->Estimate();
     }
@@ -146,7 +139,6 @@ int main(int argc, char *argv[]){
         std::cerr << e << std::endl;
         delete commander;
         delete snpEstimation;
-        delete snpIndex;
         Snp::cleanSnp(snpList);
         delete regionInfo;
         return EXIT_FAILURE;
@@ -157,7 +149,6 @@ int main(int argc, char *argv[]){
     //Cleaning section
 	Snp::cleanSnp(snpList);
 	delete snpEstimation;
-	delete snpIndex;
 	delete genotypeFileHandler;
     delete commander;
     regionInfo->clean();

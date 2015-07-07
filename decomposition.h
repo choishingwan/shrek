@@ -14,7 +14,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Core>
 #include <Eigen/SVD>
-#include "snpindex.h"
+#include <map>
 #include "snp.h"
 #include "region.h"
 #include "linkage.h"
@@ -33,14 +33,13 @@ class Decomposition
 {
 	public:
 		/**Default constructor */
-		Decomposition(SnpIndex *snpIndex, std::vector<Snp*> *snpList, Linkage *linkageMatrix, size_t thread, Region *regionInfo);
+		Decomposition( std::vector<Snp*> *snpList, Linkage *linkageMatrix, size_t thread, Region *regionInfo);
 		/**Default destructor */
 		virtual ~Decomposition();
         /** The decomposition processor */
 		ProcessCode Decompose(const size_t &blockSize, std::deque<size_t> &snpLoc, std::deque<Genotype*> &genotype, bool chromosomeStart, bool chromosomeEnd);
 	protected:
 	private:
-		SnpIndex *m_snpIndex;
         std::vector<Snp*> *m_snpList;
         Linkage *m_linkage;
 		size_t m_thread;

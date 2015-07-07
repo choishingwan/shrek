@@ -18,9 +18,9 @@
 #include <bitset>
 #include <math.h>
 #include <fstream>
+#include <map>
 #include "usefulTools.h"
 #include "snp.h"
-#include "snpindex.h"
 #include "genotype.h"
 #include "processcode.h"
 #include "genotype.h"
@@ -37,8 +37,15 @@ class GenotypeFileHandler
 {
 public:
         /** Default constructor */
-        GenotypeFileHandler(std::string genotypeFilePrefix, size_t thread);
-        void initialize(SnpIndex *snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock);
+        GenotypeFileHandler(std::string genotypeFilePrefix, size_t thread, std::string outPrefix);
+        /**
+         * \brief Function to initialize required variables for the getSnps function
+         *
+         * Need to collect the block size information and check how many Snps were
+         * found on each chromosome. Also need to indicates which Snps are the required
+         * Snps.
+         */
+        void initialize(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock);
         virtual ~GenotypeFileHandler();
         ProcessCode getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &prevResidual, size_t &blockSize);
         ProcessCode getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &numSnp);
@@ -47,8 +54,9 @@ public:
 protected:
 private:
         std::string m_genotypeFilePrefix;
-        SnpIndex *m_blockSizeTract;
-        SnpIndex *m_chrCount;
+        std::map<std::string, size_t> m_blockSizeTract;
+        std::map<std::string, size_t> m_chrCount;
+        std::map<std::string, size_t>::iterator m_chrCountIter;
         size_t m_ldSampleSize;
         size_t m_expectedNumberOfSnp;
         size_t m_snpIter;
@@ -58,6 +66,7 @@ private:
         size_t m_estimateTotal;
         size_t m_defaultDistance;
         std::ifstream m_bedFile;
+        std::string m_outPrefix;
         bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
         std::deque<std::string> m_chrExists;
         std::vector<int> m_inclusion;

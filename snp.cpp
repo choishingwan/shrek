@@ -46,20 +46,14 @@ void Snp::Setvariance(double const sigma, double const sigmaSquared, double cons
 }
 
 void Snp::Setsign(int directionEffect){ m_sign = directionEffect; }
-double Snp::GetheritabilityChi() const { return (*m_heritability)/(double)(m_beta.use_count()); }
+double Snp::Getheritability() const { return (*m_heritability)/(double)(m_beta.use_count()); }
 double Snp::Getvariance() const { return m_variance; }
-double Snp::Getheritability() const {
-	double heritability = (*m_heritability)/(double)(m_beta.use_count());
-    heritability = heritability*heritability-1.0/(m_sampleSize*1.0);
-    //std::cout << m_rs << "\tSample size: " << m_sampleSize << std::endl;
-	return heritability;
-}
 
 void Snp::Setadjustment(const double prevalence, const size_t caseSize, const size_t controlSize){
-    double portionCase = (caseSize+0.0) / (caseSize+controlSize+0.0);
+    double portionCase = (double)(caseSize) / (double)(caseSize+controlSize);
 	double i2 = usefulTools::dnorm(usefulTools::qnorm(prevalence))/(prevalence);
 	i2 = i2*i2;
-    Snp::m_adjustment = ((1-prevalence)*(1-prevalence))/(i2*portionCase*(1-portionCase));
+    Snp::m_adjustment = ((1.0-prevalence)*(1.0-prevalence))/(i2*portionCase*(1-portionCase));
 }
 
 
@@ -103,7 +97,9 @@ void Snp::shareHeritability( Snp* i ){
 
 
 bool Snp::GetFlag(size_t index) const {
-	if(index>= m_regionFlag.size()) return false;
+	if(index>= m_regionFlag.size()){
+        throw std::out_of_range("Region was out of bound");
+    }
 	return m_regionFlag[index];
 }
 
@@ -166,13 +162,13 @@ bool Snp::sortSnp (Snp* i, Snp* j){
 }
 
 
-void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, Region *regionList, bool isPvalue, double extremeRatio){
+void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList, Region *regionList, bool isPvalue, double extremeRatio){
 	std::vector<size_t> regionIncrementationIndex(regionList->GetnumRegion(), 0);
 	size_t duplicate = 0;
 	for(size_t i = 0; i < snpList.size(); ++i){
         //If the snp is new
-        if(!snpIndex->contains(snpList[i]->GetrsId())){
-            snpIndex->set(snpList[i]->GetrsId(), i);
+        if(snpIndex.find(snpList[i]->GetrsId())== snpIndex.end()){
+            snpIndex[snpList[i]->GetrsId()] =i ;
             try{
                 snpList[i]->computeVarianceExplainedChi(isPvalue, extremeRatio);
                 //The default flag (with LD), is always false at this stage
@@ -183,12 +179,12 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, Regio
                     snpList[i]->m_regionFlag.insert(snpList[i]->m_regionFlag.end(), padding.begin(), padding.end());
                 }
                 for(size_t j = 0; j < regionList->GetnumRegion(); ++j){
-                    for(unsigned k = regionIncrementationIndex[j]; k < regionList->GetintervalSize(j); ++k){
+                    for(unsigned k = regionIncrementationIndex.at(j); k < regionList->GetintervalSize(j); ++k){
                         //check whether if this snp falls within the region
                         if(regionList->Getchr(j,k).compare(snpList[i]->Getchr())==0 &&
                            regionList->Getstart(j,k) <= snpList[i]->Getbp() &&
                            regionList->Getend(j,k) >= snpList[i]->Getbp()){
-                            regionIncrementationIndex[j] = k;
+                            regionIncrementationIndex.at(j) = k;
                             snpList[i]->setFlag(j+1, true);
                             break;
                            }
@@ -209,9 +205,9 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, Regio
     else std::cerr <<  "There are a total of " << duplicate << " duplicated rsID(s) in the p-value file" << std::endl << std::endl;
 }
 
-void Snp::addDirection(SnpIndex *snpIndex, std::vector<Snp*> &snpList,std::string dirFile){
+void Snp::addDirection(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList,std::string dirFile){
     if(dirFile.empty()){
-        throw "Should not happen as we doesn't require the direction file";
+        throw "Should not happen as we direction file was not requested";
     }
     std::ifstream direction;
     direction.open(dirFile.c_str());
@@ -227,9 +223,9 @@ void Snp::addDirection(SnpIndex *snpIndex, std::vector<Snp*> &snpList,std::strin
             usefulTools::tokenizer(line, "\t ", &token);
             //The first should be rsId, the second should be the direction
             if(token.size() > 1){
-                if(snpIndex->contains(token[0])){
-                    size_t refId = snpIndex->value(token[0]);
-                    snpList[refId]->Setsign(atoi(line.c_str()));
+                if(snpIndex.find(token.at(0)) != snpIndex.end()){
+                    size_t refId = snpIndex.at(token.at(0));
+                    snpList.at(refId)->Setsign(atoi(line.c_str()));
                 }
                 else{
                     throw "The direction file contains Snps not found in p-value file. Most likely they are not matched. Please check your input!";
@@ -240,12 +236,12 @@ void Snp::addDirection(SnpIndex *snpIndex, std::vector<Snp*> &snpList,std::strin
     direction.close();
 }
 
-void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const size_t &caseSize, const size_t &controlSize, const double &prevalence, Region *regionList, bool isPvalue){
+void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList, const size_t &caseSize, const size_t &controlSize, const double &prevalence, Region *regionList, bool isPvalue){
 	std::vector<size_t> regionIncrementationIndex(regionList->GetnumRegion(), 0);
 	size_t duplicate = 0;
 	for(size_t i = 0; i < snpList.size(); ++i){
-        if(!snpIndex->contains(snpList[i]->GetrsId())){
-            snpIndex->set(snpList[i]->GetrsId(), i);
+        if(snpIndex.find(snpList[i]->GetrsId())==snpIndex.end()){
+            snpIndex[snpList[i]->GetrsId()] = i;
             try{
                 snpList[i]->computeVarianceExplainedChi(caseSize, controlSize, prevalence, isPvalue);;
                 snpList[i]->m_regionFlag.push_back(false);
@@ -254,11 +250,11 @@ void Snp::generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const
                     snpList[i]->m_regionFlag.insert(snpList[i]->m_regionFlag.end(), padding.begin(), padding.end());
                 }
                 for(size_t j = 0; j < regionList->GetnumRegion(); ++j){
-                    for(unsigned k = regionIncrementationIndex[j]; k < regionList->GetintervalSize(j); ++k){
+                    for(unsigned k = regionIncrementationIndex.at(j); k < regionList->GetintervalSize(j); ++k){
                         if(regionList->Getchr(j,k).compare(snpList[i]->Getchr())==0 &&
                            regionList->Getstart(j,k) <= snpList[i]->Getbp() &&
                            regionList->Getend(j,k) >= snpList[i]->Getbp()){
-                            regionIncrementationIndex[j] = k;
+                            regionIncrementationIndex.at(j) = k;
                             snpList[i]->setFlag(j+1, true);
                             break;
                            }
@@ -321,16 +317,13 @@ void Snp::computeVarianceExplainedChi(const size_t &caseSize, const size_t &cont
 }
 
 void Snp::setFlag(size_t index, bool value){
-	if(index >= m_regionFlag.size()){
-		throw "Error: region flag out of bound!";
-	}
-    m_regionFlag[index] = value;
+    m_regionFlag.at(index) = value;
 }
 
 
 void Snp::cleanSnp(std::vector<Snp*> &snpList){
     for(size_t i= 0; i < snpList.size(); ++i){
-        delete snpList[i];
+        delete snpList.at(i);
     }
     snpList.clear();
 }

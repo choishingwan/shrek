@@ -16,7 +16,7 @@
 #include <cmath>
 #include <algorithm>
 #include <memory>
-#include "snpindex.h"
+#include <map>
 #include "usefulTools.h"
 #include "region.h"
 #include "command.h"
@@ -51,7 +51,7 @@ public:
          *  \param [in]  isPvalue, indicate whether if the input is p-value only
          *  \param [in]  extremeRatio, the extreme adjustment ratio
          */
-        static void generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, Region *regionList, bool isPvalue, double extremeRatio);
+        static void generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList, Region *regionList, bool isPvalue, double extremeRatio);
         /** \brief Generate Snp index, also remove duplicates (Quantitative trait)
          *
          *  This function is used for case control study only.
@@ -62,7 +62,7 @@ public:
          *  \param [in]  regionList, the region information
          *  \param [in]  isPvalue, indicate whether if the input is p-value only
          */
-        static void generateSnpIndex(SnpIndex *snpIndex, std::vector<Snp*> &snpList, const size_t &caseSize, const size_t &controlSize, const double &prevalence, Region *regionList, bool isPvalue);
+        static void generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList, const size_t &caseSize, const size_t &controlSize, const double &prevalence, Region *regionList, bool isPvalue);
         virtual ~Snp();
         std::string Getchr() const;
         std::string GetrsId() const;
@@ -73,7 +73,6 @@ public:
         double Getoriginal() const;
         double Getbeta() const;
         double Getheritability() const;
-        double GetheritabilityChi() const;
         double GetsignedSqrtChiSq() const;
         double Getvariance() const;
         bool Concordant(std::string chr, size_t bp, std::string rsId) const;
@@ -85,7 +84,7 @@ public:
         void Setvariance(double const sigma, double const sigmaSquared, double const sigmaPowerThree, double const sigmaPowerFour );
         void SetadditionVariance(double i );
         void Setsign(int directionEffect);
-        static void addDirection(SnpIndex *snpIndex, std::vector<Snp*> &snpList,std::string dirFile);
+        static void addDirection(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList,std::string dirFile);
         /** \brief Function use to clean the pointers from the vector
          *  \param [in] snpList, the vector containing the snp pointers
          */

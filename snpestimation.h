@@ -14,6 +14,7 @@
 #include <fstream>
 #include <complex>
 #include <iomanip>
+#include <map>
 #include "processcode.h"
 #include "decomposition.h"
 #include "genotypefilehandler.h"
@@ -36,7 +37,7 @@ class SnpEstimation
 {
 	public:
 	    /** Default constructor */
-		SnpEstimation(GenotypeFileHandler *genotypeFileHandler,SnpIndex *snpIndex, std::vector<Snp*> *snpList, size_t thread, double maf, bool correction, Region* regionInfo);
+		SnpEstimation(GenotypeFileHandler *genotypeFileHandler,std::map<std::string, size_t> *snpIndex, std::vector<Snp*> *snpList, size_t thread, double maf, bool correction, Region* regionInfo);
 		/** Default destructor */
 		virtual ~SnpEstimation();
 		/** Initialize the estimation */
@@ -46,7 +47,7 @@ class SnpEstimation
 	protected:
 	private:
 		GenotypeFileHandler *m_genotypeFileHandler;
-		SnpIndex *m_snpIndex;
+		std::map<std::string, size_t> *m_snpIndex;
 		std::vector<Snp*> *m_snpList;
 		size_t m_thread;
         double m_maf;
