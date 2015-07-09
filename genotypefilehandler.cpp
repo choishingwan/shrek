@@ -4,7 +4,7 @@ size_t GenotypeFileHandler::GetsampleSize() const { return m_ldSampleSize; }
 size_t GenotypeFileHandler::GetestimateSnpTotal() const { return m_inputSnp; }
 
 GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, size_t thread, std::string outPrefix):m_genotypeFilePrefix(genotypeFilePrefix), m_thread(thread), m_outPrefix(outPrefix){
-	m_defaultDistance=1000000;
+	m_defaultDistance=2000000;
 	m_ldSampleSize = 0;
 	m_expectedNumberOfSnp = 0;
     m_inputSnp =0;
@@ -13,7 +13,7 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, size_t 
 
 
 void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock){
-    size_t safeBlockRange = 4.0; //Use to multiply the #Snp in 1mb region to make sure the block will always include everything within the region
+    size_t safeBlockRange = 1.0; //Use to multiply the #Snp in 1mb region to make sure the block will always include everything within the region
     std::string famFileName = m_genotypeFilePrefix +".fam";
     std::ifstream famFile;
     std::ofstream blockRecommendOut;
