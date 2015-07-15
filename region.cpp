@@ -37,6 +37,11 @@ void Region::SetbufferAdditionVariance(double const addVar, size_t i){
 
 }
 
+void Region::AddbufferVariance(size_t i, double const var, double const addVar){
+    m_bufferVariance.at(i) = var;
+    m_bufferAdditionVariance.at(i)=addVar;
+}
+
 void Region::SetbufferVariance(double const var, size_t i){
     if(i >= m_bufferVariance.size()){
         throw std::out_of_range("Region was out of bound");

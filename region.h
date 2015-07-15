@@ -55,6 +55,8 @@ class Region
         void SetbufferVariance(double const var, size_t i);
         /** Set the buffer additional variance of the i th region */
         void SetbufferAdditionVariance(double const addVar, size_t i);
+        /** Add the buffer additional variance of the i th region */
+        void AddbufferVariance(size_t i, double const var, double const addVar);
         /**add the buffer to the variance vectors and reset them */
         void Debuffer();
         /** Return the number of regions */

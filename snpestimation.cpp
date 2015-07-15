@@ -20,7 +20,6 @@ void SnpEstimation::Estimate(){
     size_t totalNum = m_genotypeFileHandler->GetestimateSnpTotal()*3;
 	while(process != completed && process != fatalError){
 		/** Will have terrible problem if the input is corrupted */
-// TODO (swchoi#1#): Work on the loading bar, it is currently not working ...
         SnpEstimation::loadbar(numProcessed,totalNum);
         //std::cerr << "Get snps" << std::endl;
 		process = m_genotypeFileHandler->getSnps(genotype, snpLoc, m_snpList, chromosomeStart, chromosomeEnd, m_maf,prevResidual, blockSize);

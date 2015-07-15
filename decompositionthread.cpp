@@ -4,7 +4,7 @@ std::mutex DecompositionThread::decomposeMtx;
 Eigen::MatrixXd DecompositionThread::checking;
 
 
-DecompositionThread::DecompositionThread(size_t start, size_t length, Eigen::VectorXd const * const betaEstimate, Eigen::VectorXd const * const sqrtChiSq, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, bool lastOfBlock, Region *regionInfo):m_start(start), m_length(length), m_betaEstimate(betaEstimate), m_sqrtChiSq(sqrtChiSq),m_linkage(linkage), m_snpLoc(snpLoc), m_snpList(snpList), m_chrStart(chrStart), m_lastOfBlock(lastOfBlock), m_regionInfo(regionInfo){}
+DecompositionThread::DecompositionThread(size_t start, size_t length, Eigen::VectorXd const * const betaEstimate, Eigen::VectorXd const * const sqrtChiSq, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, bool lastOfBlock, bool secondLastOfBlock,  Region *regionInfo):m_start(start), m_length(length), m_betaEstimate(betaEstimate), m_sqrtChiSq(sqrtChiSq),m_linkage(linkage), m_snpLoc(snpLoc), m_snpList(snpList), m_chrStart(chrStart), m_lastOfBlock(lastOfBlock), m_secondLastOfBlock(secondLastOfBlock), m_regionInfo(regionInfo){}
 
 DecompositionThread::~DecompositionThread()
 {}
@@ -16,6 +16,7 @@ void *DecompositionThread::ThreadProcesser(void *in){
 }
 
 void DecompositionThread::solve(){
+    //Here is where I need to change stuff
     size_t betaLength = (*m_betaEstimate).rows();
     size_t processLength = m_length;
     if(m_lastOfBlock) processLength=betaLength-m_start;
@@ -32,12 +33,7 @@ void DecompositionThread::solve(){
         multiplier=1.0;
 	}
 	if(m_lastOfBlock) multiplier = 1.0; //So that we can account for the varying end block size.
-	/*
-	if(m_lastOfBlock){
-        copyEnd = processLength-copyStart;
-        multiplier=1.0;
-	}
-	*/
+
 
     std::vector<double> regionVariance(m_regionInfo->GetnumRegion(), 0.0);
     std::vector<double> regionAdditionVariance(m_regionInfo->GetnumRegion(), 0.0);
@@ -50,12 +46,18 @@ void DecompositionThread::solve(){
             double covariance = variance(i,j);
 			double additionCovariance = additionVariance(i,j);
 			for(size_t regionIndex = 0; regionIndex < regionVariance.size(); ++regionIndex){
-                    //if(m_lastOfBlock) checking(m_start+i,j+m_start) += covariance; //DEBUG
-                    //else checking(m_start+j, i+m_start) += covariance;
-                    //if(multiplier> 1.0) checking(m_start+i,j+m_start) += covariance; //DEBUG
                 if((*m_snpList)[(*m_snpLoc)[m_start+i]]->GetFlag(regionIndex)&&(*m_snpList)[(*m_snpLoc)[m_start+j]]->GetFlag(regionIndex)){
-					regionVariance[regionIndex]+= multiplier*covariance;
-					regionAdditionVariance[regionIndex]+= multiplier*additionCovariance;
+					if(m_lastOfBlock || m_secondLastOfBlock){
+                        //For the last 2 blocks, it is therefore perfect LD and the whole thing should
+                        //be stored within the buffer such that only if we have reached the end
+                        //that we should put these buffer back into the region variance
+                        regionBufferVariance[regionIndex]+= multiplier*covariance;
+                        regionBufferAdditionVariance[regionIndex]+= multiplier*additionCovariance;
+					}
+					else{
+                        regionVariance[regionIndex]+= multiplier*covariance;
+                        regionAdditionVariance[regionIndex]+= multiplier*additionCovariance;
+					}
                 }
 			}
 
@@ -74,8 +76,15 @@ void DecompositionThread::solve(){
 			for(size_t regionIndex = 0; regionIndex < regionVariance.size(); ++regionIndex){
                 if((*m_snpList)[(*m_snpLoc)[m_start+i]]->GetFlag(regionIndex)&&
                    (*m_snpList)[(*m_snpLoc)[m_start+j]]->GetFlag(regionIndex)){
-					regionVariance[regionIndex]+= covariance;
-					regionAdditionVariance[regionIndex]+= additionCovariance;
+                    if(m_lastOfBlock || m_secondLastOfBlock){
+                        //same as above
+                        regionBufferVariance[regionIndex]+= covariance;
+                        regionBufferAdditionVariance[regionIndex]+= additionCovariance;
+					}
+					else{
+                        regionVariance[regionIndex]+= covariance;
+                        regionAdditionVariance[regionIndex]+= additionCovariance;
+					}
                 }
 			}
         }
@@ -90,6 +99,7 @@ void DecompositionThread::solve(){
      *  of those portion of variance.
      */
     if(m_lastOfBlock){
+        //This is only applicable for the last block but not the second last block
         for(size_t i = copyStart+copyEnd; i < processLength; ++i){
             /** Doesn't matter with these three as if we are indeed not the last
              *  block of the chromosome, they will be re-wrote
@@ -106,8 +116,8 @@ void DecompositionThread::solve(){
                        (*m_snpList)[(*m_snpLoc)[m_start+j]]->GetFlag(regionIndex)){
                         regionBufferVariance[regionIndex]+= covariance;
                         regionBufferAdditionVariance[regionIndex]+= additionCovariance;
+                    }
                 }
-			}
             }
         }
     }
