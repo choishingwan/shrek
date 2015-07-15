@@ -122,8 +122,9 @@ int main(int argc, char *argv[]){
     try{
         genotypeFileHandler->initialize(snpIndex, &snpList, commander->validate(), commander->maxBlockSet(), commander->GetmaxBlock(), commander->GetminBlock());
     }
-    catch (const std::ifstream::failure e) {
+    catch (const char *e) {
         std::cerr << "Exception encountered when opening genotype files" << std::endl;
+        std::cerr << e << std::endl;
         delete commander;
         delete regionInfo;
         Snp::cleanSnp(snpList);

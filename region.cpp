@@ -61,9 +61,11 @@ std::string Region::Getname(size_t i) const{
 
 double Region::Getvariance(double heritability, size_t i, double adjustment) const{
     if(i >= m_variance.size()) throw std::out_of_range("Region was out of bound");
-    double adjust = (1.0-sqrt(std::complex<double>(heritability)).real());
+    //double sigma = (1.0-sqrt(std::complex<double>(heritability)).real());
+    double sigma = 1.0;
     //return adjustment*adjustment*(adjust*m_variance[i] + adjust*adjust*m_additionVariance[i]);
-    return adjustment*adjustment*(adjust*m_variance.at(i) + adjust*adjust*m_additionVariance.at(i));
+
+    return adjustment*adjustment*(sigma*m_variance.at(i) + sigma*sigma*m_additionVariance.at(i));
 }
 
 std::string  Region::Getchr(size_t i, size_t j) const{
