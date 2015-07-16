@@ -22,6 +22,12 @@ void Region::Addvariance(double const var, size_t i){
     m_variance[i] += var;
 }
 
+void Region::CleanBuffer(){
+    for(size_t i =0; i < m_bufferVariance.size(); ++i){
+        m_bufferVariance[i] = 0;
+        m_bufferAdditionVariance[i] = 0;
+    }
+}
 void Region::AddadditionVariance(double const addVar, size_t i){
     if(i >= m_additionVariance.size()){
         throw std::out_of_range("Region was out of bound");

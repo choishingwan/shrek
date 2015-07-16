@@ -13,6 +13,7 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
         //new algorithm should not have any situation where genotype size is 0
         throw "No genotype to work on";
     }
+    m_regionInfo->CleanBuffer();
     //processSize by default should be the number of Snps
     size_t processSize = snpLoc.size();
     Eigen::VectorXd chiSq = Eigen::VectorXd::Zero(processSize);
