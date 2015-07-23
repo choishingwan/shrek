@@ -22,7 +22,9 @@ void SnpEstimation::Estimate(){
 		/** Will have terrible problem if the input is corrupted */
         SnpEstimation::loadbar(numProcessed,totalNum);
         //std::cerr << "Get snps" << std::endl;
+        std::cerr << "Begin with : " << genotype.size() << std::endl;
 		process = m_genotypeFileHandler->getSnps(genotype, snpLoc, m_snpList, chromosomeStart, chromosomeEnd, m_maf,prevResidual, blockSize);
+		std::cerr << "Number of genotype: " << genotype.size() << std::endl;
 		size_t workSize = blockSize/3*m_thread;
 		if(chromosomeStart) workSize +=2/3*blockSize+blockSize;
 		if(workSize > snpLoc.size()) workSize = snpLoc.size();
@@ -53,10 +55,10 @@ void SnpEstimation::Estimate(){
 
 
             }
-
+            std::cerr << "Number of genotype Before decompose: " << genotype.size() << std::endl;
             numProcessed+= workSize; //Finished the LD construction
             SnpEstimation::loadbar(numProcessed,totalNum);
-            //std::cerr << "Decomposition" << std::endl;
+            std::cerr << "Decomposition" << std::endl;
             ProcessCode decomposeProcess = decompositionHandler->Decompose(blockSize, snpLoc, genotype, chromosomeStart, chromosomeEnd);
             numProcessed+= workSize; //Finished the LD construction
             SnpEstimation::loadbar(numProcessed,totalNum);

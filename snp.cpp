@@ -35,7 +35,10 @@ double Snp::GetsignedSqrtChiSq() const {
 	return (*m_sqrtChiSq)/(double)(m_sqrtChiSq.use_count());
 }
 
-void Snp::Setheritability(double heritability ) { (*m_heritability) = heritability;}
+void Snp::Setheritability(double heritability ) {
+     (*m_heritability) = heritability;
+
+}
 void Snp::Setvariance(double i){ m_variance = i; }
 void Snp::SetadditionVariance(double i){ m_additionVariance = i; }
 void Snp::Setvariance(double const sigma, double const sigmaSquared, double const sigmaPowerThree, double const sigmaPowerFour ){

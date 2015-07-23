@@ -87,7 +87,7 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 		std::vector<DecompositionThread* > garbageCollection;
         for(size_t i = 0; i < startLoc.size(); ++i){
             bool lastBlock = ((startLoc.size()-1) == i);
-            bool secondLastBlock = ((startLoc.size()-2) == i);
+            bool secondLastBlock = ((startLoc.size()-2) == i || startLoc.size()-3==i);
             garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate,&chiSq,m_linkage, &snpLoc, m_snpList, chromosomeStart, lastBlock, secondLastBlock, m_regionInfo));
         }
         if(m_thread >= garbageCollection.size()){

@@ -38,8 +38,6 @@ class DecompositionThread
 		virtual ~DecompositionThread();
         /** Function called by the threading algorithm */
 		static void *ThreadProcesser(void *in);
-		/** Function to actually handle the solving */
-		void solve();
 	protected:
 	private:
 		size_t m_start;
@@ -55,6 +53,12 @@ class DecompositionThread
         bool m_secondLastOfBlock;
         Region *m_regionInfo;
         static std::mutex decomposeMtx;
+
+		/** Function to actually handle the solving */
+		void solve();
+        void chromosomeStartProcess(Eigen::MatrixXd const * const variance, Eigen::VectorXd const *const result);
+        void normalProcess(Eigen::MatrixXd const * const variance, Eigen::VectorXd const *const result);
+        void endBlockProcess(Eigen::MatrixXd const * const variance, Eigen::VectorXd const *const result);
 };
 
 #endif // DECOMPOSITIONTHREAD_H

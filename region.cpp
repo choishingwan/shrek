@@ -14,13 +14,11 @@ Region::~Region()
 
 
 void Region::Addvariance(double const var, size_t i){
-    if(i >= m_variance.size()){
-        throw std::out_of_range("Region was out of bound");
-    }
-    m_variance[i] += var;
+    m_variance.at(i) += var;
 }
 
 void Region::CleanBuffer(){
+    std::cerr << "Cleanse " << m_variance[0] << std::endl;
     for(size_t i =0; i < m_bufferVariance.size(); ++i){
         m_bufferVariance[i] = 0;
     }
@@ -37,6 +35,7 @@ void Region::SetbufferVariance(double const var, size_t i){
 }
 
 void Region::Debuffer(){
+    std::cerr << "Debuff" << std::endl;
     for(size_t i = 0; i < m_bufferVariance.size(); ++i){
         m_variance[i] += m_bufferVariance[i];
         m_bufferVariance[i] = 0;
