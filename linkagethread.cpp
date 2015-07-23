@@ -23,12 +23,6 @@ void LinkageThread::triangularProcess(){
                 double rSquare= 0.0;
                 double r = 0.0;
                 (*m_genotype)[j]->GetbothR( (*m_genotype)[k], m_correction, r, rSquare);
-                if(std::fabs(rSquare-1.0) < G_EPSILON_DBL ){ //Perfect LD situation
-                    perfectLd.push_back(k);
-                    LinkageThread::mtx.lock();
-                        (*m_snpList)[(*m_snpLoc)[k]]->shareHeritability((*m_snpList)[(*m_snpLoc)[j]]);
-                    LinkageThread::mtx.unlock();
-                }
                 (*m_ldMatrix)(j, k) = rSquare;
                 (*m_ldMatrix)(k,j) = rSquare;
                 (*m_ldMatrixSqrt)(j, k) = r;
@@ -55,12 +49,6 @@ void LinkageThread::rectangularProcess(){
                 double rSquare=0.0;
                 double r =0.0;
                 (*m_genotype)[i]->GetbothR((*m_genotype)[j],m_correction, r, rSquare);
-                if(std::fabs(rSquare-1.0) < G_EPSILON_DBL){
-                    perfectLd.push_back(j);
-                    LinkageThread::mtx.lock();
-                        (*m_snpList)[(*m_snpLoc)[j]]->shareHeritability((*m_snpList)[(*m_snpLoc)[i]]);
-                    LinkageThread::mtx.unlock();
-                }
 				(*m_ldMatrix)(i,j) = rSquare;
 				(*m_ldMatrix)(j,i) = rSquare;
 				(*m_ldMatrixSqrt)(i,j) = r;

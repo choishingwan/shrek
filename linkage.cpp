@@ -187,10 +187,6 @@ void Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResid
                     double rSquare =0.0;
                     double r = 0.0;
                     genotype[i]->GetbothR(genotype[j], correction, r, rSquare);
-                    if(i != j && std::fabs(rSquare-1.0) < G_EPSILON_DBL){ //if they are in perfect LD
-                        m_perfectLd.push_back(j);
-                        (*m_snpList)[(*m_snpLoc)[j]]->shareHeritability((*m_snpList)[(*m_snpLoc)[i]]);
-                    }
                     m_linkage(i,j) = rSquare;
                     m_linkage(j,i) = rSquare;
                     m_linkageSqrt(i,j) = r;
@@ -249,8 +245,6 @@ void Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResid
         throw "Undefined behaviour! Step size should never be negative as block size is positive";
 	}
 
-    std::sort(m_perfectLd.begin(), m_perfectLd.end());
-    m_perfectLd.erase( std::unique( m_perfectLd.begin(), m_perfectLd.end() ), m_perfectLd.end() );
 }
 
 

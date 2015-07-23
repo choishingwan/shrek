@@ -294,9 +294,8 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
     prevResidual =genotype.size(); //default amount of residule
     if(chromosomeStart){
         processSize+= blockSize/3*2;
-        processSize+= blockSize; //DEBUG //This is to avoid problem with the perfect LD thingy, so that now we will have one extra block ahead of time //This extra part will stay until the end of chromosome
+        //processSize+= blockSize; //DEBUG //This is to avoid problem with the perfect LD thingy, so that now we will have one extra block ahead of time //This extra part will stay until the end of chromosome
     }
-
 	while (m_snpIter < m_inputSnp){ //While there are still Snps to read
 		bool snp = false;
 		if(m_inclusion[m_snpIter] != -1){//indicate whether if we need this snp

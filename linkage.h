@@ -75,11 +75,11 @@ class Linkage
         void setSnpList(std::vector<Snp* > *snpList);
         void setThread(size_t thread);
 		void print();
-        Eigen::MatrixXd m_linkage;
 
 		static size_t DEBUG;
 	protected:
 	private:
+        Eigen::MatrixXd m_linkage;
         Eigen::MatrixXd m_linkageSqrt;
         size_t m_thread;
         std::vector<size_t> m_perfectLd; //Store the remove index of on matrix level

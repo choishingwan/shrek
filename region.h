@@ -49,6 +49,9 @@ class Region
         void clean();
         /** Add variance to the i th region */
         void Addvariance(double const var, size_t i);
+        void SetlastVariance(double const var, size_t i);
+        void ConfirmlastVariance();
+        void CleanlastVariance();
         /** Set the buffer variance to the i th region */
         void SetbufferVariance(double const var, size_t i);
         /** Add the buffer additional variance of the i th region */
@@ -77,6 +80,7 @@ class Region
         std::vector<std::string> m_names;
         std::vector<double> m_variance;
         std::vector<double> m_bufferVariance;
+        std::vector<double> m_lastVariance;
 };
 
 #endif // REGION_H

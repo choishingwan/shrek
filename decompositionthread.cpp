@@ -4,7 +4,7 @@ std::mutex DecompositionThread::decomposeMtx;
 Eigen::MatrixXd DecompositionThread::checking;
 
 
-DecompositionThread::DecompositionThread(size_t start, size_t length, Eigen::VectorXd const * const betaEstimate, Eigen::VectorXd const * const sqrtChiSq, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, bool lastOfBlock, bool secondLastOfBlock,  Region *regionInfo):m_start(start), m_length(length), m_betaEstimate(betaEstimate), m_sqrtChiSq(sqrtChiSq),m_linkage(linkage), m_snpLoc(snpLoc), m_snpList(snpList), m_chrStart(chrStart), m_lastOfBlock(lastOfBlock), m_secondLastOfBlock(secondLastOfBlock), m_regionInfo(regionInfo){}
+DecompositionThread::DecompositionThread(size_t start, size_t length, Eigen::VectorXd const * const betaEstimate, Eigen::VectorXd const * const sqrtChiSq, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, bool lastOfBlock, Region *regionInfo):m_start(start), m_length(length), m_betaEstimate(betaEstimate), m_sqrtChiSq(sqrtChiSq),m_linkage(linkage), m_snpLoc(snpLoc), m_snpList(snpList), m_chrStart(chrStart), m_lastOfBlock(lastOfBlock), m_regionInfo(regionInfo){}
 
 DecompositionThread::~DecompositionThread()
 {}
@@ -69,25 +69,20 @@ void DecompositionThread::normalProcess(Eigen::MatrixXd const * const variance, 
     }
 	decomposeMtx.lock();
 		for(size_t i = 0; i < m_regionInfo->GetnumRegion(); ++i){
-            if(m_secondLastOfBlock){
-                m_regionInfo->AddbufferVariance(i,regionVariance.at(i));
-            }
-            else{
-                m_regionInfo->Addvariance(regionVariance.at(i), i);
-            }
+            m_regionInfo->Addvariance(regionVariance.at(i), i);
      	}
-
 	decomposeMtx.unlock();
 }
 
 void DecompositionThread::endBlockProcess(Eigen::MatrixXd const * const variance, Eigen::VectorXd const *const result){
     std::vector<double> regionVariance(m_regionInfo->GetnumRegion(), 0.0);
+    std::vector<double> regionBufferVariance(m_regionInfo->GetnumRegion(), 0.0);
     //The most complicated case (sort of);
     //The trick is, the variance matrix will always be with the correct dimension (else our methods has already failed)
 
 
     size_t actualProcessSize = (*variance).rows();
-    for(size_t i =m_length/3; i < actualProcessSize; ++i){
+    for(size_t i =m_length/3; i < m_length/3*2; ++i){
         (*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability((*result)(i));
         for(size_t j = 0; j < actualProcessSize; ++j){
             double covariance = (*variance)(i,j);
@@ -99,15 +94,28 @@ void DecompositionThread::endBlockProcess(Eigen::MatrixXd const * const variance
     //Only add the variance of the top right missing part
     for(size_t i = 0; i < m_length/3; ++i){
         for(size_t j = m_length/3*2; j < actualProcessSize; ++j){
-            double covariance = (*variance)(i,j);
+            double covariance = 2*(*variance)(i,j);
             for(size_t regionIndex = 0; regionIndex < regionVariance.size(); ++regionIndex){
                 regionVariance[regionIndex]+= covariance;
             }
         }
     }
+    //Finally, the bit where we want to put in the buffer
+    for(size_t i = m_length/3*2; i < actualProcessSize; ++i){
+        (*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability((*result)(i));
+        for(size_t j = m_length/3; j < actualProcessSize; ++j){
+            double covariance = (*variance)(i,j);
+            for(size_t regionIndex = 0; regionIndex < regionVariance.size(); ++regionIndex){
+                regionBufferVariance[regionIndex]+= covariance;
+            }
+
+        }
+    }
+
 	decomposeMtx.lock();
 		for(size_t i = 0; i < m_regionInfo->GetnumRegion(); ++i){
-            m_regionInfo->AddbufferVariance(i,regionVariance.at(i));
+            m_regionInfo->SetlastVariance(regionVariance.at(i),i);
+            m_regionInfo->SetbufferVariance(regionBufferVariance.at(i),i);
      	}
     decomposeMtx.unlock();
 }

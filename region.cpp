@@ -5,6 +5,7 @@ Region::Region(){
     m_names.push_back("With LD");
     m_variance.push_back(0.0);
     m_bufferVariance.push_back(0.0);
+    m_lastVariance.push_back(0.0);
 }
 
 Region::~Region()
@@ -38,6 +39,7 @@ void Region::Debuffer(){
         m_variance[i] += m_bufferVariance[i];
         m_bufferVariance[i] = 0;
     }
+    ConfirmlastVariance();
 }
 
 std::string Region::Getname(size_t i) const{
@@ -74,7 +76,21 @@ void Region::clean(){
     m_intervalList.clear();
 }
 
+void Region::SetlastVariance(double const var, size_t i ){
+    m_lastVariance.at(i) =var;
+}
 
+void Region::ConfirmlastVariance(){
+    for(size_t i = 0; i < m_variance.size(); ++i){
+        m_variance[i]+= m_lastVariance[i];
+    }
+}
+
+void Region::CleanlastVariance(){
+    for(size_t i = 0; i < m_variance.size(); ++i){
+        m_lastVariance[i]= 0;
+    }
+}
 void Region::generateRegion(std::string regionList){
     std::vector<Interval*> padRegion; //For the default region
     m_intervalList.push_back(padRegion);
@@ -104,6 +120,7 @@ void Region::generateRegion(std::string regionList){
 				m_names.push_back(name);
                 m_variance.push_back(0.0);
                 m_bufferVariance.push_back(0.0);
+                m_lastVariance.push_back(0.0);
                 std::string line;
                 while(std::getline(regionFile, line)){
                     line = usefulTools::trim(line);

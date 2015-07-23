@@ -15,7 +15,6 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
         //new algorithm should not have any situation where genotype size is 0
         throw "No genotype to work on";
     }
-    m_regionInfo->CleanBuffer();
     //processSize by default should be the number of Snps
     size_t processSize = snpLoc.size();
     Eigen::VectorXd chiSq = Eigen::VectorXd::Zero(processSize);
@@ -87,8 +86,7 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 		std::vector<DecompositionThread* > garbageCollection;
         for(size_t i = 0; i < startLoc.size(); ++i){
             bool lastBlock = ((startLoc.size()-1) == i);
-            bool secondLastBlock = ((startLoc.size()-2) == i || startLoc.size()-3==i);
-            garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate,&chiSq,m_linkage, &snpLoc, m_snpList, chromosomeStart, lastBlock, secondLastBlock, m_regionInfo));
+            garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate,&chiSq,m_linkage, &snpLoc, m_snpList, chromosomeStart, lastBlock, m_regionInfo));
         }
         if(m_thread >= garbageCollection.size()){
             //More thread than work
