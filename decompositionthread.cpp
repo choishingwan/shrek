@@ -21,9 +21,8 @@ void DecompositionThread::solve(){
     size_t processLength = m_length;
     if(m_lastOfBlock) processLength=betaLength-m_start;
     Eigen::MatrixXd variance = Eigen::MatrixXd::Zero(processLength, processLength);
-    Eigen::MatrixXd additionVariance = Eigen::MatrixXd::Zero(processLength, processLength);
 	Eigen::VectorXd result;
-    result = m_linkage->solve(m_start, processLength, m_betaEstimate, m_sqrtChiSq, &variance, &additionVariance, Snp::GetmaxSampleSize());;
+    result = m_linkage->solve(m_start, processLength, m_betaEstimate, m_sqrtChiSq, &variance, Snp::GetmaxSampleSize());;
     double multiplier = 2.0;
 	size_t copyStart = m_length/3;
 	size_t copyEnd = m_length/3;
@@ -36,15 +35,12 @@ void DecompositionThread::solve(){
 
 
     std::vector<double> regionVariance(m_regionInfo->GetnumRegion(), 0.0);
-    std::vector<double> regionAdditionVariance(m_regionInfo->GetnumRegion(), 0.0);
     std::vector<double> regionBufferVariance(m_regionInfo->GetnumRegion(), 0.0);
-    std::vector<double> regionBufferAdditionVariance(m_regionInfo->GetnumRegion(), 0.0);
 
 
     for(size_t i = 0; i < m_length/3; ++i){
         for(size_t j = copyEnd+copyStart; j < processLength; ++j){
             double covariance = variance(i,j);
-			double additionCovariance = additionVariance(i,j);
 			for(size_t regionIndex = 0; regionIndex < regionVariance.size(); ++regionIndex){
                 if((*m_snpList)[(*m_snpLoc)[m_start+i]]->GetFlag(regionIndex)&&(*m_snpList)[(*m_snpLoc)[m_start+j]]->GetFlag(regionIndex)){
 					if(m_lastOfBlock || m_secondLastOfBlock){
@@ -52,11 +48,9 @@ void DecompositionThread::solve(){
                         //be stored within the buffer such that only if we have reached the end
                         //that we should put these buffer back into the region variance
                         regionBufferVariance[regionIndex]+= multiplier*covariance;
-                        regionBufferAdditionVariance[regionIndex]+= multiplier*additionCovariance;
 					}
 					else{
                         regionVariance[regionIndex]+= multiplier*covariance;
-                        regionAdditionVariance[regionIndex]+= multiplier*additionCovariance;
 					}
                 }
 			}
@@ -66,24 +60,22 @@ void DecompositionThread::solve(){
 
     for(size_t i = copyStart; i < copyStart+copyEnd; ++i){
 		(*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability(result(i));
+        decomposeMtx.lock();
+		std::cerr << "Add Herit: " << (*m_snpLoc)[m_start+i] << std::endl;
+		decomposeMtx.unlock();
 		(*m_snpList)[(*m_snpLoc)[m_start+i]]->Setvariance(variance(i,i)); //The diagonal of the matrix contain the per snp variance
-		(*m_snpList)[(*m_snpLoc)[m_start+i]]->SetadditionVariance(additionVariance(i,i)); //The diagonal of the matrix contain the per snp variance
         for(size_t j = 0; j < processLength; ++j){ //For this snp, go through all the snp partners
 
 			double covariance = variance(i,j);
-			double additionCovariance = additionVariance(i,j);
-			//checking(m_start+i,m_start+j) += covariance; //DEBUG
 			for(size_t regionIndex = 0; regionIndex < regionVariance.size(); ++regionIndex){
                 if((*m_snpList)[(*m_snpLoc)[m_start+i]]->GetFlag(regionIndex)&&
                    (*m_snpList)[(*m_snpLoc)[m_start+j]]->GetFlag(regionIndex)){
                     if(m_lastOfBlock || m_secondLastOfBlock){
                         //same as above
                         regionBufferVariance[regionIndex]+= covariance;
-                        regionBufferAdditionVariance[regionIndex]+= additionCovariance;
 					}
 					else{
                         regionVariance[regionIndex]+= covariance;
-                        regionAdditionVariance[regionIndex]+= additionCovariance;
 					}
                 }
 			}
@@ -105,17 +97,17 @@ void DecompositionThread::solve(){
              *  block of the chromosome, they will be re-wrote
              */
             (*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability(result(i));
+            decomposeMtx.lock();
+            std::cerr << "Add Herit: " << (*m_snpLoc)[m_start+i] << std::endl;
+            decomposeMtx.unlock();
             (*m_snpList)[(*m_snpLoc)[m_start+i]]->Setvariance(variance(i,i));
-            (*m_snpList)[(*m_snpLoc)[m_start+i]]->SetadditionVariance(additionVariance(i,i));
             for(size_t j =  0; j < processLength; ++j){
                 double covariance = variance(i,j);
-                double additionCovariance = additionVariance(i,j);
                 //checking(m_start+i,m_start+j) += covariance; //DEBUG
                 for(size_t regionIndex = 0; regionIndex < m_regionInfo->GetnumRegion(); ++regionIndex){
                     if((*m_snpList)[(*m_snpLoc)[m_start+i]]->GetFlag(regionIndex)&&
                        (*m_snpList)[(*m_snpLoc)[m_start+j]]->GetFlag(regionIndex)){
                         regionBufferVariance[regionIndex]+= covariance;
-                        regionBufferAdditionVariance[regionIndex]+= additionCovariance;
                     }
                 }
             }
@@ -125,9 +117,7 @@ void DecompositionThread::solve(){
 	decomposeMtx.lock();
 		for(size_t i = 0; i < m_regionInfo->GetnumRegion(); ++i){
             m_regionInfo->Addvariance(regionVariance[i], i);
-            m_regionInfo->AddadditionVariance(regionAdditionVariance[i], i);
             m_regionInfo->SetbufferVariance(regionBufferVariance[i],i);
-            m_regionInfo->SetbufferAdditionVariance(regionBufferAdditionVariance[i], i);
 		}
 	decomposeMtx.unlock();
 

@@ -1,5 +1,7 @@
 #include "decomposition.h"
 
+//require major revision. There are BUGS here. So we need to make it robust to changes.
+
 Decomposition::Decomposition( std::vector<Snp*> *snpList, Linkage *linkageMatrix, size_t thread, Region *regionInfo):m_snpList(snpList), m_linkage(linkageMatrix), m_thread(thread), m_regionInfo(regionInfo){}
 
 Decomposition::~Decomposition()
@@ -53,21 +55,17 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
             throw "Unexpected error";
         }
         Eigen::MatrixXd variance = Eigen::MatrixXd::Zero(processSize, processSize);
-		Eigen::MatrixXd additionVariance = Eigen::MatrixXd::Zero(processSize, processSize);
 		Eigen::VectorXd result;
-		result = m_linkage->solve(0, processSize, &betaEstimate, &chiSq, &variance, &additionVariance,Snp::GetmaxSampleSize());
+		result = m_linkage->solve(0, processSize, &betaEstimate, &chiSq, &variance,Snp::GetmaxSampleSize());
         for(size_t i = 0; i < processSize; ++i){
             (*m_snpList).at(snpLoc.at(i))->Setheritability(result(i));
             (*m_snpList).at(snpLoc.at(i))->Setvariance(variance(i,i));
-            (*m_snpList).at(snpLoc.at(i))->SetadditionVariance(additionVariance(i,i));
             for(size_t j = 0; j < processSize;++j){
                 double covariance = variance(i,j);
-                double additionCovariance = additionVariance(i,j);
                 for(size_t regionIndex = 0; regionIndex < m_regionInfo->GetnumRegion(); ++regionIndex){
 					if((*m_snpList)[snpLoc[i]]->GetFlag(regionIndex)&&
                         (*m_snpList)[snpLoc[j]]->GetFlag(regionIndex)){
                         m_regionInfo->Addvariance(covariance, regionIndex);
-                        m_regionInfo->AddadditionVariance(additionCovariance, regionIndex);
 					}
 				}
             }

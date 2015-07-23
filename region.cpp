@@ -4,9 +4,7 @@
 Region::Region(){
     m_names.push_back("With LD");
     m_variance.push_back(0.0);
-    m_additionVariance.push_back(0.0);
     m_bufferVariance.push_back(0.0);
-    m_bufferAdditionVariance.push_back(0.0);
 }
 
 Region::~Region()
@@ -25,100 +23,47 @@ void Region::Addvariance(double const var, size_t i){
 void Region::CleanBuffer(){
     for(size_t i =0; i < m_bufferVariance.size(); ++i){
         m_bufferVariance[i] = 0;
-        m_bufferAdditionVariance[i] = 0;
     }
 }
-void Region::AddadditionVariance(double const addVar, size_t i){
-    if(i >= m_additionVariance.size()){
-        throw std::out_of_range("Region was out of bound");
-    }
-    m_additionVariance[i] += addVar;
-}
 
-void Region::SetbufferAdditionVariance(double const addVar, size_t i){
-    if(i >= m_bufferAdditionVariance.size()){
-        throw std::out_of_range("Region was out of bound");
-    }
-    m_bufferAdditionVariance[i] = addVar;
 
-}
-
-void Region::AddbufferVariance(size_t i, double const var, double const addVar){
-    m_bufferVariance.at(i) = var;
-    m_bufferAdditionVariance.at(i)=addVar;
+void Region::AddbufferVariance(size_t i, double const var){
+    m_bufferVariance.at(i) += var;
 }
 
 void Region::SetbufferVariance(double const var, size_t i){
-    if(i >= m_bufferVariance.size()){
-        throw std::out_of_range("Region was out of bound");
-    }
-    m_bufferVariance[i] = var;
+    m_bufferVariance.at(i) = var;
 
 }
 
 void Region::Debuffer(){
-    for(size_t i = 0; i < m_bufferAdditionVariance.size(); ++i){
-        m_variance.at(i) += m_bufferVariance.at(i);
-        m_additionVariance.at(i) += m_bufferAdditionVariance.at(i);
-        m_bufferVariance.at(i) = 0;
-        m_bufferAdditionVariance.at(i) = 0;
+    for(size_t i = 0; i < m_bufferVariance.size(); ++i){
+        m_variance[i] += m_bufferVariance[i];
+        m_bufferVariance[i] = 0;
     }
 }
 
 std::string Region::Getname(size_t i) const{
-    if(i >= m_names.size()) throw std::out_of_range("Region was out of bound");
-    return m_names[i];
+    return m_names.at(i);
 }
 
 double Region::Getvariance(double heritability, size_t i, double adjustment) const{
-    if(i >= m_variance.size()) throw std::out_of_range("Region was out of bound");
-    //double sigma = (1.0-sqrt(std::complex<double>(heritability)).real());
-    double sigma = 1.0;
-    //return adjustment*adjustment*(adjust*m_variance[i] + adjust*adjust*m_additionVariance[i]);
-
-    return adjustment*adjustment*(sigma*m_variance.at(i) + sigma*sigma*m_additionVariance.at(i));
+    return adjustment*adjustment*m_variance.at(i);
 }
 
 std::string  Region::Getchr(size_t i, size_t j) const{
-    if(i > m_intervalList.size()) {
-        throw std::out_of_range ("Interval list was out of bound");
-    }
-    else if(j > m_intervalList[i].size()){
-        throw std::out_of_range ("Interval list was out of bound");
-    }
-    else{
-        return m_intervalList[i][j]->Getchr();
-    }
+    return m_intervalList.at(i).at(j)->Getchr();
 }
 
 size_t Region::Getstart(size_t i, size_t j) const{
-    if(i > m_intervalList.size()) {
-        throw std::out_of_range ("Interval list was out of bound");
-    }
-    else if(j > m_intervalList[i].size()){
-        throw std::out_of_range ("Interval list was out of bound");
-    }
-    else{
-        return m_intervalList[i][j]->Getstart();
-    }
+    return m_intervalList.at(i).at(j)->Getstart();
 }
 size_t Region::Getend(size_t i, size_t j) const{
-    if(i > m_intervalList.size()) {
-        throw std::out_of_range ("Interval list was out of bound");
-    }
-    else if(j > m_intervalList[i].size()){
-        throw std::out_of_range ("Interval list was out of bound");
-    }
-    else{
-        return m_intervalList[i][j]->Getend();
-    }
+    return m_intervalList.at(i).at(j)->Getend();
 }
 
 size_t Region::GetintervalSize(size_t i) const{
-    if(i>= m_intervalList.size()){
-        throw std::out_of_range ("Interval list was out of bound");
-    }
-    return m_intervalList[i].size();
+    return m_intervalList.at(i).size();
 }
 size_t Region::GetnumRegion() const {return m_names.size(); }
 
@@ -161,9 +106,7 @@ void Region::generateRegion(std::string regionList){
 				std::vector<Interval* > currentRegion;
 				m_names.push_back(name);
                 m_variance.push_back(0.0);
-                m_additionVariance.push_back(0.0);
                 m_bufferVariance.push_back(0.0);
-                m_bufferAdditionVariance.push_back(0.0);
                 std::string line;
                 while(std::getline(regionFile, line)){
                     line = usefulTools::trim(line);

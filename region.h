@@ -49,14 +49,10 @@ class Region
         void clean();
         /** Add variance to the i th region */
         void Addvariance(double const var, size_t i);
-        /** Add the additional variance to the i th region */
-        void AddadditionVariance(double const addVar, size_t i);
         /** Set the buffer variance to the i th region */
         void SetbufferVariance(double const var, size_t i);
-        /** Set the buffer additional variance of the i th region */
-        void SetbufferAdditionVariance(double const addVar, size_t i);
         /** Add the buffer additional variance of the i th region */
-        void AddbufferVariance(size_t i, double const var, double const addVar);
+        void AddbufferVariance(size_t i, double const var);
         /** Remove the additional buffer */
         void CleanBuffer();
         /**add the buffer to the variance vectors and reset them */
@@ -80,9 +76,7 @@ class Region
         std::vector<std::vector<Interval*> > m_intervalList;
         std::vector<std::string> m_names;
         std::vector<double> m_variance;
-        std::vector<double> m_additionVariance;
         std::vector<double> m_bufferVariance;
-        std::vector<double> m_bufferAdditionVariance;
 };
 
 #endif // REGION_H

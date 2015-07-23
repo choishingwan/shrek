@@ -188,7 +188,7 @@ void SnpEstimation::Getresult(std::string outputPrefix){
 
  void SnpEstimation::loadbar(size_t x, size_t n){
     //std::cerr << "Calling load bar" << std::endl;
-
+/*
     if(n == 0) throw "Total work size should not be zero";
  	size_t w =60;
 	double percent  =  x/(double)n;
@@ -201,5 +201,5 @@ void SnpEstimation::Getresult(std::string outputPrefix){
     for (size_t i=c; i<w; i++) std::cerr << " ";
     std::cerr << "]\r" << std::flush;
 
-
+*/
 }

@@ -63,7 +63,7 @@ class Linkage
 		/** Get the ld matrix of R */
 		Eigen::MatrixXd blockSqrt(size_t blockStart, size_t lengthOfBlock);
 		/** Solving the matrix equation using the linkage matrix */
-		Eigen::VectorXd solve(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::MatrixXd *variance,Eigen::MatrixXd *additionVariance, size_t sampleSize);
+		Eigen::VectorXd solve(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::MatrixXd *variance, size_t sampleSize);
 
 		/** Removing perfectLD by setting them to 0 so that they will be updated */
         size_t Remove();
