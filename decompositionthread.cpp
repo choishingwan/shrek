@@ -18,8 +18,7 @@ void *DecompositionThread::ThreadProcesser(void *in){
 void DecompositionThread::chromosomeStartProcess(Eigen::MatrixXd const * const variance, Eigen::VectorXd const *const result){
     //we need to include the front
 
-	decomposeMtx.lock();
-    std::vector<double> regionVariance(m_regionInfo->GetnumRegion(), 0.0);
+	std::vector<double> regionVariance(m_regionInfo->GetnumRegion(), 0.0);
     for(size_t i =0; i < m_length/3*2; ++i){
         (*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability((*result)(i));
         for(size_t j = 0; j < m_length; ++j){
@@ -38,27 +37,19 @@ void DecompositionThread::chromosomeStartProcess(Eigen::MatrixXd const * const v
             }
         }
     }
-	//decomposeMtx.lock();
+	decomposeMtx.lock();
 		for(size_t i = 0; i < m_regionInfo->GetnumRegion(); ++i){
             m_regionInfo->Addvariance(regionVariance.at(i), i);
      	}
-    std::cerr << "Start of chromosome " << "\t" << (*m_snpLoc)[m_start] << "\t" << regionVariance.at(0)<< std::endl;
-	decomposeMtx.unlock();
+    decomposeMtx.unlock();
 }
 
 void DecompositionThread::normalProcess(Eigen::MatrixXd const * const variance, Eigen::VectorXd const *const result){
     //whether if it is the second last block
 
-	decomposeMtx.lock();
-    std::vector<double> regionVariance(m_regionInfo->GetnumRegion(), 0.0);
-    if((*m_snpLoc)[m_start]==596){
-        std::cout << m_linkage->m_linkage.block(m_start, m_start, m_length, m_length) << std::endl;
-    }
+	std::vector<double> regionVariance(m_regionInfo->GetnumRegion(), 0.0);
     for(size_t i =m_length/3; i < m_length/3*2; ++i){
-        if((*m_snpLoc)[m_start]==596){
-            std::cerr << (*m_snpList)[(*m_snpLoc)[m_start+i]]->GetrsId() << "\t" <<(*m_snpList)[(*m_snpLoc)[m_start+i]]->Getheritability() << "\t" << (*result)(i) << std::endl;
 
-        }
         (*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability((*result)(i));
         for(size_t j = 0; j < m_length; ++j){
             double covariance = (*variance)(i,j);
@@ -76,7 +67,7 @@ void DecompositionThread::normalProcess(Eigen::MatrixXd const * const variance, 
             }
         }
     }
-	//decomposeMtx.lock();
+	decomposeMtx.lock();
 		for(size_t i = 0; i < m_regionInfo->GetnumRegion(); ++i){
             if(m_secondLastOfBlock){
                 m_regionInfo->AddbufferVariance(i,regionVariance.at(i));
@@ -86,7 +77,6 @@ void DecompositionThread::normalProcess(Eigen::MatrixXd const * const variance, 
             }
      	}
 
-	std::cerr << "Normal process " << (*m_snpLoc)[m_start] << "\t" << regionVariance.at(0) << "\t" << m_secondLastOfBlock << std::endl;
 	decomposeMtx.unlock();
 }
 
@@ -95,7 +85,6 @@ void DecompositionThread::endBlockProcess(Eigen::MatrixXd const * const variance
     //The most complicated case (sort of);
     //The trick is, the variance matrix will always be with the correct dimension (else our methods has already failed)
 
-	decomposeMtx.lock();
 
     size_t actualProcessSize = (*variance).rows();
     for(size_t i =m_length/3; i < actualProcessSize; ++i){
@@ -116,12 +105,11 @@ void DecompositionThread::endBlockProcess(Eigen::MatrixXd const * const variance
             }
         }
     }
-	//decomposeMtx.lock();
+	decomposeMtx.lock();
 		for(size_t i = 0; i < m_regionInfo->GetnumRegion(); ++i){
             m_regionInfo->AddbufferVariance(i,regionVariance.at(i));
      	}
-    std::cerr << "Last of block" << "\t" << (*m_snpLoc)[m_start] << "\t" << actualProcessSize << "\t" << regionVariance.at(0)<< std::endl;
-	decomposeMtx.unlock();
+    decomposeMtx.unlock();
 }
 
 void DecompositionThread::solve(){

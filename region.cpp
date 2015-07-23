@@ -18,7 +18,6 @@ void Region::Addvariance(double const var, size_t i){
 }
 
 void Region::CleanBuffer(){
-    std::cerr << "Cleanse " << m_variance[0] << std::endl;
     for(size_t i =0; i < m_bufferVariance.size(); ++i){
         m_bufferVariance[i] = 0;
     }
@@ -35,7 +34,6 @@ void Region::SetbufferVariance(double const var, size_t i){
 }
 
 void Region::Debuffer(){
-    std::cerr << "Debuff" << std::endl;
     for(size_t i = 0; i < m_bufferVariance.size(); ++i){
         m_variance[i] += m_bufferVariance[i];
         m_bufferVariance[i] = 0;
