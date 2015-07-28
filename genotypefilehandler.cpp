@@ -259,6 +259,7 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
     }
 	//Initialize the variable for getSnps
 	m_processed = 0;
+	m_targetProcessed=0;
 	//Now calculate the block start size and update the snps accordingly
     //For each chromosome we will need to have the block information
 
@@ -271,10 +272,15 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
                 //Build the vector first
                 std::vector<size_t> blockInfo(m_chrProcessCount[chr],3.0);
                 size_t block  = m_blockSizeTract[chr]/3;
-                std::fill_n(blockInfo.begin(), block*2, 2.0);
-                std::fill_n(blockInfo.begin(), block, 1.0);
-                std::fill_n(blockInfo.begin()+(blockInfo.size()-block*2), block*2, 2.0);
-                std::fill_n(blockInfo.begin()+(blockInfo.size()-block), block, 1.0);
+                if(block > blockInfo.size()){
+                    std::fill_n(blockInfo.begin(), blockInfo.size(), 1.0);
+                }
+                else{
+                    std::fill_n(blockInfo.begin(), block*2, 2.0);
+                    std::fill_n(blockInfo.begin(), block, 1.0);
+                    std::fill_n(blockInfo.begin()+(blockInfo.size()-block*2), block*2, 2.0);
+                    std::fill_n(blockInfo.begin()+(blockInfo.size()-block), block, 1.0);
+                }
                 size_t blockIter =0;
                 for(size_t j = 0; j < m_chrCount[chr]; ++j){
                     if(m_inclusion[j+index]!=-1){
@@ -369,6 +375,28 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 	return bfile_SNP_major;
 }
 
+void GenotypeFileHandler::skipSnps(size_t const skipNum){
+    /** This function is used to skip the chromosome */
+    size_t processed = 0;
+    while (m_snpIter < m_inputSnp && processed < skipNum){
+        size_t indx = 0;
+		while ( indx < m_ldSampleSize ){
+			std::bitset<8> b; //Initiate the bit array
+			char ch[1];
+			m_bedFile.read(ch,1); //Read the information
+			if (!m_bedFile){
+				throw "Problem with the BED file...has the FAM/BIM file been changed?";
+			}
+			int c = 0;
+			while (c<7 && indx < m_ldSampleSize ){
+                ++indx;
+                c+=2;
+			}
+		}
+		m_snpIter++;
+		processed++;
+	}
+}
 
 ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &prevResidual, size_t &blockSize){
     /** Now that we know exactly how many SNPs are in each chromosome
@@ -377,27 +405,32 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
      *  manner. Will need to re write this function yet again
      */
 
-
-	//We will get snps according to the distance
-	//We want to use flanking distance, e.g. getting the 1mb flanking on the both side
-	bool skipChromosome=false;
-	if(m_blockSizeTract.find(m_chrExists.front()) !=m_blockSizeTract.end() && m_blockSizeTract[m_chrExists.front()] == 0){
-        //This chromosome contains nothing useful.
-        skipChromosome = true;
-        blockSize = 0;
-	}
-	else{
-        blockSize = m_blockSizeTract.at(m_chrExists.front());
-	}
-    size_t processSize = blockSize/3*m_thread; //This is the expected number of snps to be processed
-
-    prevResidual =genotype.size(); //default amount of residule
-    if(chromosomeStart){
-        processSize+= blockSize/3*2;
-        //processSize+= blockSize; //DEBUG //This is to avoid problem with the perfect LD thingy, so that now we will have one extra block ahead of time //This extra part will stay until the end of chromosome
+    while(m_chrProcessCount.find(m_chrExists.front())==m_chrProcessCount.end()){
+        //While we have nothing to do, skip chromosome
+        skipSnps(m_chrCount[m_chrExists.front()]);
+        //std::cerr << "No SNPs to process, skip chromosome " << m_chrExists.front() << std::endl;
+        m_chrExists.pop_front();
+        chromosomeStart = true;
+        chromosomeEnd = false;
+        m_targetProcessed = 0;
+        m_processed = 0;
+        if(m_chrExists.empty()){
+            return completed;
+        }
     }
-	while (m_snpIter < m_inputSnp){ //While there are still Snps to read
-		bool snp = false;
+    blockSize = m_blockSizeTract.at(m_chrExists.front());
+    size_t processSize = blockSize/3*m_thread;
+    if(chromosomeStart) processSize += blockSize/3*2;
+    if(m_chrProcessCount[m_chrExists.front()]-(processSize+m_targetProcessed) < blockSize/3){
+        //So the last block should be extended
+        processSize+=m_chrProcessCount[m_chrExists.front()]-(processSize+m_targetProcessed);
+        chromosomeEnd =true;
+    }
+
+
+    prevResidual = genotype.size();
+    while(m_snpIter < m_inputSnp){
+        bool snp = false;
 		if(m_inclusion[m_snpIter] != -1){//indicate whether if we need this snp
 			snp=true;
 		}
@@ -448,64 +481,35 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 		if(snp){
 			indx > 0 ? genotype.back()->Setmean(newM) : genotype.back()->Setmean(0.0);
 			indx > 1 ? genotype.back()->SetstandardDeviation(std::sqrt(newS/(indx - 1.0))) : genotype.back()->SetstandardDeviation(0.0);
-
-			double currentMaf = (alleleCount+0.0)/(2*m_ldSampleSize*1.0);
-			currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
-			//remove snps with maf too low
-			if(maf >= 0.0 && maf > currentMaf){
-				std::cerr << "Snp: " << (*snpList)[snpLoc.back()]->GetrsId() << " not included due to maf filtering" << std::endl;
-				Genotype *temp = genotype.back();
-				genotype.pop_back();
-                (*snpList)[snpLoc.back()]->setFlag(0, false);
-				snpLoc.pop_back();
-				delete temp;
-			}
-			else{
-				processSize--;
-			}
+            processSize--;
+            m_targetProcessed++;
 		}
 		m_snpIter++;
 		m_processed++;
-		//Check if we have finished the chromosome
         if(m_processed > m_chrCount[m_chrExists.front()]){
-            //std::cerr << "Finished one chromosome " << m_chrExists.front() << "\t" << genotype.size() << std::endl;
-
-			//finished one chromosome
-			m_chrExists.pop_front(); //Remove the front
+            //Finished this chromosome
+            m_chrExists.pop_front(); //Remove the front
 			m_processed = 0;
-			if(skipChromosome){
-                chromosomeStart=true;
-                if(m_blockSizeTract.find(m_chrExists.front()) == m_blockSizeTract.end() || (m_blockSizeTract.find(m_chrExists.front())!=m_blockSizeTract.end() && m_blockSizeTract[m_chrExists.front()]==0)){
-                    //This chromosome contains nothing useful.
-                    skipChromosome = true;
-                    blockSize = 0;
-                }
-                else{
-                    skipChromosome = false;
-                    blockSize = m_blockSizeTract.at(m_chrExists.front());
-                }
-                processSize = blockSize/3*m_thread; //This is the expected number of snps to be processed
-                prevResidual =0; //default amount of residule
-                if(genotype.size() != 0){
-                    std::cerr << m_chrExists.front() << "\t" << genotype.size() << std::endl;
-                    throw "Unexpected genotype size. If the chromosome is useless, then there shouldn't be any recorded Snps";
-                }
-                if(chromosomeStart){
-                    processSize+= blockSize/3*2;
-                    processSize+= blockSize; //DEBUG //This is to avoid problem with the perfect LD thingy, so that now we will have one extra block ahead of time //This extra part will stay until the end of chromosome
-                }
-
-            }
-            else{
-                chromosomeEnd = true;
-                return continueProcess;
-            }
-        }
-        else if(!skipChromosome && processSize == 0){
+			m_targetProcessed=0;
+			//There will not be any case (in my little brain) where we are trying to iterate an empty chromosome because it was dealt with
+			chromosomeEnd = true;
             return continueProcess;
         }
+        else if(processSize == 0){
+            if(m_targetProcessed==m_chrProcessCount[m_chrExists.front()]){
+                //Remove the remaining snps
+                size_t remaining = m_chrCount[m_chrExists.front()]-m_chrProcessCount[m_chrExists.front()];
+                skipSnps(remaining);
+                m_chrExists.pop_front(); //Remove the front
+                m_processed = 0;
+                m_targetProcessed=0;
+                chromosomeEnd = true;
+            }
+            return continueProcess;
+        }
+    }
+    //Now we start processing because there are things to do
 
-	}
     chromosomeEnd=true;
 	return completed;
 

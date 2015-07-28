@@ -33,7 +33,7 @@ class DecompositionThread
 	    static Eigen::MatrixXd checking; //DEBUG
 
 		/** Default constructor */
-		DecompositionThread(size_t start, size_t length, Eigen::VectorXd const * const betaEstimate, Eigen::VectorXd const * const chiSq, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, bool lastOfBlock, Region *regionInfo);
+		DecompositionThread(size_t start, size_t length, Eigen::VectorXd const * const betaEstimate, Eigen::VectorXd const * const chiSq, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, Region *regionInfo);
 		/** Default destructor */
 		virtual ~DecompositionThread();
         /** Function called by the threading algorithm */
@@ -49,8 +49,6 @@ class DecompositionThread
 		std::deque<size_t> const *m_snpLoc;
         std::vector<Snp*> *m_snpList;
         bool m_chrStart;
-        bool m_lastOfBlock;
-        bool m_secondLastOfBlock;
         Region *m_regionInfo;
         static std::mutex decomposeMtx;
 

@@ -66,12 +66,14 @@ private:
         size_t m_processed;
         size_t m_estimateTotal;
         size_t m_defaultDistance;
+        size_t m_targetProcessed;
         std::ifstream m_bedFile;
         std::string m_outPrefix;
         bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
         std::deque<std::string> m_chrExists;
         std::vector<int> m_inclusion;
         std::vector<size_t> m_locTract;
+        void skipSnps(size_t const skipNum);
 
 };
 

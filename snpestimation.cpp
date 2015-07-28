@@ -23,28 +23,14 @@ void SnpEstimation::Estimate(){
         SnpEstimation::loadbar(numProcessed,totalNum);
         //Work one by one first.
 		process = m_genotypeFileHandler->getSnps(genotype, snpLoc, m_snpList, chromosomeStart, chromosomeEnd, m_maf,prevResidual, blockSize);
-        //Check if we have enough to remove the previous residual
-        if(genotype.size() >= blockSize+blockSize/3 && prevResidual> 0){
-            m_regionInfo->ConfirmlastVariance();
-            for(size_t i = 0; i < blockSize/3 && prevResidual> 0; ++i){
-                genotype.pop_front();
-                snpLoc.pop_front();
-                prevResidual--;
-            }
-        }
-        else{
-            m_regionInfo->CleanlastVariance();
-        }
+
 		size_t workSize = blockSize/3*m_thread;
 		if(chromosomeStart) workSize +=2/3*blockSize+blockSize;
 		if(workSize > snpLoc.size()) workSize = snpLoc.size();
 		numProcessed+= workSize;
         SnpEstimation::loadbar(numProcessed,totalNum);
-		if(process == completed && prevResidual==genotype.size()){
-			//Nothing was updated
-			//std::cerr << std::endl;
+		if(process == completed){
 			m_regionInfo->Debuffer();
-			//std::cerr << "completed" << std::endl;
 		}
 		else{
 			//Now calculate the LD matrix
@@ -59,8 +45,8 @@ void SnpEstimation::Estimate(){
             SnpEstimation::loadbar(numProcessed,totalNum);
 			if(decomposeProcess == fatalError) throw "Fatal error with Decomposition";
             if(!chromosomeEnd){
-				if(blockSize > genotype.size()) blockSize= genotype.size();
-				size_t retain = blockSize;
+				if(blockSize > genotype.size()) throw "When block size is bigger than the number of genotype, it must be the end of chromosome";
+				size_t retain = blockSize/3*2;
 				Genotype::clean(genotype, retain);
 				size_t removeCount = snpLoc.size() - retain;
 				for(size_t i = 0; i < removeCount; ++i)	snpLoc.pop_front();
@@ -70,7 +56,6 @@ void SnpEstimation::Estimate(){
                 Genotype::clean(genotype,0);
                 snpLoc.clear();
             }
-
 		}
         if(chromosomeStart && !chromosomeEnd){
             chromosomeStart =false;
@@ -80,7 +65,6 @@ void SnpEstimation::Estimate(){
             chromosomeStart = true;
             chromosomeEnd = false;
         }
-
 	}
 /*
 	std::cerr << "Here" << std::endl;
@@ -88,7 +72,7 @@ void SnpEstimation::Estimate(){
     linkageMatrix->print();
 	exit(-1);
 */
-    std::cout << Linkage::m_testing << std::endl;
+    //std::cout << Linkage::m_testing << std::endl;
 	m_regionInfo->Debuffer();
     SnpEstimation::loadbar(totalNum, totalNum);
 	std::cerr << std::endl;

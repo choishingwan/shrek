@@ -133,6 +133,7 @@ int main(int argc, char *argv[]){
     }
 
 	SnpEstimation *snpEstimation = new SnpEstimation(genotypeFileHandler, &snpIndex, &snpList, commander->Getthread(), commander->Getmaf(), commander->ldCorrect(), regionInfo);
+
     try{
         snpEstimation->Estimate();
     }

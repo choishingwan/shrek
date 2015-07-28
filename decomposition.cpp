@@ -57,7 +57,6 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
         Eigen::MatrixXd variance;
 		Eigen::VectorXd result;
 		result = m_linkage->solve(0, processSize, &betaEstimate, &chiSq, &variance,Snp::GetmaxSampleSize(),snpLoc[0]);
-		/*
         for(size_t i = 0; i < processSize; ++i){
             (*m_snpList).at(snpLoc.at(i))->Setheritability(result(i));
             (*m_snpList).at(snpLoc.at(i))->Setvariance(variance(i,i));
@@ -71,7 +70,6 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 				}
             }
         }
-        */
 
     }
     else if(stepSize> 0){
@@ -83,13 +81,11 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 		if(!startLoc.empty() && processSize - startLoc.back() < stepSize){
 			startLoc.pop_back();
 		}
-        //The last two index of startLoc should have their variance put into the buffervariance
 
 		std::vector<pthread_t*> threadList;
 		std::vector<DecompositionThread* > garbageCollection;
         for(size_t i = 0; i < startLoc.size(); ++i){
-            bool lastBlock = ((startLoc.size()-1) == i);
-            garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate,&chiSq,m_linkage, &snpLoc, m_snpList, chromosomeStart, lastBlock, m_regionInfo));
+            garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate,&chiSq,m_linkage, &snpLoc, m_snpList, chromosomeStart, m_regionInfo));
         }
         if(m_thread >= garbageCollection.size()){
             //More thread than work

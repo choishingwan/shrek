@@ -1,6 +1,6 @@
 #include "linkage.h"
 
-Eigen::MatrixXd Linkage::m_testing = Eigen::MatrixXd::Zero(1000,1000);
+Eigen::MatrixXd Linkage::m_testing = Eigen::MatrixXd::Zero(3000,3000);
 Linkage::Linkage(){
     m_perfectLd =std::vector<size_t>();
     m_snpLoc = nullptr;
