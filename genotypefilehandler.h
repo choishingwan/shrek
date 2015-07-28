@@ -45,7 +45,7 @@ public:
          * found on each chromosome. Also need to indicates which Snps are the required
          * Snps.
          */
-        void initialize(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock);
+        void initialize(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock, double const maf);
         virtual ~GenotypeFileHandler();
         ProcessCode getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &prevResidual, size_t &blockSize);
         ProcessCode getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &numSnp);
@@ -56,6 +56,7 @@ private:
         std::string m_genotypeFilePrefix;
         std::map<std::string, size_t> m_blockSizeTract;
         std::map<std::string, size_t> m_chrCount;
+        std::map<std::string, size_t> m_chrProcessCount;
         std::map<std::string, size_t>::iterator m_chrCountIter;
         size_t m_ldSampleSize;
         size_t m_expectedNumberOfSnp;

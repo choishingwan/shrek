@@ -12,7 +12,7 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, size_t 
 }
 
 
-void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock){
+void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock, double const maf){
     size_t safeBlockRange = 1.0; //Use to multiply the #Snp in 1mb region to make sure the block will always include everything within the region
     std::string famFileName = m_genotypeFilePrefix +".fam";
     std::ifstream famFile;
@@ -38,6 +38,15 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
     famFile.close();
     std::cerr << "A total of " << m_ldSampleSize << " samples were found in the genotype file for LD construction" << std::endl << std::endl;
     Genotype::SetsampleNum(m_ldSampleSize);
+
+    std::string bedFileName = m_genotypeFilePrefix+".bed";
+	bool bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_bedFile); //We will try to open the connection to bedFile
+    if(bfile_SNP_major){
+        //This is ok
+    }
+    else{
+        throw "We currently have no plan of implementing the individual-major mode. Please use the snp-major format";
+    }
 
     std::string bimFileName = m_genotypeFilePrefix+".bim";
     std::ifstream bimFile;
@@ -131,6 +140,7 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
 
                     if(currentMaxBlock < locList.size()*safeBlockRange) currentMaxBlock = locList.size()*safeBlockRange;
 					if(currentMaxBlock%3 != 0){
+                            std::cerr<< currentMaxBlock << std::endl;
                         currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
 					}
 					if(stdOut) std::cerr <<prevChr << "\t" << currentMaxBlock <<"\t";
@@ -164,15 +174,59 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
                         }
                     }
                 }
+                //Try to do the maf check here
+
+                bool snp = false;
+                if(m_inclusion.back() != -1){//indicate whether if we need this snp
+                    snp=true;
+                }
+                size_t indx = 0; //The iterative count
+                size_t alleleCount=0;
+                while ( indx < m_ldSampleSize ){
+                    std::bitset<8> b; //Initiate the bit array
+                    char ch[1];
+                    m_bedFile.read(ch,1); //Read the information
+                    if (!m_bedFile){
+                        throw "Problem with the BED file...has the FAM/BIM file been changed?";
+                    }
+                    b = ch[0];
+                    int c=0;
+                    while (c<7 && indx < m_ldSampleSize ){ //Going through the bit flag. Stop when it have read all the samples as the end == NULL
+				//As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
+
+                        ++indx; //so that we only need to modify the indx when adding samples but not in the mean and variance calculation
+                        if (snp){
+                            int first = b[c++];
+                            int second = b[c++];
+                            if(first == 1 && second == 0) first = 0; //We consider the missing value to be reference
+                            alleleCount += first+second;
+                        }
+                        else{
+                            c+=2;
+                        }
+                    }
+                    double currentMaf = (alleleCount+0.0)/(2*m_ldSampleSize*1.0);
+                    currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
+                    //remove snps with maf too low
+                    if(maf >= 0.0 && maf > currentMaf){
+                        m_inclusion.back()= -1;
+                        std::cerr << "Snp: " << rs << " not included due to maf filtering" << std::endl;
+                    }
+                    else{
+                        if(m_chrProcessCount.find(chr)==m_chrProcessCount.end()) m_chrProcessCount[chr] = 1;
+                        else m_chrProcessCount[chr]++;
+                    }
+                }
             }
             else{
-                throw "Line in bim file has more incorrect number of dimension";
+                throw "Line in bim file has incorrect number of dimension";
             }
         }
     }
     //Only do this if we still have Snps left
     if(currentMaxBlock < locList.size()*safeBlockRange) currentMaxBlock = locList.size()*safeBlockRange;
     if(currentMaxBlock%3 != 0){
+        std::cerr << currentMaxBlock << std::endl;
         currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
     }
     if(stdOut) std::cerr << prevChr << "\t" << currentMaxBlock << "\t";
@@ -190,15 +244,14 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
     if(!stdOut) blockRecommendOut.close();
 
     bimFile.close();
+    m_bedFile.close();
     if(duplicateCount == 0) std::cerr << "There are no duplicated snps in the LD file" << std::endl;
     else{
 		std::cerr << "A total of " << duplicateCount << " Snps in the LD file were duplicated" << std::endl;
 		std::cerr << "Only the first instance of each Snp will be used" << std::endl;
     }
 	std::cerr << std::endl;
-
-    std::string bedFileName = m_genotypeFilePrefix+".bed";
-	bool bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_bedFile); //We will try to open the connection to bedFile
+    bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_bedFile); //We will try to open the connection to bedFile
     if(bfile_SNP_major){
         //This is ok
     }

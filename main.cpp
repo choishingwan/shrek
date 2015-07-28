@@ -120,7 +120,7 @@ int main(int argc, char *argv[]){
 	//From now on, we are only allow to iterate through snpList through snpIndex
     GenotypeFileHandler *genotypeFileHandler = new GenotypeFileHandler(commander->GetldFilePrefix(), commander->Getthread(), commander->GetoutputPrefix());
     try{
-        genotypeFileHandler->initialize(snpIndex, &snpList, commander->validate(), commander->maxBlockSet(), commander->GetmaxBlock(), commander->GetminBlock());
+        genotypeFileHandler->initialize(snpIndex, &snpList, commander->validate(), commander->maxBlockSet(), commander->GetmaxBlock(), commander->GetminBlock(),commander->Getmaf());
     }
     catch (const char *e) {
         std::cerr << "Exception encountered when opening genotype files" << std::endl;
