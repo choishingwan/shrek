@@ -63,7 +63,7 @@ class Linkage
 		/** Get the ld matrix of R */
 		Eigen::MatrixXd blockSqrt(size_t blockStart, size_t lengthOfBlock);
 		/** Solving the matrix equation using the linkage matrix */
-		Eigen::VectorXd solve(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::MatrixXd *variance, size_t sampleSize);
+		Eigen::VectorXd solve(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::MatrixXd *variance, size_t sampleSize,size_t snpStart);
 
 		/** Removing perfectLD by setting them to 0 so that they will be updated */
         size_t Remove();
@@ -75,12 +75,13 @@ class Linkage
         void setSnpList(std::vector<Snp* > *snpList);
         void setThread(size_t thread);
 		void print();
-
-		static size_t DEBUG;
+        void computeSqrtChi(std::map<std::string, size_t> *m_snpIndex);
+		static Eigen::MatrixXd m_testing;
 	protected:
 	private:
         Eigen::MatrixXd m_linkage;
         Eigen::MatrixXd m_linkageSqrt;
+        Eigen::VectorXd m_fullChi;
         size_t m_thread;
         std::vector<size_t> m_perfectLd; //Store the remove index of on matrix level
         std::vector<Snp*> *m_snpList;

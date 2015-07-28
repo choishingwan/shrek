@@ -15,6 +15,7 @@ void SnpEstimation::Estimate(){
     linkageMatrix->setSnpList(m_snpList);
     linkageMatrix->setSnpLoc(&snpLoc);
     linkageMatrix->setThread(m_thread);
+    linkageMatrix->computeSqrtChi(m_snpIndex);
     Decomposition *decompositionHandler = new Decomposition( m_snpList, linkageMatrix, m_thread,m_regionInfo);
     size_t numProcessed = 0;
     size_t totalNum = m_genotypeFileHandler->GetestimateSnpTotal()*3;
@@ -88,6 +89,7 @@ void SnpEstimation::Estimate(){
     linkageMatrix->print();
 	exit(-1);
 */
+    std::cout << Linkage::m_testing << std::endl;
 	m_regionInfo->Debuffer();
     SnpEstimation::loadbar(totalNum, totalNum);
 	std::cerr << std::endl;

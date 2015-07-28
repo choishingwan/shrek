@@ -53,9 +53,11 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
             std::cerr << "Something is wrong. I don't expect step size = 0 when there are more than 2 snp input" << std::endl;
             throw "Unexpected error";
         }
-        Eigen::MatrixXd variance = Eigen::MatrixXd::Zero(processSize, processSize);
+        //Eigen::MatrixXd variance = Eigen::MatrixXd::Zero(processSize, processSize);
+        Eigen::MatrixXd variance;
 		Eigen::VectorXd result;
-		result = m_linkage->solve(0, processSize, &betaEstimate, &chiSq, &variance,Snp::GetmaxSampleSize());
+		result = m_linkage->solve(0, processSize, &betaEstimate, &chiSq, &variance,Snp::GetmaxSampleSize(),snpLoc[0]);
+		/*
         for(size_t i = 0; i < processSize; ++i){
             (*m_snpList).at(snpLoc.at(i))->Setheritability(result(i));
             (*m_snpList).at(snpLoc.at(i))->Setvariance(variance(i,i));
@@ -69,6 +71,7 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 				}
             }
         }
+        */
 
     }
     else if(stepSize> 0){

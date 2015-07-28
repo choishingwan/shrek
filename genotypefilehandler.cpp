@@ -130,7 +130,9 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
 
 
                     if(currentMaxBlock < locList.size()*safeBlockRange) currentMaxBlock = locList.size()*safeBlockRange;
-					if(currentMaxBlock%3 != 0) currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
+					if(currentMaxBlock%3 != 0){
+                        currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
+					}
 					if(stdOut) std::cerr <<prevChr << "\t" << currentMaxBlock <<"\t";
 					else blockRecommendOut << prevChr << "\t" << currentMaxBlock <<"\t";
 					if(maxBlockSet && maxBlock < currentMaxBlock ){
@@ -170,7 +172,9 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
     }
     //Only do this if we still have Snps left
     if(currentMaxBlock < locList.size()*safeBlockRange) currentMaxBlock = locList.size()*safeBlockRange;
-    if(currentMaxBlock%3 != 0) currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
+    if(currentMaxBlock%3 != 0){
+        currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
+    }
     if(stdOut) std::cerr << prevChr << "\t" << currentMaxBlock << "\t";
     else blockRecommendOut << prevChr << "\t" << currentMaxBlock << "\t";
     if(maxBlockSet && maxBlock < currentMaxBlock ){
