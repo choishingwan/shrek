@@ -69,6 +69,7 @@ public:
         size_t Getbp() const;
         size_t GetregionSize() const;
         size_t GetperfectId () const;
+        size_t GetblockInfo() const;
         double GetsampleSize() const;
         double Getoriginal() const;
         double Getbeta() const;
@@ -84,6 +85,7 @@ public:
         void Setvariance(double const sigma, double const sigmaSquared, double const sigmaPowerThree, double const sigmaPowerFour );
         void SetadditionVariance(double i );
         void Setsign(int directionEffect);
+        void SetblockInfo(size_t blockInfo);
         static void addDirection(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList,std::string dirFile);
         /** \brief Function use to clean the pointers from the vector
          *  \param [in] snpList, the vector containing the snp pointers
@@ -101,6 +103,7 @@ private:
         std::string m_chr;
         std::string m_rs;
         size_t m_bp;
+        size_t m_blockInfo;
         int m_sign;
         double m_sampleSize;
         double m_original;

@@ -24,6 +24,7 @@ std::string Snp::GetrsId() const { return m_rs; }
 size_t Snp::GetperfectId() const { return m_perfectLdId; }
 size_t Snp::Getbp() const { return m_bp; }
 size_t Snp::GetregionSize() const {return m_regionFlag.size(); }
+size_t Snp::GetblockInfo() const {return m_blockInfo; }
 size_t Snp::GetmaxSampleSize() {return Snp::m_maxSampleSize; }
 double Snp::GetsampleSize() const { return m_sampleSize; }
 double Snp::Getoriginal() const { return m_original; }
@@ -40,6 +41,7 @@ void Snp::Setheritability(double heritability ) {
 
 }
 void Snp::Setvariance(double i){ m_variance = i; }
+void Snp::SetblockInfo(size_t blockInfo){m_blockInfo = blockInfo;}
 void Snp::SetadditionVariance(double i){ m_additionVariance = i; }
 void Snp::Setvariance(double const sigma, double const sigmaSquared, double const sigmaPowerThree, double const sigmaPowerFour ){
     m_variance = sigma;

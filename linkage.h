@@ -81,7 +81,6 @@ class Linkage
 	private:
         Eigen::MatrixXd m_linkage;
         Eigen::MatrixXd m_linkageSqrt;
-        Eigen::VectorXd m_fullChi;
         size_t m_thread;
         std::vector<size_t> m_perfectLd; //Store the remove index of on matrix level
         std::vector<Snp*> *m_snpList;

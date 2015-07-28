@@ -28,14 +28,6 @@ size_t Linkage::cols() const { return m_linkage.cols(); }
 Eigen::MatrixXd Linkage::block(size_t blockStart, size_t lengthOfBlock){ return m_linkage.block(blockStart, blockStart, lengthOfBlock, lengthOfBlock); }
 Eigen::MatrixXd Linkage::blockSqrt(size_t blockStart, size_t lengthOfBlock){ return m_linkageSqrt.block(blockStart, blockStart, lengthOfBlock, lengthOfBlock); }
 
-void Linkage::computeSqrtChi(std::map<std::string, size_t> *m_snpIndex){
-    std::map<std::string, size_t>::iterator iter;
-    m_fullChi = Eigen::VectorXd::Zero(m_snpIndex->size());
-    for(iter = (*m_snpIndex).begin(); iter != (*m_snpIndex).end(); ++iter){
-        m_fullChi(iter->second)  =(*m_snpList)[iter->second]->GetsignedSqrtChiSq();
-    }
-}
-
 
 void Linkage::triangularThread( const size_t startBlock, const size_t endBlock, bool correction, std::deque<Genotype*> &genotype){
     //Make the thread region

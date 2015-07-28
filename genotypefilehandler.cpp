@@ -140,7 +140,6 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
 
                     if(currentMaxBlock < locList.size()*safeBlockRange) currentMaxBlock = locList.size()*safeBlockRange;
 					if(currentMaxBlock%3 != 0){
-                            std::cerr<< currentMaxBlock << std::endl;
                         currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
 					}
 					if(stdOut) std::cerr <<prevChr << "\t" << currentMaxBlock <<"\t";
@@ -205,17 +204,18 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
                             c+=2;
                         }
                     }
-                    double currentMaf = (alleleCount+0.0)/(2*m_ldSampleSize*1.0);
-                    currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
-                    //remove snps with maf too low
-                    if(maf >= 0.0 && maf > currentMaf){
-                        m_inclusion.back()= -1;
-                        std::cerr << "Snp: " << rs << " not included due to maf filtering" << std::endl;
-                    }
-                    else{
-                        if(m_chrProcessCount.find(chr)==m_chrProcessCount.end()) m_chrProcessCount[chr] = 1;
-                        else m_chrProcessCount[chr]++;
-                    }
+                }
+
+                double currentMaf = (alleleCount+0.0)/(2*m_ldSampleSize*1.0);
+                currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
+                //remove snps with maf too low
+                if(maf >= 0.0 && maf > currentMaf){
+                    m_inclusion.back()= -1;
+                    std::cerr << "Snp: " << rs << " not included due to maf filtering" << std::endl;
+                }
+                else if(m_inclusion.back() != -1){
+                    if(m_chrProcessCount.find(chr)==m_chrProcessCount.end()) m_chrProcessCount[chr] = 1;
+                    else m_chrProcessCount[chr]++;
                 }
             }
             else{
@@ -226,7 +226,6 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
     //Only do this if we still have Snps left
     if(currentMaxBlock < locList.size()*safeBlockRange) currentMaxBlock = locList.size()*safeBlockRange;
     if(currentMaxBlock%3 != 0){
-        std::cerr << currentMaxBlock << std::endl;
         currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
     }
     if(stdOut) std::cerr << prevChr << "\t" << currentMaxBlock << "\t";
@@ -260,6 +259,43 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
     }
 	//Initialize the variable for getSnps
 	m_processed = 0;
+	//Now calculate the block start size and update the snps accordingly
+    //For each chromosome we will need to have the block information
+
+    //Check m_chrprocessCount
+    size_t index = 0;
+    for(size_t i = 0; i < m_chrExists.size(); ++i){
+        std::string chr = m_chrExists[i];
+        if(m_chrProcessCount.find(chr)!= m_chrProcessCount.end()){
+            if(m_chrCount.find(chr)!=m_chrCount.end()){
+                //Build the vector first
+                std::vector<size_t> blockInfo(m_chrProcessCount[chr],3.0);
+                size_t block  = m_blockSizeTract[chr]/3;
+                std::fill_n(blockInfo.begin(), block*2, 2.0);
+                std::fill_n(blockInfo.begin(), block, 1.0);
+                std::fill_n(blockInfo.begin()+(blockInfo.size()-block*2), block*2, 2.0);
+                std::fill_n(blockInfo.begin()+(blockInfo.size()-block), block, 1.0);
+                size_t blockIter =0;
+                for(size_t j = 0; j < m_chrCount[chr]; ++j){
+                    if(m_inclusion[j+index]!=-1){
+                        (*snpList).at(m_inclusion[j+index])->SetblockInfo(blockInfo[blockIter]);
+                        blockIter++;
+                    }
+                }
+
+                index+= m_chrCount[chr];
+            }
+            else{
+                throw "Unexpected error";
+            }
+        }
+        else{
+            //There is nothing to do with the current chromosome;
+            if(m_chrCount.find(chr) != m_chrCount.end()){
+                index+= m_chrCount[chr];
+            }
+        }
+    }
 }
 
 GenotypeFileHandler::~GenotypeFileHandler(){}
@@ -335,6 +371,13 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 
 
 ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &prevResidual, size_t &blockSize){
+    /** Now that we know exactly how many SNPs are in each chromosome
+     *  and how many SNPs that we need from each chromosome, we can
+     *  extract the SNPs in a more efficient and easy to understand
+     *  manner. Will need to re write this function yet again
+     */
+
+
 	//We will get snps according to the distance
 	//We want to use flanking distance, e.g. getting the 1mb flanking on the both side
 	bool skipChromosome=false;
@@ -444,6 +487,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
                 processSize = blockSize/3*m_thread; //This is the expected number of snps to be processed
                 prevResidual =0; //default amount of residule
                 if(genotype.size() != 0){
+                    std::cerr << m_chrExists.front() << "\t" << genotype.size() << std::endl;
                     throw "Unexpected genotype size. If the chromosome is useless, then there shouldn't be any recorded Snps";
                 }
                 if(chromosomeStart){
