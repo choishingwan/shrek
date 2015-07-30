@@ -1,6 +1,6 @@
 #include "linkage.h"
+//Eigen::MatrixXd Linkage::m_testing = Eigen::MatrixXd::Zero(3000,3000);
 
-Eigen::MatrixXd Linkage::m_testing = Eigen::MatrixXd::Zero(3000,3000);
 Linkage::Linkage(){
     m_perfectLd =std::vector<size_t>();
     m_snpLoc = nullptr;
@@ -184,7 +184,7 @@ void Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResid
         for(size_t i = 0; i < numOfSnp; ++i){
             m_linkage(i,i) = 1.0;
             m_linkageSqrt(i,i) = 1.0;
-            for(size_t j = numOfSnp-1; j > i; --j){ //invert the direction so that we can do it faster
+            for(size_t j = i+1; j < numOfSnp; ++j){ //invert the direction so that we can do it faster
                 if(m_linkage(i,j) == 0.0){ //This location was not calculated before else it will not be exactly 0.0;
                     double rSquare =0.0;
                     double r = 0.0;
@@ -310,7 +310,7 @@ void Linkage::Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc
 
 }
 
-Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::MatrixXd *variance, size_t sampleSize, size_t snpStart){
+Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::MatrixXd *variance,  size_t sampleSize, size_t snpStart){
     /** Perform the eigen value decomposition here */
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     /** Calculate the tolerance threshold */
@@ -337,7 +337,26 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd cons
         if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
+/*
+    Eigen::VectorXd effectiveNumber = Eigen::VectorXd::Constant(length,1.0);
+    double eNorm = effectiveNumber.norm();
+    Eigen::VectorXd effectiveResult = rInverse*effectiveNumber;
+    error = m_linkage.block(start, start, length, length)*effectiveResult-effectiveNumber;
+    relative_error = error.norm()/eNorm;
+    prev_error = relative_error+1;
+    update=effectiveResult;
+    while(relative_error < prev_error){
+        prev_error = relative_error;
+        update.noalias()=rInverse*(-error);
+        relative_error = 0.0;
+        error.noalias()= m_linkage.block(start, start, length, length)*(effectiveResult+update) - effectiveNumber;
+        relative_error = error.norm() / eNorm;
+        if(relative_error < 1e-300) relative_error = 0;
+        effectiveResult = effectiveResult+update;
+    }
 
+    (*effectiveReturnResult) = effectiveResult;
+    */
     /** Here we try to calculate the variance */
     Eigen::MatrixXd ncpEstimate = (4*m_linkageSqrt.block(start, start, length, length)).array()*((*sqrtChiSq).segment(start, length)*(*sqrtChiSq).segment(start, length).transpose()).array();
     Eigen::VectorXd minusF = (Eigen::VectorXd::Constant(length, 1.0)-(*betaEstimate).segment(start, length));
@@ -345,21 +364,21 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd cons
         minusF(i) = minusF(i)/((double)sampleSize-2.0+((*sqrtChiSq).segment(start, length))(i)*((*sqrtChiSq).segment(start, length))(i));
     }
     (*variance).noalias() = (rInverse*minusF.asDiagonal()*(ncpEstimate-2*m_linkage.block(start, start, length, length))*minusF.asDiagonal()*rInverse);
-    /*
-    std::ofstream DEBUG;
-    DEBUG.open("r.matrix");
-    DEBUG << m_linkageSqrt << std::endl;
-    DEBUG.close();
-    DEBUG.open("r2.matrix");
-    DEBUG << m_linkage << std::endl;
-    DEBUG.close();
-    DEBUG.open("inverse.matrix");
-    DEBUG << rInverse << std::endl;
-    DEBUG.close();
-    DEBUG.open("left.matrix");
-    DEBUG << ncpEstimate << std::endl;
-    DEBUG.close();
-*/
+
+    //std::ofstream DEBUG;
+    //DEBUG.open("r.matrix");
+    //DEBUG << m_linkageSqrt << std::endl;
+    //DEBUG.close();
+    //DEBUG.open("r2.matrix");
+    //DEBUG << m_linkage << std::endl;
+    //DEBUG.close();
+    //DEBUG.open("inverse.matrix");
+    //DEBUG << rInverse << std::endl;
+    //DEBUG.close();
+    //DEBUG.open("left.matrix");
+    //DEBUG << ncpEstimate << std::endl;
+    //DEBUG.close();
+
     return result;
 }
 

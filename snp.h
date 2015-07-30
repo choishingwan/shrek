@@ -74,11 +74,13 @@ public:
         double Getoriginal() const;
         double Getbeta() const;
         double Getheritability() const;
+        double GeteffectiveNumber() const;
         double GetsignedSqrtChiSq() const;
         double Getvariance() const;
         bool Concordant(std::string chr, size_t bp, std::string rsId) const;
         bool GetFlag(size_t index) const;
         void Setheritability(double heritability);
+        void SeteffectiveNumber(double effective);
         void setFlag(size_t index, bool value);
         void shareHeritability( Snp* i );
         void Setvariance(double i );

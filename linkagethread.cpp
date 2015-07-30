@@ -18,17 +18,16 @@ void LinkageThread::triangularProcess(){
         (*m_ldMatrix)(j,j) = 1.0;
         (*m_ldMatrixSqrt)(j,j) = 1.0;
 
-        for(size_t k = m_boundEnd-1; k > j; --k){
-            if((*m_ldMatrix)(j,k) == 0.0){ //If 0.0, then it is new and has never been calculated before
-                double rSquare= 0.0;
-                double r = 0.0;
-                (*m_genotype)[j]->GetbothR( (*m_genotype)[k], m_correction, r, rSquare);
-                (*m_ldMatrix)(j, k) = rSquare;
-                (*m_ldMatrix)(k,j) = rSquare;
-                (*m_ldMatrixSqrt)(j, k) = r;
-                (*m_ldMatrixSqrt)(k,j) = r;
-            }
-            else break;
+        //for(size_t k = m_boundEnd-1; k > j; --k){
+        for(size_t k = j+1; k < m_boundEnd; ++k){
+            double rSquare= 0.0;
+            double r = 0.0;
+            (*m_genotype)[j]->GetbothR( (*m_genotype)[k], m_correction, r, rSquare);
+            (*m_ldMatrix)(j, k) = rSquare;
+            (*m_ldMatrix)(k,j) = rSquare;
+            (*m_ldMatrixSqrt)(j, k) = r;
+            (*m_ldMatrixSqrt)(k,j) = r;
+
         }
     }
     LinkageThread::mtx.lock();
@@ -40,12 +39,12 @@ void LinkageThread::rectangularProcess(){
 
     std::vector<size_t> perfectLd;
     for(size_t i = m_snpStart; i < m_snpEnd; ++i){
-        for(size_t j = m_boundEnd-1; j >= m_boundStart; --j){
+        for(size_t j = m_boundStart; j < m_boundEnd; ++j){
             if(j == i){
                 (*m_ldMatrix)(i,i) = 1.0; //Let's just assume that it is duplicated
                 (*m_ldMatrixSqrt)(i,i) = 1.0;
             }
-            else if((*m_ldMatrix)(i,j) == 0.0){
+            else{
                 double rSquare=0.0;
                 double r =0.0;
                 (*m_genotype)[i]->GetbothR((*m_genotype)[j],m_correction, r, rSquare);
@@ -55,7 +54,6 @@ void LinkageThread::rectangularProcess(){
 				(*m_ldMatrixSqrt)(j,i) = r;
 
             }
-            else break;
         }
     }
     LinkageThread::mtx.lock();

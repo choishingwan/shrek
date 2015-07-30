@@ -1,7 +1,7 @@
 #include "genotypefilehandler.h"
 
 size_t GenotypeFileHandler::GetsampleSize() const { return m_ldSampleSize; }
-size_t GenotypeFileHandler::GetestimateSnpTotal() const { return m_inputSnp; }
+size_t GenotypeFileHandler::GetestimateSnpTotal() const { return m_expectedNumberOfSnp; }
 
 GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, size_t thread, std::string outPrefix):m_genotypeFilePrefix(genotypeFilePrefix), m_thread(thread), m_outPrefix(outPrefix){
 	m_defaultDistance=2000000;
@@ -67,7 +67,7 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
     while(std::getline(bimFile, line)){
         line = usefulTools::trim(line);
         if(!line.empty()){
-            m_expectedNumberOfSnp++;
+            //m_expectedNumberOfSnp++;
             std::vector<std::string> token;
             usefulTools::tokenizer(line, "\t ", &token);
             if(token.size() >=6){
@@ -268,6 +268,7 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
     for(size_t i = 0; i < m_chrExists.size(); ++i){
         std::string chr = m_chrExists[i];
         if(m_chrProcessCount.find(chr)!= m_chrProcessCount.end()){
+            m_expectedNumberOfSnp +=m_chrProcessCount[chr];
             if(m_chrCount.find(chr)!=m_chrCount.end()){
                 //Build the vector first
                 std::vector<size_t> blockInfo(m_chrProcessCount[chr],3.0);
@@ -302,6 +303,7 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
             }
         }
     }
+
 }
 
 GenotypeFileHandler::~GenotypeFileHandler(){}
@@ -404,7 +406,9 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
      *  extract the SNPs in a more efficient and easy to understand
      *  manner. Will need to re write this function yet again
      */
-
+    if(m_chrExists.empty()){
+        return completed;
+    }
     while(m_chrProcessCount.find(m_chrExists.front())==m_chrProcessCount.end()){
         //While we have nothing to do, skip chromosome
         skipSnps(m_chrCount[m_chrExists.front()]);
@@ -509,7 +513,6 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
         }
     }
     //Now we start processing because there are things to do
-
     chromosomeEnd=true;
 	return completed;
 

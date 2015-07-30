@@ -24,38 +24,34 @@ void SnpEstimation::Estimate(){
         //Work one by one first.
 		process = m_genotypeFileHandler->getSnps(genotype, snpLoc, m_snpList, chromosomeStart, chromosomeEnd, m_maf,prevResidual, blockSize);
 
-		size_t workSize = blockSize/3*m_thread;
-		if(chromosomeStart) workSize +=2/3*blockSize+blockSize;
-		if(workSize > snpLoc.size()) workSize = snpLoc.size();
-		numProcessed+= workSize;
-        SnpEstimation::loadbar(numProcessed,totalNum);
-		if(process == completed){
+		if(process == completed && !chromosomeEnd){
 			m_regionInfo->Debuffer();
 		}
 		else{
 			//Now calculate the LD matrix
 			linkageMatrix->Initialize(genotype, prevResidual, blockSize);
 			linkageMatrix->Construct(genotype, prevResidual, blockSize, m_correction);
-            numProcessed+= workSize; //Finished the LD construction-+
-            SnpEstimation::loadbar(numProcessed,totalNum);
 
             m_regionInfo->CleanBuffer();
             ProcessCode decomposeProcess = decompositionHandler->Decompose(blockSize, snpLoc, genotype, chromosomeStart, chromosomeEnd);
-            numProcessed+= workSize; //Finished the LD construction
-            SnpEstimation::loadbar(numProcessed,totalNum);
+
 			if(decomposeProcess == fatalError) throw "Fatal error with Decomposition";
+            numProcessed+= genotype.size(); //Finished the LD construction
             if(!chromosomeEnd){
 				if(blockSize > genotype.size()) throw "When block size is bigger than the number of genotype, it must be the end of chromosome";
 				size_t retain = blockSize/3*2;
 				Genotype::clean(genotype, retain);
 				size_t removeCount = snpLoc.size() - retain;
 				for(size_t i = 0; i < removeCount; ++i)	snpLoc.pop_front();
+				numProcessed-=retain;
             }
             else{
                 m_regionInfo->Debuffer();
                 Genotype::clean(genotype,0);
                 snpLoc.clear();
             }
+
+            SnpEstimation::loadbar(numProcessed,totalNum);
 		}
         if(chromosomeStart && !chromosomeEnd){
             chromosomeStart =false;
@@ -106,7 +102,7 @@ void SnpEstimation::Getresult(std::string outputPrefix){
             }
         }
     }
-
+    //std::cerr << "Effective: " << effectiveNumber << std::endl;
     totalSum *= Snp::Getadjustment();
     for(size_t i = 0; i <regionEstimate.size(); ++i){
         regionEstimate[i] *= Snp::Getadjustment();

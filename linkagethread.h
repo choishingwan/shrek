@@ -16,7 +16,7 @@
 #include "configure.h"
 #include "genotype.h"
 #include "snp.h"
-
+#include <math.h>
 
 /** \class LinkageThread
  *  \brief The multi-threading component of the Linkage class

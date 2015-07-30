@@ -29,7 +29,7 @@ void DecompositionThread::fullProcess(Eigen::MatrixXd const * const variance, Ei
         }
     }
 	decomposeMtx.lock();
-	std::cerr << "Full process" << std::endl;
+	//std::cerr << "Full process" << std::endl;
 		for(size_t i = 0; i < m_regionInfo->GetnumRegion(); ++i){
             m_regionInfo->Addvariance(regionVariance.at(i), i);
      	}
@@ -72,7 +72,7 @@ void DecompositionThread::chromosomeStartProcess(Eigen::MatrixXd const * const v
         }
     }
 	decomposeMtx.lock();
-	std::cerr << "Start of block" << std::endl;
+	//std::cerr << "Start of block" << std::endl;
 		for(size_t i = 0; i < m_regionInfo->GetnumRegion(); ++i){
             m_regionInfo->Addvariance(regionVariance.at(i), i);
      	}
@@ -111,7 +111,7 @@ void DecompositionThread::normalProcess(Eigen::MatrixXd const * const variance, 
         }
     }
 	decomposeMtx.lock();
-	std::cerr << "Normal parts" << std::endl;
+	//std::cerr << "Normal parts" << std::endl;
 		for(size_t i = 0; i < m_regionInfo->GetnumRegion(); ++i){
             m_regionInfo->Addvariance(regionVariance.at(i), i);
      	}
@@ -154,7 +154,7 @@ void DecompositionThread::endBlockProcess(Eigen::MatrixXd const * const variance
     }
 
 	decomposeMtx.lock();
-	std::cerr << "End block"<< std::endl;
+	//std::cerr << "End block"<< std::endl;
 		for(size_t i = 0; i < m_regionInfo->GetnumRegion(); ++i){
             m_regionInfo->Addvariance(regionVariance.at(i),i);
      	}
@@ -168,7 +168,9 @@ void DecompositionThread::solve(){
     if(betaLength-m_start-m_length < m_length/3) processLength = betaLength-m_start;
     Eigen::MatrixXd variance;
 	Eigen::VectorXd result;
+	decomposeMtx.lock();
     result = m_linkage->solve(m_start, processLength, m_betaEstimate, m_sqrtChiSq, &variance, Snp::GetmaxSampleSize(),(*m_snpLoc)[m_start]);
+    decomposeMtx.unlock();
     size_t first = (*m_snpList)[(*m_snpLoc)[m_start]]->GetblockInfo();
     size_t last = (*m_snpList)[(*m_snpLoc)[m_start+processLength-1]]->GetblockInfo();
     if(first == 1 && last == 1) fullProcess(&variance, &result);

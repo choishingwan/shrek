@@ -35,10 +35,12 @@ double Snp::Getbeta() const {
 double Snp::GetsignedSqrtChiSq() const {
 	return (*m_sqrtChiSq)/(double)(m_sqrtChiSq.use_count());
 }
-
+double Snp::GeteffectiveNumber() const { return m_effectiveNumber; }
 void Snp::Setheritability(double heritability ) {
      (*m_heritability) = heritability;
-
+}
+void Snp::SeteffectiveNumber(double effective){
+    m_effectiveNumber = effective;
 }
 void Snp::Setvariance(double i){ m_variance = i; }
 void Snp::SetblockInfo(size_t blockInfo){m_blockInfo = blockInfo;}

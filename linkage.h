@@ -20,6 +20,7 @@ class LinkageThread;
 #include <limits>
 #include <map>
 #include <complex>
+#include <math.h>
 #include "configure.h"
 #include "genotype.h"
 #include "linkagethread.h"
@@ -76,7 +77,8 @@ class Linkage
         void setThread(size_t thread);
 		void print();
         void computeSqrtChi(std::map<std::string, size_t> *m_snpIndex);
-		static Eigen::MatrixXd m_testing;
+		//static Eigen::MatrixXd m_testing;
+
 	protected:
 	private:
         Eigen::MatrixXd m_linkage;
