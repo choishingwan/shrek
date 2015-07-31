@@ -114,6 +114,7 @@ class Command
         size_t m_chrIndex; //!< the column containing the chromosome information
         size_t m_rsIndex; //!< the column containing the rs-id
         size_t m_sampleSizeIndex; //!< the column containing the sample size information. Not use if sample size is specified
+        size_t m_distance; //!< the distance between snps. Any snps further than this is considered as invalid
         double m_prevalence; //!< the prevalence
         double m_maf; //!< the maf filtering threshold. Snps with maf less then this threshold will be filtered out
         double m_extremeAdjust; //!< the extreme adjustment parameter

@@ -185,16 +185,15 @@ void Linkage::Construct(std::deque<Genotype*> &genotype, const size_t &prevResid
             m_linkage(i,i) = 1.0;
             m_linkageSqrt(i,i) = 1.0;
             for(size_t j = i+1; j < numOfSnp; ++j){ //invert the direction so that we can do it faster
-                if(m_linkage(i,j) == 0.0){ //This location was not calculated before else it will not be exactly 0.0;
-                    double rSquare =0.0;
-                    double r = 0.0;
+                double rSquare =0.0;
+                double r = 0.0;
+                //if(fabs((*m_snpList)[(*m_snpLoc)[i]]->Getbp()-(*m_snpList)[(*m_snpLoc)[j]]->Getbp()) <= 2000000){
                     genotype[i]->GetbothR(genotype[j], correction, r, rSquare);
-                    m_linkage(i,j) = rSquare;
-                    m_linkage(j,i) = rSquare;
-                    m_linkageSqrt(i,j) = r;
-                    m_linkageSqrt(j,i) = r;
-                }
-                else break; //Already calculated before
+                //}
+                m_linkage(i,j) = rSquare;
+                m_linkage(j,i) = rSquare;
+                m_linkageSqrt(i,j) = r;
+                m_linkageSqrt(j,i) = r;
             }
         }
     }
@@ -310,7 +309,7 @@ void Linkage::Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc
 
 }
 
-Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::MatrixXd *variance,  size_t sampleSize, size_t snpStart){
+Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::MatrixXd *variance,  Eigen::VectorXd *effectiveReturnResult,  size_t sampleSize, size_t snpStart){
     /** Perform the eigen value decomposition here */
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     /** Calculate the tolerance threshold */
@@ -337,7 +336,7 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd cons
         if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
-/*
+
     Eigen::VectorXd effectiveNumber = Eigen::VectorXd::Constant(length,1.0);
     double eNorm = effectiveNumber.norm();
     Eigen::VectorXd effectiveResult = rInverse*effectiveNumber;
@@ -356,7 +355,7 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd cons
     }
 
     (*effectiveReturnResult) = effectiveResult;
-    */
+
     /** Here we try to calculate the variance */
     Eigen::MatrixXd ncpEstimate = (4*m_linkageSqrt.block(start, start, length, length)).array()*((*sqrtChiSq).segment(start, length)*(*sqrtChiSq).segment(start, length).transpose()).array();
     Eigen::VectorXd minusF = (Eigen::VectorXd::Constant(length, 1.0)-(*betaEstimate).segment(start, length));

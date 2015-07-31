@@ -56,9 +56,11 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
         //Eigen::MatrixXd variance = Eigen::MatrixXd::Zero(processSize, processSize);
         Eigen::MatrixXd variance;
 		Eigen::VectorXd result;
-		result = m_linkage->solve(0, processSize, &betaEstimate, &chiSq, &variance, Snp::GetmaxSampleSize(),snpLoc[0]);
+		Eigen::VectorXd effectiveNumber;
+		result = m_linkage->solve(0, processSize, &betaEstimate, &chiSq, &variance,&effectiveNumber, Snp::GetmaxSampleSize(),snpLoc[0]);
         for(size_t i = 0; i < processSize; ++i){
             (*m_snpList).at(snpLoc.at(i))->Setheritability(result(i));
+            (*m_snpList).at(snpLoc.at(i))->SeteffectiveNumber(effectiveNumber(i));
             (*m_snpList).at(snpLoc.at(i))->Setvariance(variance(i,i));
             for(size_t j = 0; j < processSize;++j){
                 double covariance = variance(i,j);

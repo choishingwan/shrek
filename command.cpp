@@ -57,6 +57,7 @@ Command::Command(){
     m_sampleSize=0;
 	m_caseSize=0;
 	m_controlSize=0;
+	m_distance = 2000000;
 	m_cIndex=7;
     m_tIndex=7;
     m_prevalence=1.0;
@@ -181,7 +182,7 @@ void Command::initialize(int argc, char* argv[]){
         throw "You have not provided any arguments. Please provide all the required arguments";
     }
 	m_programmeName =argv[0];
-	static const char *optString = "a:b:c:C:d:e:f:Hh?k:l:L:M:m:no:p:q:R:r:t:s:uvx:";
+	static const char *optString = "a:b:c:C:d:e:f:Hh?k:l:L:M:m:no:p:q:R:r:i:t:s:uvx:";
 	static const struct option longOpts[]={
 		{"case",required_argument,NULL,'a'},
 		{"bfile",required_argument,NULL,'b'},
@@ -195,6 +196,7 @@ void Command::initialize(int argc, char* argv[]){
 		{"region",required_argument,NULL,'L'},
 		{"maxBlock",required_argument,NULL,'M'},
 		{"minBlock",required_argument,NULL,'m'},
+		{"distance", required_argument, NULL, 'i'},
 		{"no_correct",no_argument,NULL,'n'},
 		{"out",required_argument,NULL,'o'},
 		{"pfile",required_argument,NULL,'p'},
@@ -248,6 +250,9 @@ void Command::initialize(int argc, char* argv[]){
  				printUsage();
                 throw 0;
 				break;
+            case 'i':
+                m_distance = atoi(optarg);
+                break;
 			case 'k':
 				m_prevalence = atof(optarg);
 				m_providedPrevalence =true;

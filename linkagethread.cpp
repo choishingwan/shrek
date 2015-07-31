@@ -22,7 +22,9 @@ void LinkageThread::triangularProcess(){
         for(size_t k = j+1; k < m_boundEnd; ++k){
             double rSquare= 0.0;
             double r = 0.0;
-            (*m_genotype)[j]->GetbothR( (*m_genotype)[k], m_correction, r, rSquare);
+            //if(fabs((int)((*m_snpList)[(*m_snpLoc)[k]]->Getbp()-(*m_snpList)[(*m_snpLoc)[j]]->Getbp())) <= 2000000){
+                (*m_genotype)[j]->GetbothR( (*m_genotype)[k], m_correction, r, rSquare);
+            //}
             (*m_ldMatrix)(j, k) = rSquare;
             (*m_ldMatrix)(k,j) = rSquare;
             (*m_ldMatrixSqrt)(j, k) = r;
@@ -47,7 +49,9 @@ void LinkageThread::rectangularProcess(){
             else{
                 double rSquare=0.0;
                 double r =0.0;
-                (*m_genotype)[i]->GetbothR((*m_genotype)[j],m_correction, r, rSquare);
+                //if(fabs((int)((*m_snpList)[(*m_snpLoc)[i]]->Getbp()-(*m_snpList)[(*m_snpLoc)[j]]->Getbp())) <= 2000000){
+                    (*m_genotype)[i]->GetbothR((*m_genotype)[j],m_correction, r, rSquare);
+               // }
 				(*m_ldMatrix)(i,j) = rSquare;
 				(*m_ldMatrix)(j,i) = rSquare;
 				(*m_ldMatrixSqrt)(i,j) = r;

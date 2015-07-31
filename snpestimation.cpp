@@ -85,24 +85,27 @@ SnpEstimation::~SnpEstimation()
 void SnpEstimation::Getresult(std::string outputPrefix){
     size_t regionSize = m_regionInfo->GetnumRegion();
     std::vector<double> regionEstimate(regionSize, 0.0);
+    std::vector<double> regionEffect(regionSize, 0.0);
     size_t nSnp = 0;
     size_t index;
+    size_t sampleSize = Snp::GetmaxSampleSize();
     std::map<std::string, size_t>::iterator iter;
     double totalSum = 0.0;
        for(iter= m_snpIndex->begin(); iter != m_snpIndex->end(); ++iter){
 		index =iter->second;
         double num = (*m_snpList).at(index)->Getheritability();
+        double eff =(*m_snpList).at(index)->GeteffectiveNumber();
         totalSum+= num;
         if((*m_snpList).at(index)->GetFlag(0)){
 			nSnp++;
             for(size_t j = 0; j < regionSize;++j){
                 if((*m_snpList).at(index)->GetFlag(j)){
                     regionEstimate[j]+= num;
+                    regionEffect[j]+= eff;
                 }
             }
         }
     }
-    //std::cerr << "Effective: " << effectiveNumber << std::endl;
     totalSum *= Snp::Getadjustment();
     for(size_t i = 0; i <regionEstimate.size(); ++i){
         regionEstimate[i] *= Snp::Getadjustment();
@@ -156,7 +159,8 @@ void SnpEstimation::Getresult(std::string outputPrefix){
             std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
 			for(size_t i =0; i < regionEstimate.size(); ++i){
 				std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i, Snp::Getadjustment()) << std::endl;
-				resSum << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i, Snp::Getadjustment()) << std::endl;
+				//resSum << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i, Snp::Getadjustment()) << std::endl;
+				resSum << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << 2*(regionEffect[i]+2.0*regionEstimate[i]*sampleSize)/((double)sampleSize*sampleSize) << std::endl;
 			}
             resSum.close();
         }
