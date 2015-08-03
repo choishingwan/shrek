@@ -327,6 +327,7 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd cons
     Eigen::VectorXd update = result;
 // TODO (swchoi#1#): Might actually want to add a hard termination here. E.g. terminate after X cycles ...
 //
+
     while(relative_error < prev_error){
         prev_error = relative_error;
         update.noalias()=rInverse*(-error);
@@ -357,26 +358,14 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd cons
     (*effectiveReturnResult) = effectiveResult;
 
     /** Here we try to calculate the variance */
+    /*
     Eigen::MatrixXd ncpEstimate = (4*m_linkageSqrt.block(start, start, length, length)).array()*((*sqrtChiSq).segment(start, length)*(*sqrtChiSq).segment(start, length).transpose()).array();
     Eigen::VectorXd minusF = (Eigen::VectorXd::Constant(length, 1.0)-(*betaEstimate).segment(start, length));
     for(size_t i = 0; i < length; ++i){
         minusF(i) = minusF(i)/((double)sampleSize-2.0+((*sqrtChiSq).segment(start, length))(i)*((*sqrtChiSq).segment(start, length))(i));
     }
     (*variance).noalias() = (rInverse*minusF.asDiagonal()*(ncpEstimate-2*m_linkage.block(start, start, length, length))*minusF.asDiagonal()*rInverse);
-
-    //std::ofstream DEBUG;
-    //DEBUG.open("r.matrix");
-    //DEBUG << m_linkageSqrt << std::endl;
-    //DEBUG.close();
-    //DEBUG.open("r2.matrix");
-    //DEBUG << m_linkage << std::endl;
-    //DEBUG.close();
-    //DEBUG.open("inverse.matrix");
-    //DEBUG << rInverse << std::endl;
-    //DEBUG.close();
-    //DEBUG.open("left.matrix");
-    //DEBUG << ncpEstimate << std::endl;
-    //DEBUG.close();
+*/
 
     return result;
 }

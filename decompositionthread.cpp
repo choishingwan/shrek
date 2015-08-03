@@ -22,19 +22,23 @@ void DecompositionThread::fullProcess(Eigen::MatrixXd const * const variance, Ei
         //Don't bother, just take everything
         (*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability((*result)(i));
         (*m_snpList)[(*m_snpLoc)[m_start+i]]->SeteffectiveNumber((*effectiveReturnResult)(i));
+        /*
         for(size_t j = 0; j < actualSize; ++j){
             double covariance = (*variance)(i,j);
             for(size_t regionIndex = 0; regionIndex < regionVariance.size(); ++regionIndex){
                 regionVariance[regionIndex]+= covariance;
             }
         }
+        */
     }
+    /*
 	decomposeMtx.lock();
 	//std::cerr << "Full process" << std::endl;
 		for(size_t i = 0; i < m_regionInfo->GetnumRegion(); ++i){
             m_regionInfo->Addvariance(regionVariance.at(i), i);
      	}
     decomposeMtx.unlock();
+    */
 }
 
 
@@ -46,6 +50,7 @@ void DecompositionThread::chromosomeStartProcess(Eigen::MatrixXd const * const v
         (*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability((*result)(i));
         (*m_snpList)[(*m_snpLoc)[m_start+i]]->SeteffectiveNumber((*effectiveReturnResult)(i));
     }
+    /*
     //middle part
     for(size_t i = 0; i < m_length; ++i){
         for(size_t j = 0; j < m_length; ++j){
@@ -79,6 +84,7 @@ void DecompositionThread::chromosomeStartProcess(Eigen::MatrixXd const * const v
             m_regionInfo->Addvariance(regionVariance.at(i), i);
      	}
     decomposeMtx.unlock();
+    */
 }
 
 void DecompositionThread::normalProcess(Eigen::MatrixXd const * const variance, Eigen::VectorXd const *const result, Eigen::VectorXd const *const effectiveReturnResult){
@@ -89,13 +95,16 @@ void DecompositionThread::normalProcess(Eigen::MatrixXd const * const variance, 
     for(size_t i =m_length/3; i < m_length/3*2; ++i){
         (*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability((*result)(i));
         (*m_snpList)[(*m_snpLoc)[m_start+i]]->SeteffectiveNumber((*effectiveReturnResult)(i));
+        /*
         for(size_t j = 0; j < m_length; ++j){
             double covariance = (*variance)(i,j);
             for(size_t regionIndex = 0; regionIndex < regionVariance.size(); ++regionIndex){
                 regionVariance[regionIndex]+= covariance;
             }
         }
+        */
     }
+    /*
     //Now the triangles
     for(size_t i = 0; i < m_length/3; ++i){
         for(size_t j = m_length/3*2; j < m_length/3*2+i+1; ++j){
@@ -119,16 +128,19 @@ void DecompositionThread::normalProcess(Eigen::MatrixXd const * const variance, 
             m_regionInfo->Addvariance(regionVariance.at(i), i);
      	}
 	decomposeMtx.unlock();
+	*/
 }
 
 void DecompositionThread::endBlockProcess(Eigen::MatrixXd const * const variance, Eigen::VectorXd const *const result, Eigen::VectorXd const *const effectiveReturnResult){
     std::vector<double> regionVariance(m_regionInfo->GetnumRegion(), 0.0);
 
-    size_t actualProcessSize = (*variance).rows();
-    for(size_t i =m_length/3; i < m_length/3*2; ++i){
+    size_t actualProcessSize = (*result).rows();
+    for(size_t i =m_length/3; i < actualProcessSize; ++i){
+        //std::cerr << "Set: " << (*m_snpLoc)[m_start+i] << "\t" << (*result)(i) << std::endl;
         (*m_snpList)[(*m_snpLoc)[m_start+i]]->Setheritability((*result)(i));
         (*m_snpList)[(*m_snpLoc)[m_start+i]]->SeteffectiveNumber((*effectiveReturnResult)(i));
     }
+    /*
     //Middle part
     for(size_t i=m_length/3; i < m_length/3*2; ++i){
         for(size_t j = 0; j< actualProcessSize; ++j){
@@ -163,6 +175,7 @@ void DecompositionThread::endBlockProcess(Eigen::MatrixXd const * const variance
             m_regionInfo->Addvariance(regionVariance.at(i),i);
      	}
     decomposeMtx.unlock();
+    */
 }
 
 void DecompositionThread::solve(){
@@ -173,9 +186,10 @@ void DecompositionThread::solve(){
     Eigen::MatrixXd variance;
 	Eigen::VectorXd result;
 	Eigen::VectorXd  effectiveReturnResult;
-	decomposeMtx.lock();
+	//decomposeMtx.lock();
+	//std::cerr << m_start << "\t" << (*m_snpLoc)[m_start] << "\t" << processLength << std::endl;
     result = m_linkage->solve(m_start, processLength, m_betaEstimate, m_sqrtChiSq, &variance, &effectiveReturnResult, Snp::GetmaxSampleSize(),(*m_snpLoc)[m_start]);
-    decomposeMtx.unlock();
+    //decomposeMtx.unlock();
     size_t first = (*m_snpList)[(*m_snpLoc)[m_start]]->GetblockInfo();
     size_t last = (*m_snpList)[(*m_snpLoc)[m_start+processLength-1]]->GetblockInfo();
     /*
