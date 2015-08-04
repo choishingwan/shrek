@@ -109,11 +109,12 @@ void SnpEstimation::Getresult(std::string outputPrefix){
     totalSum *= Snp::Getadjustment();
     for(size_t i = 0; i <regionEstimate.size(); ++i){
         regionEstimate[i] *= Snp::Getadjustment();
+        regionEffect[i] = 2.0*(regionEffect[i]*Snp::Getadjustment()*Snp::Getadjustment()+2.0*Snp::Getadjustment()*regionEstimate[i]*sampleSize)/((double)sampleSize*sampleSize);
     }
 	if(outputPrefix.empty()){
         std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
         for(size_t i =0; i < regionEstimate.size(); ++i){
-            std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << 2.0*Snp::Getadjustment()*Snp::Getadjustment()*(regionEffect[i]+2.0*regionEstimate[i]*sampleSize)/((double)sampleSize*sampleSize)  << std::endl;
+            std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << regionEffect[i]  << std::endl;
         }
     }
     else{
@@ -150,17 +151,16 @@ void SnpEstimation::Getresult(std::string outputPrefix){
             std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
 
 			for(size_t i =0; i < regionEstimate.size(); ++i){
-				std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << 2.0*Snp::Getadjustment()*Snp::Getadjustment()*(regionEffect[i]+2.0*regionEstimate[i]*sampleSize)/((double)sampleSize*sampleSize)  << std::endl;
+				std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << regionEffect[i]  << std::endl;
 			}
         }
         else{
             resSum << "Category\tPositive\tNegative\tVariance" << std::endl;
             std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;
 			for(size_t i =0; i < regionEstimate.size(); ++i){
-				std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << 2.0*Snp::Getadjustment()*Snp::Getadjustment()*(regionEffect[i]+2.0*regionEstimate[i]*sampleSize)/((double)sampleSize*sampleSize)  << std::endl;
+				std::cout << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << regionEffect[i]  << std::endl;
 				//resSum << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << m_regionInfo->Getvariance(regionEstimate[i],i, Snp::Getadjustment()) << std::endl;
-				std::cerr << Snp::Getadjustment() << "\t" << regionEffect[i] << std::endl;
-				resSum << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << 2.0*Snp::Getadjustment()*Snp::Getadjustment()*(regionEffect[i]+2.0*regionEstimate[i]*sampleSize)/((double)sampleSize*sampleSize) << std::endl;
+				resSum << m_regionInfo->Getname(i) << "\t" << regionEstimate[i] << "\t" << totalSum-regionEstimate[i] << "\t" << regionEffect[i] << std::endl;
 			}
             resSum.close();
         }
