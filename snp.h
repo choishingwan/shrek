@@ -77,6 +77,7 @@ public:
         double GeteffectiveNumber() const;
         double GetsignedSqrtChiSq() const;
         double Getvariance() const;
+        double GetsnpLDSC() const;
         bool Concordant(std::string chr, size_t bp, std::string rsId) const;
         bool GetFlag(size_t index) const;
         void Setheritability(double heritability);
@@ -84,6 +85,7 @@ public:
         void setFlag(size_t index, bool value);
         void shareHeritability( Snp* i );
         void Setvariance(double i );
+        void SetsnpLDSC(double i );
         void Setvariance(double const sigma, double const sigmaSquared, double const sigmaPowerThree, double const sigmaPowerFour );
         void SetadditionVariance(double i );
         void Setsign(int directionEffect);
@@ -114,6 +116,7 @@ private:
         double m_additionVariance;
         double m_sigmaPowerThree;
         double m_sigmaPowerFour;
+        double m_snpLDSC;
         size_t m_perfectLdId;
         //std::shared_ptr<double> m_ncp;
         std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD

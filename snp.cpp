@@ -11,6 +11,7 @@ Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double o
 	m_effectiveNumber=0.0;
 	m_additionVariance =0.0;
 	m_variance =0.0;
+	m_snpLDSC = 0.0;
 	m_targetClass = this;
 	m_sign = usefulTools::signum(original);
 	m_perfectLdId= 0;
@@ -36,11 +37,15 @@ double Snp::GetsignedSqrtChiSq() const {
 	return (*m_sqrtChiSq)/(double)(m_sqrtChiSq.use_count());
 }
 double Snp::GeteffectiveNumber() const { return m_effectiveNumber; }
+double Snp::GetsnpLDSC() const { return m_snpLDSC; }
 void Snp::Setheritability(double heritability ) {
      (*m_heritability) = heritability;
 }
 void Snp::SeteffectiveNumber(double effective){
     m_effectiveNumber = effective;
+}
+void Snp::SetsnpLDSC(double effect){
+    m_snpLDSC = effect;
 }
 void Snp::Setvariance(double i){ m_variance = i; }
 void Snp::SetblockInfo(size_t blockInfo){m_blockInfo = blockInfo;}
@@ -130,6 +135,7 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
     if(commander->caseControl()) index=commander->GetcIndex();
     if(commander->quantitative()) index=commander->GettIndex();
     if(!commander->provideSampleSize()) sIndex= commander->GetsampleSizeIndex();
+    std::string removeSnps="";
     while(std::getline(pValue, line)){
         line =usefulTools::trim(line);
         if(!line.empty()){
@@ -143,15 +149,23 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
                 std::string rsId = token[rsIndex];
                 size_t sizeOfSample = commander->GetsampleSize();
                 if(!commander->provideSampleSize()) sizeOfSample = atoi(token[sIndex].c_str());
-                double predictedBeta = atof(token[index].c_str());
-                if(!std::isfinite(predictedBeta)){
-                    std::cerr << rsId << " does not have finite input ("<< predictedBeta <<"), will set it to zero" << std::endl;
-                    predictedBeta=0;
+                if(!usefulTools::isNumeric(token[index])){
+                    //Check if the input is a number. If it is not, then it should be filtered out.
+                    removeSnps.append(rsId);
+                    removeSnps.append(",");
                 }
-                snpList.push_back(new Snp(chr, rsId, bp, sizeOfSample, predictedBeta));
+                else{
+                    double predictedBeta = atof(token[index].c_str());
+                    if(!std::isfinite(predictedBeta)){
+                        std::cerr << rsId << " does not have finite input ("<< predictedBeta <<"), will set it to zero" << std::endl;
+                        predictedBeta=0;
+                    }
+                    snpList.push_back(new Snp(chr, rsId, bp, sizeOfSample, predictedBeta));
+                }
             }
         }
     }
+    std::cerr << "Remove: " << removeSnps << " because its statistic/p-value isn't numeric" << std::endl;
     pValue.close();
     std::sort(snpList.begin(), snpList.end(), Snp::sortSnp);
     snpList.erase( unique( snpList.begin(), snpList.end() ), snpList.end() );

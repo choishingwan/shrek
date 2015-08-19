@@ -31,7 +31,7 @@ class usefulTools{
     /** Check if file exists */
     static bool fileExists(const std::string fileName) ;
     /** Check if the string is a number */
-    static bool checkIfNumeric(const std::string seq);
+    static bool isNumeric(const std::string seq);
     /** dnorm from R */
 	static double dnorm(const double x);
 	/** qnorm from R */
@@ -46,7 +46,6 @@ class usefulTools{
     /** Functions for getting the sign of a value input, obtained from  <a href="http://stackoverflow.com/questions/1903954/is-there-a-standard-sign-function-signum-sgn-in-c-c">stackoverflow</a>  */
 	template <typename T> inline constexpr
 	static int signum(T x) { return signum(x, std::is_signed<T>()); }
-
 };
 
 #endif	/* USEFULTOOLS_H */

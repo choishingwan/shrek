@@ -54,10 +54,10 @@ class DecompositionThread
 
 		/** Function to actually handle the solving */
 		void solve();
-        void fullProcess(Eigen::MatrixXd const * const variance, Eigen::VectorXd const *const result, Eigen::VectorXd const *const effectiveReturnResult);
-        void chromosomeStartProcess(Eigen::MatrixXd const * const variance, Eigen::VectorXd const *const result, Eigen::VectorXd const *const effectiveReturnResult);
-        void normalProcess(Eigen::MatrixXd const * const variance, Eigen::VectorXd const *const result, Eigen::VectorXd const *const effectiveReturnResult);
-        void endBlockProcess(Eigen::MatrixXd const * const variance, Eigen::VectorXd const *const result, Eigen::VectorXd const *const effectiveReturnResult);
+        void fullProcess(Eigen::VectorXd const * const variance, Eigen::VectorXd const *const result, Eigen::VectorXd const *const effectiveReturnResult);
+        void chromosomeStartProcess(Eigen::VectorXd const * const variance, Eigen::VectorXd const *const result, Eigen::VectorXd const *const effectiveReturnResult);
+        void normalProcess(Eigen::VectorXd const * const variance, Eigen::VectorXd const *const result, Eigen::VectorXd const *const effectiveReturnResult);
+        void endBlockProcess(Eigen::VectorXd const * const variance, Eigen::VectorXd const *const result, Eigen::VectorXd const *const effectiveReturnResult);
 };
 
 #endif // DECOMPOSITIONTHREAD_H

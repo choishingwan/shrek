@@ -54,14 +54,16 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
             throw "Unexpected error";
         }
         //Eigen::MatrixXd variance = Eigen::MatrixXd::Zero(processSize, processSize);
-        Eigen::MatrixXd variance;
+        Eigen::VectorXd perSnpEffect;
 		Eigen::VectorXd result;
 		Eigen::VectorXd effectiveNumber;
-		result = m_linkage->solve(0, processSize, &betaEstimate, &chiSq, &variance,&effectiveNumber, Snp::GetmaxSampleSize(),snpLoc[0]);
+		result = m_linkage->solve(0, processSize, &betaEstimate, &chiSq, &perSnpEffect,&effectiveNumber, Snp::GetmaxSampleSize(),snpLoc[0]);
+		//std::cerr << "Single " << processSize << std::endl;
         for(size_t i = 0; i < processSize; ++i){
             (*m_snpList).at(snpLoc.at(i))->Setheritability(result(i));
             (*m_snpList).at(snpLoc.at(i))->SeteffectiveNumber(effectiveNumber(i));
-            (*m_snpList).at(snpLoc.at(i))->Setvariance(variance(i,i));
+            //(*m_snpList).at(snpLoc.at(i))->SetsnpEffect(perSnpEffect(i));
+            /*
             for(size_t j = 0; j < processSize;++j){
                 double covariance = variance(i,j);
                 for(size_t regionIndex = 0; regionIndex < m_regionInfo->GetnumRegion(); ++regionIndex){
@@ -71,6 +73,7 @@ ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t>
 					}
 				}
             }
+            */
         }
 
     }

@@ -43,17 +43,36 @@ bool usefulTools::fileExists(const std::string fileName){
     return file;
 }
 
-bool usefulTools::checkIfNumeric(const std::string seq) {
-      // clean out the special characters at the end of the sequence
-      std::string numSeq = clean(seq);
-      if((numSeq.at(0) == '+' || numSeq.at(0) == '-') && numSeq.length() ==1){
-        return false;
-      }
-      int j = numSeq.length()-1;
-      while ((j>=0) && ((numSeq.at(j)<='9') && (numSeq.at(j)>='0')))
-            j--;
-      if (j<=0) return true;
+bool usefulTools::isNumeric(const std::string seq) {
+    // clean out the special characters at the end of the sequence
+    std::string numSeq = trim(seq);
+    bool foundDigit = false;
+    if(isdigit(numSeq.at(0))){
+        //Continue checking until the end
+        size_t seqLength = numSeq.length();
+        for(size_t i = 1; i < seqLength; ++i){
+            if(!isdigit(numSeq.at(i)) && numSeq.at(i)=='.' && !foundDigit){
+                foundDigit=true;
+            }
+            else if(!isdigit(numSeq.at(i))){
+                return false;
+            }
+        }
+    }
+    else if((numSeq.at(0) == '+' || numSeq.at(0)=='-') && numSeq.length() != 1){
+        //There is a sign in front
+        size_t seqLength = numSeq.length();
+        for(size_t i = 1; i < seqLength; ++i){
+            if(!isdigit(numSeq.at(i)) && numSeq.at(i)=='.' && !foundDigit){
+                foundDigit=true;
+            }
+            else if(!isdigit(numSeq.at(i))){
+                return false;
+            }
+        }
+    }
       else return false;
+    return true;
 }
 
 double usefulTools::dnorm(const double x){

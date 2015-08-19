@@ -131,7 +131,7 @@ void SnpEstimation::Getresult(std::string outputPrefix){
         }
         else{
 			//We want the output in sorted format. So we will have to do extra works just to make sure the result is sorted
-            resOut << "Chr\tLoc\trsID\tOriginal\tBeta\tEstimate\tWithLD\tEffectiveNumber" << std::endl;
+            resOut << "Chr\tLoc\trsID\tOriginal\tBeta\tEstimate\tWithLD\tEffectiveNumber\tldsc" << std::endl;
             size_t index;
             std::vector<Snp*> resultSnps;
             for(iter = m_snpIndex->begin(); iter != m_snpIndex->end(); ++iter){
@@ -140,7 +140,7 @@ void SnpEstimation::Getresult(std::string outputPrefix){
             }
             std::sort(resultSnps.begin(), resultSnps.end(), Snp::sortSnp);
             for(size_t i =0; i < resultSnps.size(); ++i){
-				resOut << resultSnps[i]->Getchr() << "\t" << resultSnps[i]->Getbp() << "\t" << resultSnps[i]->GetrsId() << "\t" << resultSnps[i]->Getoriginal()<< "\t" << resultSnps[i]->Getbeta() << "\t" <<  resultSnps[i]->Getheritability() << "\t" << resultSnps[i]->GetFlag(0) << "\t" <<  resultSnps[i]->GeteffectiveNumber() << std::endl;
+				resOut << resultSnps[i]->Getchr() << "\t" << resultSnps[i]->Getbp() << "\t" << resultSnps[i]->GetrsId() << "\t" << resultSnps[i]->Getoriginal()<< "\t" << resultSnps[i]->Getbeta() << "\t" <<  resultSnps[i]->Getheritability() << "\t" << resultSnps[i]->GetFlag(0) << "\t" <<  resultSnps[i]->GeteffectiveNumber() <<"\t" << resultSnps[i]->GetsnpLDSC()<< std::endl;
                 //delete resultSnps[i]; //Avoid double deletion
             }
             resultSnps.clear();

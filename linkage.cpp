@@ -309,7 +309,7 @@ void Linkage::Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc
 
 }
 
-Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::MatrixXd *variance,  Eigen::VectorXd *effectiveReturnResult,  size_t sampleSize, size_t snpStart){
+Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::VectorXd *perSnpEffect,  Eigen::VectorXd *effectiveReturnResult,  size_t sampleSize, size_t snpStart){
     /** Perform the eigen value decomposition here */
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     /** Calculate the tolerance threshold */
@@ -356,7 +356,7 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd cons
     }
 
     (*effectiveReturnResult) = effectiveResult;
-
+    (*perSnpEffect) =m_linkage.block(start, start, length, length).colwise().sum();
     /** Here we try to calculate the variance */
     /*
     Eigen::MatrixXd ncpEstimate = (4*m_linkageSqrt.block(start, start, length, length)).array()*((*sqrtChiSq).segment(start, length)*(*sqrtChiSq).segment(start, length).transpose()).array();
