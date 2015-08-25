@@ -164,7 +164,9 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
             }
         }
     }
-    std::cerr << "Remove: " << removeSnps << " because its statistic/p-value isn't numeric" << std::endl;
+    if(!removeSnps.empty()){
+        std::cerr << "Remove: " << removeSnps << " because its statistic/p-value isn't numeric" << std::endl;
+    }
     pValue.close();
     std::sort(snpList.begin(), snpList.end(), Snp::sortSnp);
     snpList.erase( unique( snpList.begin(), snpList.end() ), snpList.end() );

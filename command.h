@@ -114,9 +114,12 @@ class Command
         size_t m_refIndex; //!< the column containing the reference allele. Only use for risk prediction
         size_t m_altIndex; //!< the column containing the alternative allele. Only use for risk prediction
         size_t m_distance; //!< the distance between snps. Any snps further than this is considered as invalid (Have not implement any function to use this information)
+        size_t m_alt; //!< the column containing the alternative allele, only used for risk prediction
+        size_t m_ref; //!< the column containing the reference allele, only used for risk prediction
         double m_prevalence; //!< the prevalence
         double m_maf; //!< the maf filtering threshold. Snps with maf less then this threshold will be filtered out
         double m_extremeAdjust; //!< the extreme adjustment parameter
+        double m_version;
         bool m_ldCorrection;//!< whether if the r square / r should be adjusted (default true)
         bool m_validate; //!< if the snp information should be validated
         bool m_isPvalue; //!< if the input is p-value instead of test statistics
@@ -131,19 +134,21 @@ class Command
         bool m_hasHeader; //!< Indicate whether if the p-value file contains header (Actually, should always contains header)
         std::string m_outputPrefix; //!< the output prefix
         std::string m_pValueFileName; //!< the p-value input file
-        std::string m_directionFile; //!< the direction file. Contain information of the direction of effect
+        std::string m_directionFile; //!< the direction file. Contain information of the direction of effect  (Now only use for risk prediction. Variance estimation is ok, but we will simplify the parameter input first)
         std::string m_genotypeFilePrefix; //!< the genotype file. Contain information of the sample for prediction
         std::string m_ldFilePrefix; //!< the file prefix of the genotype file for the ld construction
         std::string m_regionList; //!< a list of region informations
         std::string m_programmeName; //!< the programme name. Use for the help message only
         /** Function to print the usage information of the programme */
         void printUsage();
+        void printCCUsage();
+        void printQuantUsage();
+        void printRiskUsage();
         /** Function to perform general checking to for all parameters */
         bool generalCheck();
-        /** Function to check parameters specific for case control studies */
-        bool caseControlCheck();
-        /** Function to check parameters specific for quantitative studies */
-        bool quantitativeCheck();
+        void riskMode(int argc, char* argv[]);
+        void quantMode(int argc, char* argv[]);
+        void ccMode(int argc, char* argv[]);
 };
 
 #endif // COMMAND_H

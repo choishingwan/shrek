@@ -31,6 +31,7 @@ std::string Command::GetprogrammeName() const { return m_programmeName; }
 
 
 Command::Command(){
+    m_version = 0.01;
     m_hasHeader =true;
 	m_provideExtremeAdjustment = false;
 	m_providedPrevalence = false;
@@ -94,13 +95,6 @@ bool Command::generalCheck(){
         error = true;
         std::cerr << "Cannot open the p-value file, please check that the file exists" << std::endl;
     }
-    if(m_directionFile.empty() && (m_isPvalue || m_caseControl )){
-		std::cerr << "WARNING: If direction of the effect are not provided, the variance estimated will likely to be bias" << std::endl;
-    }
-    if(!m_directionFile.empty() && !usefulTools::fileExists(m_directionFile)){
-        error = true;
-        std::cerr << "Cannot open the direction file, please check that the file exists" << std::endl;
-    }
     if(m_providedMaf && (m_maf < 0.0 || m_maf > 1.0)){
         error = true;
         std::cerr << "maf must be between 0.0 and 1.0" << std::endl;
@@ -113,158 +107,58 @@ bool Command::generalCheck(){
     return error;
 }
 
-bool Command::caseControlCheck(){
-	bool error = false;
-	if(m_caseSize == 0){
-        error = true;
-        std::cerr << "Your case control study has 0 case and we cannot perform the analysis on such type of study." << std::endl;
-        std::cerr << "Please check your input is correct. Sorry." << std::endl;
-    }
-    else if(m_controlSize == 0){
-        std::cerr << "WARNING! Your case control study has 0 control and we are uncertain how will this affect the result." << std::endl;
-        std::cerr << "Please be cautious with the result" << std::endl;
-    }
-    if(m_Index == m_bpIndex || m_Index == m_chrIndex || m_Index == m_rsIndex ||
-			m_bpIndex==m_chrIndex || m_bpIndex == m_rsIndex ||
-            m_chrIndex == m_rsIndex){
-        error = true;
-        std::cerr << "Duplicated index! Please make sure the index are not duplicated!" << std::endl;
-        std::cerr << "Statistic index: " << m_Index << std::endl;
-        std::cerr << "bp index: " << m_bpIndex << std::endl;
-        std::cerr << "chr index: " << m_chrIndex << std::endl;
-        std::cerr << "rsId index: " << m_rsIndex << std::endl;
-    }
-    if(!m_providedPrevalence ){
-        error = true;
-        std::cerr << "You must provide the prevalence for case control study." << std::endl;
-    }
 
-	else if(m_provideExtremeAdjustment){
-        std::cerr << "Currently there is no support for extreme phenotype in case control study. Extreme adjustment value will have no effect" << std::endl;
-	}
-	return error;
-}
-
-bool Command::quantitativeCheck(){
-	bool error =false;
-	if(m_provideSampleSize && m_sampleSize <= 0){
-        error = true;
-        std::cerr << "Sample size provided for the quantitative study is less than or equal to zero" << std::endl;
-        std::cerr << "Please check you have the correct input" << std::endl;
-    }
-
-    if(m_Index == m_bpIndex || m_Index == m_chrIndex || m_Index == m_rsIndex || m_Index == m_sampleSizeIndex ||
-       m_bpIndex == m_chrIndex || m_bpIndex == m_rsIndex || m_bpIndex == m_sampleSizeIndex ||
-       m_chrIndex == m_rsIndex || m_chrIndex == m_sampleSizeIndex ||
-       m_rsIndex == m_sampleSizeIndex){
-        error = true;
-        std::cerr << "Duplicated index! Please make sure the index are not duplicated!" << std::endl;
-        std::cerr << "Statistic index: " << m_Index << std::endl;
-        std::cerr << "bp index: " << m_bpIndex << std::endl;
-        std::cerr << "chr index: " << m_chrIndex << std::endl;
-        std::cerr << "rsId index: " << m_rsIndex << std::endl;
-        std::cerr << "sample size index: " << m_sampleSizeIndex << std::endl;
-
-    }
-	if(m_extremeAdjust <= 0.0){
-        error = true;
-        std::cerr << "The extreme adjustment value should always be bigger than 0" << std::endl;
-	}
-	if(m_providedPrevalence ){
-        std::cerr << "Prevalence is currently not considered in quantitative study. The value of prevalence will therefore have no effect" << std::endl;
-    }
-    return error;
-
-}
-
-void Command::initialize(int argc, char* argv[]){
-    if(argc==1){
-        throw "You have not provided any arguments. Please provide all the required arguments";
-    }
-	m_programmeName =argv[0];
-	static const char *optString = "a:b:c:C:d:e:f:g:Hh?k:K:l:L:M:m:no:p:q:R:r:i:t:s:uvx:";
+void Command::riskMode(int argc, char* argv[]){
+static const char *optString = "a:b:c:f:g:Hh?i:l:M:m:no:p:r:R:t:v";
 	static const struct option longOpts[]={
-		{"case",required_argument,NULL,'a'},
+	    {"alt",required_argument,NULL, 'a'},
 		{"bfile",required_argument,NULL,'b'},
-		{"caseControl",required_argument,NULL,'c'},
-		{"chr",required_argument,NULL,'C'},
-		{"dir",required_argument,NULL,'d'},
-		{"extreme",required_argument,NULL,'e'},
+		{"chr",required_argument,NULL,'c'},
 		{"maf",required_argument,NULL,'f'},
-		{"geno",required_argument,NULL,'g'},
-		{"prevalence",required_argument,NULL,'k'},
-		{"risk",required_argument,NULL,'K'},
+		{"geno", required_argument, NULL, 'g'},
+		{"index", required_argument, NULL, 'i'},
 		{"loc",required_argument,NULL,'l'},
-		{"region",required_argument,NULL,'L'},
 		{"maxBlock",required_argument,NULL,'M'},
 		{"minBlock",required_argument,NULL,'m'},
-		{"distance", required_argument, NULL, 'i'},
 		{"no_correct",no_argument,NULL,'n'},
 		{"out",required_argument,NULL,'o'},
 		{"pfile",required_argument,NULL,'p'},
-		{"quant",required_argument,NULL,'q'},
-		{"control",required_argument,NULL,'R'},
 		{"rs",required_argument,NULL,'r'},
-		{"sampleSize",required_argument,NULL,'s'},
+		{"ref", required_argument,NULL, 'R'},
 		{"thread",required_argument,NULL,'t'},
-		{"pvalue",no_argument,NULL,'u'},
 		{"validate",no_argument,NULL,'v'},
-		{"sampleIndex",required_argument,NULL,'x'},
-		{"header",no_argument,NULL,'H'},
 		{"help",no_argument,NULL,'h'},
 		{NULL, 0, 0, 0}
 	};
-	int longIndex=0;
+    int longIndex=0;
 	int opt = 0;
 	std::string interpret="";
 	opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     while(opt!=-1){
 		switch(opt){
 			case 'a':
-				m_caseSize= atoi(optarg);
-				break;
+                m_alt = atoi(optarg)-1;
+                break;
 			case 'b':
                 m_ldFilePrefix = optarg;
                 break;
 			case 'c':
-				m_Index= atoi(optarg)-1;
-				m_caseControl = true;
-				break;
-			case 'C':
                 m_chrIndex = atoi(optarg)-1;
                 break;
-			case 'd':
-                m_directionFile = optarg;
-                break;
-			case 'e':
-				m_extremeAdjust = atof(optarg);
-				m_provideExtremeAdjustment = true;
-				break;
 			case 'f':
                 m_maf = atof(optarg);
                 m_providedMaf= true;
                 break;
-			case 'f':
+            case 'g':
                 m_genotypeFilePrefix = optarg;
                 break;
-            case 'H':
-                m_hasHeader=true;
+            case 'i':
+                m_Index = atoi(optarg)-1;;
                 break;
 			case 'h':
 			case '?':
- 				printUsage();
+ 				printRiskUsage();
                 throw 0;
-				break;
-            case 'i':
-                m_distance = atoi(optarg);
-                break;
-			case 'k':
-				m_prevalence = atof(optarg);
-				m_providedPrevalence =true;
-				break;
-			case 'K':
-				m_risk = true;
-				m_index=atoi(optarg);
 				break;
 			case 'l':
 				m_bpIndex=atoi(optarg)-1;
@@ -288,22 +182,144 @@ void Command::initialize(int argc, char* argv[]){
 			case 'p':
 				m_pValueFileName = optarg;
 				break;
-			case 'q':
-				m_Index= atoi(optarg)-1;
-				m_quantitative = true;
+			case 'r':
+				m_rsIndex = atoi(optarg)-1;
 				break;
-			case 'R':
-				m_controlSize= atoi(optarg);
+            case 'R':
+                m_ref = atoi(optarg)-1;
+			case 't':
+				m_thread = atoi(optarg);
+				break;
+			case 'v':
+				m_validate = true;
+				break;
+			default:
+				throw "Undefined operator, please use --help for more information!";
+		}
+		opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
+    }
+    bool error = generalCheck();
+    if( m_Index == m_bpIndex || m_Index == m_chrIndex || m_Index == m_rsIndex || m_Index == m_alt || m_Index == m_ref ||
+        m_bpIndex == m_chrIndex || m_bpIndex == m_rsIndex || m_bpIndex == m_alt || m_bpIndex == m_ref ||
+        m_chrIndex == m_rsIndex || m_chrIndex == m_alt || m_chrIndex == m_ref ||
+        m_alt == m_ref){
+        error = true;
+        std::cerr << "Duplicated index! Please make sure the index are not duplicated!" << std::endl;
+        std::cerr << "Statistic index: " << m_Index << std::endl;
+        std::cerr << "bp index: " << m_bpIndex << std::endl;
+        std::cerr << "chr index: " << m_chrIndex << std::endl;
+        std::cerr << "rsId index: " << m_rsIndex << std::endl;
+        std::cerr << "alt allele index: " << m_alt << std::endl;
+        std::cerr << "ref allele index: " << m_ref << std::endl;
+    }
+    if(m_genotypeFilePrefix.empty() ||!usefulTools::fileExists(m_genotypeFilePrefix)){
+        error = true;
+        std::cerr << "The genotype file of the individual are required for risk prediction" << std::endl;
+    }
+    if(!error && m_maxBlockSet && m_maxBlock%3 != 0){
+        std::cerr << "We prefer a blockSize that can be divided by 3. Will change the max block size to " << m_maxBlock+3-m_maxBlock%3 << std::endl;
+        m_maxBlock = m_maxBlock+3-m_maxBlock%3;
+    }
+    if(!error && m_minBlock > 0 && m_minBlock%3 != 0){
+        std::cerr << "We prefer a blockSize that can be divided by 3. Will change the min block size to " << m_minBlock+3-m_minBlock%3 << std::endl;
+        m_minBlock = m_minBlock+3-m_minBlock%3;
+    }
+    if(error){
+        throw "There is(are) error in the parameter input(s). Please check if you have the correct input";
+    }
+
+}
+
+
+void Command::quantMode(int argc, char* argv[]){
+    static const char *optString = "b:c:e:f:Hh?i:l:L:M:m:no:p:r:s:t:uvx:";
+	static const struct option longOpts[]={
+		{"bfile",required_argument,NULL,'b'},
+		{"chr",required_argument,NULL,'c'},
+		{"dir",required_argument,NULL,'d'},
+		{"extreme",required_argument,NULL,'e'},
+		{"maf",required_argument,NULL,'f'},
+		{"index", required_argument, NULL, 'i'},
+		{"loc",required_argument,NULL,'l'},
+		{"region",required_argument,NULL,'L'},
+		{"maxBlock",required_argument,NULL,'M'},
+		{"minBlock",required_argument,NULL,'m'},
+		{"no_correct",no_argument,NULL,'n'},
+		{"out",required_argument,NULL,'o'},
+		{"pfile",required_argument,NULL,'p'},
+		{"rs",required_argument,NULL,'r'},
+		{"sampleSize",required_argument,NULL,'s'},
+		{"thread",required_argument,NULL,'t'},
+		{"pvalue",no_argument,NULL,'u'},
+		{"validate",no_argument,NULL,'v'},
+		{"sampleIndex",required_argument,NULL,'x'},
+		{"header",no_argument,NULL,'H'},
+		{"help",no_argument,NULL,'h'},
+		{NULL, 0, 0, 0}
+	};
+
+	int longIndex=0;
+	int opt = 0;
+	std::string interpret="";
+	opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
+    while(opt!=-1){
+		switch(opt){
+			case 'b':
+                m_ldFilePrefix = optarg;
+                break;
+			case 'c':
+                m_chrIndex = atoi(optarg)-1;
+                break;
+			case 'e':
+				m_extremeAdjust = atof(optarg);
+				m_provideExtremeAdjustment = true;
+				break;
+			case 'f':
+                m_maf = atof(optarg);
+                m_providedMaf= true;
+                break;
+            case 'i':
+                m_Index = atoi(optarg)-1;;
+                break;
+            case 'H':
+                m_hasHeader=true;
+                break;
+			case 'h':
+			case '?':
+ 				printQuantUsage();
+                throw 0;
+				break;
+			case 'l':
+				m_bpIndex=atoi(optarg)-1;
+				break;
+			case 'L':
+				m_regionList = optarg;
+                break;
+			case 'M':
+				m_maxBlock = atoi(optarg);
+				m_maxBlockSet =true;
+				break;
+			case 'm':
+				m_minBlock = atoi(optarg);
+				break;
+			case 'n':
+				m_ldCorrection = false;
+				break;
+			case 'o':
+				m_outputPrefix = optarg;
+				break;
+			case 'p':
+				m_pValueFileName = optarg;
 				break;
 			case 'r':
 				m_rsIndex = atoi(optarg)-1;
 				break;
-			case 't':
-				m_thread = atoi(optarg);
-				break;
 			case 's':
 				m_sampleSize= atoi(optarg);
 				m_provideSampleSize = true;
+				break;
+			case 't':
+				m_thread = atoi(optarg);
 				break;
 			case 'u':
                 m_isPvalue = true;
@@ -319,31 +335,224 @@ void Command::initialize(int argc, char* argv[]){
 		}
 		opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
-	if(m_caseControl && m_quantitative){
-		throw "You may specify the study as either quantitative or case control study but not both.";
+    bool error =generalCheck();
+	if(m_provideSampleSize && m_sampleSize <= 0){
+        error = true;
+        std::cerr << "Sample size provided for the quantitative study is less than or equal to zero" << std::endl;
+        std::cerr << "Please check you have the correct input" << std::endl;
+    }
+
+    if(m_Index == m_bpIndex || m_Index == m_chrIndex || m_Index == m_rsIndex || (m_Index == m_sampleSizeIndex && !m_provideSampleSize) ||
+       m_bpIndex == m_chrIndex || m_bpIndex == m_rsIndex || (m_bpIndex == m_sampleSizeIndex && !m_provideSampleSize) ||
+       m_chrIndex == m_rsIndex || (m_chrIndex == m_sampleSizeIndex && !m_provideSampleSize) ||
+       (m_rsIndex == m_sampleSizeIndex && !m_provideSampleSize)){
+        error = true;
+        std::cerr << "Duplicated index! Please make sure the index are not duplicated!" << std::endl;
+        std::cerr << "Statistic index: " << m_Index << std::endl;
+        std::cerr << "bp index: " << m_bpIndex << std::endl;
+        std::cerr << "chr index: " << m_chrIndex << std::endl;
+        std::cerr << "rsId index: " << m_rsIndex << std::endl;
+        std::cerr << "sample size index: " << m_sampleSizeIndex << std::endl;
+
+    }
+	if(m_extremeAdjust <= 0.0){
+        error = true;
+        std::cerr << "The extreme adjustment value should always be bigger than 0" << std::endl;
 	}
-	else{
-		bool error = generalCheck();
-		if(m_caseControl){
-			error = error || caseControlCheck();
-		}
-		else if(m_quantitative){
-			error = error || quantitativeCheck();
-		}
-		if(!error && m_maxBlockSet && m_maxBlock%3 != 0){
-			std::cerr << "We prefer a blockSize that can be divided by 3. Will change the max block size to " << m_maxBlock+3-m_maxBlock%3 << std::endl;
-			m_maxBlock = m_maxBlock+3-m_maxBlock%3;
-		}
-		if(!error && m_minBlock > 0 && m_minBlock%3 != 0){
-			std::cerr << "We prefer a blockSize that can be divided by 3. Will change the min block size to " << m_minBlock+3-m_minBlock%3 << std::endl;
-			m_minBlock = m_minBlock+3-m_minBlock%3;
-		}
-		if(error){
-			throw "There is(are) error in the parameter input(s). Please check if you have the correct input";
-		}
-	}
+    if(!error && m_maxBlockSet && m_maxBlock%3 != 0){
+        std::cerr << "We prefer a blockSize that can be divided by 3. Will change the max block size to " << m_maxBlock+3-m_maxBlock%3 << std::endl;
+        m_maxBlock = m_maxBlock+3-m_maxBlock%3;
+    }
+    if(!error && m_minBlock > 0 && m_minBlock%3 != 0){
+        std::cerr << "We prefer a blockSize that can be divided by 3. Will change the min block size to " << m_minBlock+3-m_minBlock%3 << std::endl;
+        m_minBlock = m_minBlock+3-m_minBlock%3;
+    }
+    if(error){
+        throw "There is(are) error in the parameter input(s). Please check if you have the correct input";
+    }
+
+}
 
 
+
+void Command::ccMode(int argc, char* argv[]){
+    static const char *optString = "a:b:c:f:Hh?i:k:l:L:M:m:no:p:R:r:t:uv";
+	static const struct option longOpts[]={
+		{"case",required_argument,NULL,'a'},
+		{"bfile",required_argument,NULL,'b'},
+		{"chr",required_argument,NULL,'c'},
+		{"dir",required_argument,NULL,'d'},
+		{"maf",required_argument,NULL,'f'},
+		{"index", required_argument, NULL, 'i'},
+		{"prevalence",required_argument,NULL,'k'},
+		{"loc",required_argument,NULL,'l'},
+		{"region",required_argument,NULL,'L'},
+		{"maxBlock",required_argument,NULL,'M'},
+		{"minBlock",required_argument,NULL,'m'},
+		{"no_correct",no_argument,NULL,'n'},
+		{"out",required_argument,NULL,'o'},
+		{"pfile",required_argument,NULL,'p'},
+		{"control",required_argument,NULL,'R'},
+		{"rs",required_argument,NULL,'r'},
+		{"thread",required_argument,NULL,'t'},
+		{"pvalue",no_argument,NULL,'u'},
+		{"validate",no_argument,NULL,'v'},
+		{"header",no_argument,NULL,'H'},
+		{"help",no_argument,NULL,'h'},
+		{NULL, 0, 0, 0}
+	};
+
+	int longIndex=0;
+	int opt = 0;
+	std::string interpret="";
+	opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
+    while(opt!=-1){
+		switch(opt){
+			case 'a':
+				m_caseSize= atoi(optarg);
+				break;
+			case 'b':
+                m_ldFilePrefix = optarg;
+                break;
+			case 'c':
+                m_chrIndex = atoi(optarg)-1;
+                break;
+			case 'f':
+                m_maf = atof(optarg);
+                m_providedMaf= true;
+                break;
+            case 'i':
+                m_Index = atoi(optarg)-1;
+                break;
+            case 'H':
+                m_hasHeader=true;
+                break;
+			case 'h':
+			case '?':
+ 				printCCUsage();
+                throw 0;
+				break;
+			case 'k':
+				m_prevalence = atof(optarg);
+				m_providedPrevalence =true;
+				break;
+			case 'l':
+				m_bpIndex=atoi(optarg)-1;
+				break;
+			case 'L':
+				m_regionList = optarg;
+                break;
+			case 'M':
+				m_maxBlock = atoi(optarg);
+				m_maxBlockSet =true;
+				break;
+			case 'm':
+				m_minBlock = atoi(optarg);
+				break;
+			case 'n':
+				m_ldCorrection = false;
+				break;
+			case 'o':
+				m_outputPrefix = optarg;
+				break;
+			case 'p':
+				m_pValueFileName = optarg;
+				break;
+			case 'R':
+				m_controlSize= atoi(optarg);
+				break;
+			case 'r':
+				m_rsIndex = atoi(optarg)-1;
+				break;
+			case 't':
+				m_thread = atoi(optarg);
+				break;
+			case 'u':
+                m_isPvalue = true;
+                break;
+			case 'v':
+				m_validate = true;
+				break;
+			default:
+				throw "Undefined operator, please use --help for more information!";
+		}
+		opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
+    }
+
+    bool error = generalCheck();
+	if(m_caseSize == 0){
+        error = true;
+        std::cerr << "Your case control study has 0 case and we cannot perform the analysis on such type of study." << std::endl;
+        std::cerr << "Please check your input is correct. Sorry." << std::endl;
+    }
+    else if(m_controlSize == 0){
+        error = true;
+        std::cerr << "Your case control study has 0 control and we are uncertain how will this affect the result." << std::endl;
+        std::cerr << "Please check your input is correct. Sorry." << std::endl;
+    }
+    if(m_Index == m_bpIndex || m_Index == m_chrIndex || m_Index == m_rsIndex ||
+			m_bpIndex==m_chrIndex || m_bpIndex == m_rsIndex ||
+            m_chrIndex == m_rsIndex){
+        error = true;
+        std::cerr << "Duplicated index! Please make sure the index are not duplicated!" << std::endl;
+        std::cerr << "Statistic index: " << m_Index << std::endl;
+        std::cerr << "bp index: " << m_bpIndex << std::endl;
+        std::cerr << "chr index: " << m_chrIndex << std::endl;
+        std::cerr << "rsId index: " << m_rsIndex << std::endl;
+    }
+    if(!m_providedPrevalence ){
+        error = true;
+        std::cerr << "You must provide the prevalence for case control study." << std::endl;
+    }
+    if(!error && m_maxBlockSet && m_maxBlock%3 != 0){
+        std::cerr << "We prefer a blockSize that can be divided by 3. Will change the max block size to " << m_maxBlock+3-m_maxBlock%3 << std::endl;
+        m_maxBlock = m_maxBlock+3-m_maxBlock%3;
+    }
+    if(!error && m_minBlock > 0 && m_minBlock%3 != 0){
+        std::cerr << "We prefer a blockSize that can be divided by 3. Will change the min block size to " << m_minBlock+3-m_minBlock%3 << std::endl;
+        m_minBlock = m_minBlock+3-m_minBlock%3;
+    }
+    if(error){
+        throw "There is(are) error in the parameter input(s). Please check if you have the correct input";
+    }
+}
+
+
+void Command::initialize(int argc, char* argv[]){
+    if(argc==1){
+        std::cerr << "------------------------------------------------------------------------------"  << std::endl;
+        std::cerr << "| Snp HeRitability Estimation Kit                                             |" << std::endl;
+        std::cerr << "| version "<<m_version <<"                                                                |" << std::endl;
+        std::cerr << "| (C) 2014 Johnny Kwan, Sam Choi                                              |" << std::endl;
+        std::cerr << "| The University of Hong Kong                                                 |" << std::endl;
+        std::cerr << "| GNU General Public License v2.0                                             |" << std::endl;
+        std::cerr << "------------------------------------------------------------------------------"  << std::endl;
+        std::cerr << "Usage: ./SHREK <command> [options]"                                      << std::endl;
+        std::cerr << "Command:    quant          Quantitative Trait"                                   << std::endl;
+        std::cerr << "            caseControl    Case control study"                                   << std::endl;
+        std::cerr << "            risk           Risk Prediction"                                      << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "To see the specific parameters of each mode, use: "                              << std::endl;
+        std::cerr << "       ./"<<argv[0]<<" <command> -h"                                             << std::endl;
+        throw "You have not provided any arguments. Please provide all the required arguments";
+    }
+	m_programmeName =argv[0];
+	std::string mode(argv[1]);
+    if(mode.compare("quant")==0){
+        m_quantitative = true;
+        quantMode(argc, argv);
+    }
+    else if(mode.compare("caseControl")==0){
+        m_caseControl = true;
+        ccMode(argc, argv);
+    }
+    else if(mode.compare("risk")==0){
+        m_risk=true;
+        riskMode(argc, argv);
+    }
+    else{
+        throw "Undefined analysis mode selected, please check the user manual";
+    }
 }
 
 Command::~Command()
@@ -351,50 +560,105 @@ Command::~Command()
     //dtor
 }
 
-void Command::printBriefUsage(){
+void Command::printCCUsage(){
     std::cerr << "------------------------------------------------------------------------------"  << std::endl;
     std::cerr << "| Snp HeRitability Estimation Kit                                             |" << std::endl;
-    std::cerr << "| version 0.01                                                                |" << std::endl;
+    std::cerr << "| version "<<m_version <<"                                                                |" << std::endl;
     std::cerr << "| (C) 2014 Johnny Kwan, Sam Choi                                              |" << std::endl;
     std::cerr << "| The University of Hong Kong                                                 |" << std::endl;
-    std::cerr << "| Haven't figure out which license                                            |" << std::endl;
+    std::cerr << "| GNU General Public License v2.0                                             |" << std::endl;
     std::cerr << "------------------------------------------------------------------------------"  << std::endl;
-    std::cerr << "usage: ./SHREK [-p <p-value_file>] [-q <t-stat_index> | -c <chi_index>]"         << std::endl;
-    std::cerr << "               [-b <genotype file prefix> ] ..."                                 << std::endl;
+    std::cerr << "usage: ./SHREK caseControl [options]"         << std::endl;
     std::cerr << "Required options: "                                                              << std::endl;
-    std::cerr << "  -p,--pfile       The p-value file.                              [ Required ]"  << std::endl;
-    std::cerr << "  -C,--chr         The column number of chromosome              [ Default: 1 ]"  << std::endl;
-    std::cerr << "  -r,--rs          The column number of rsid                    [ Default: 2 ]"  << std::endl;
-    std::cerr << "  -l,--loc         The column number of coordinate              [ Default: 3 ]"  << std::endl;
-    std::cerr << "  -b,--bfile       The linkage  file prefix.                      [ Required ]"  << std::endl;
-    std::cerr << "  -d,--dir         The direction of effect.                      [ Preferred ]"  << std::endl;
+    std::cerr << "  -p,--pfile       The p-value file.                              < Required >"  << std::endl;
+    std::cerr << "  -b,--bfile       The linkage  file prefix.                      < Required >"  << std::endl;
+    std::cerr << "  -i,--index       The column of statistic.                       < Required >"  << std::endl;
+    std::cerr << "  -c,--chr         The column number of chromosome              < Default: 1 >"  << std::endl;
+    std::cerr << "  -r,--rs          The column number of rsid                    < Default: 2 >"  << std::endl;
+    std::cerr << "  -l,--loc         The column number of coordinate              < Default: 3 >"  << std::endl;
     std::cerr << "  -n,--no_correct  Turn off LD correction. "                                     << std::endl;
     std::cerr << "  -f,--maf         The minor allele frequency filtering. "                       << std::endl;
-    std::cerr << "                                                                              "  << std::endl;
-    std::cerr << "Quantitative trait analysis: "                                                   << std::endl;
-    std::cerr << "  -q,--quant       The column of statistic. Quantitative trait    [ Required ]"  << std::endl;
-    std::cerr << "  -s,--sampleSize  The number of sample used."                                   << std::endl;
-    std::cerr << "  -e,--extreme     The extreme phenotype adjustment ratio."                      << std::endl;
-    std::cerr << "  -x,--sampleIndex The sample column index.                     [ Default: 4 ]"  << std::endl;
-    std::cerr << "                                                                              "  << std::endl;
-    std::cerr << "Case Control analysis: "                                                         << std::endl;
-    std::cerr << "  -c,--caseControl The column of statistic. Case Control study    [ Required ]"  << std::endl;
-    std::cerr << "  -k,--prevalence  Prevalence of the phenotype                    [ Required ]"  << std::endl;
-    std::cerr << "  -a,--case        The number of case used in the study           [ Required ]"  << std::endl;
-    std::cerr << "  -R,--control     The number of control used in the study        [ Required ]"  << std::endl;
-    std::cerr << "                                                                              "  << std::endl;
+    std::cerr << "  -k,--prevalence  Prevalence of the phenotype                    < Required >"  << std::endl;
+    std::cerr << "  -a,--case        The number of case used in the study           < Required >"  << std::endl;
+    std::cerr << "  -R,--control     The number of control used in the study        < Required >"  << std::endl;
     std::cerr << "General options: " << std::endl;
-    std::cerr << "  -u,--pvalue      Input is p-value "                                            << std::endl;
+    std::cerr << "  -u,--pvalue      Input is p-value                         [ Default: False ]"  << std::endl;
     std::cerr << "  -m,--minBlock    The minimum block size                    [ Default: None ]"  << std::endl;
     std::cerr << "  -M,--maxBlock    The maximum block size                    [ Default: None ]"  << std::endl;
     std::cerr << "  -L,--region      Region information"                                           << std::endl;
     std::cerr << "  -t,--thread      The number of thread                         [ Default: 1 ]"  << std::endl;
-    std::cerr << "  -H,--header      P-value file doesn't contain header"                          << std::endl;
-    std::cerr << "  -v,--validate    Validate the Snps                         [ Default: None ]"  << std::endl;
+    std::cerr << "  -v,--validate    Validate the Snps                        [ Default: False ]"  << std::endl;
     std::cerr << "  -o,--out         The output file prefix."                                      << std::endl;
     std::cerr << "  -h,-?,--help     Display the detail help message"                              << std::endl;
+    std::cerr << std::endl;
+
+}
+void Command::printRiskUsage(){
+    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
+    std::cerr << "| Snp HeRitability Estimation Kit                                             |" << std::endl;
+    std::cerr << "| version "<<m_version <<"                                                                |" << std::endl;
+    std::cerr << "| (C) 2014 Johnny Kwan, Sam Choi                                              |" << std::endl;
+    std::cerr << "| The University of Hong Kong                                                 |" << std::endl;
+    std::cerr << "| GNU General Public License v2.0                                             |" << std::endl;
+    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
+    std::cerr << "usage: ./SHREK risk [options]"         << std::endl;
+    std::cerr << "Required options: "                                                              << std::endl;
+    std::cerr << "  -p,--pfile       The p-value file.                              < Required >"  << std::endl;
+    std::cerr << "  -b,--bfile       The linkage  file prefix.                      < Required >"  << std::endl;
+    std::cerr << "  -i,--index       The column of statistic.                       < Required >"  << std::endl;
+    std::cerr << "  -c,--chr         The column number of chromosome              < Default: 1 >"  << std::endl;
+    std::cerr << "  -r,--rs          The column number of rsid                    < Default: 2 >"  << std::endl;
+    std::cerr << "  -l,--loc         The column number of coordinate              < Default: 3 >"  << std::endl;
+    std::cerr << "  -R,--ref         The column number of reference allele."                       << std::endl;
+    std::cerr << "  -a,--alt         The column number of alternative allele."                     << std::endl;
+    std::cerr << "  -n,--no_correct  Turn off LD correction."                                      << std::endl;
+    std::cerr << "  -f,--maf         The minor allele frequency filtering. "                       << std::endl;
+    std::cerr << "  -g,--geno        The genotype file for the individual(s). "                    << std::endl;
+    std::cerr << "General options: " << std::endl;
+    std::cerr << "  -m,--minBlock    The minimum block size                    [ Default: None ]"  << std::endl;
+    std::cerr << "  -M,--maxBlock    The maximum block size                    [ Default: None ]"  << std::endl;
+    std::cerr << "  -t,--thread      The number of thread                         [ Default: 1 ]"  << std::endl;
+    std::cerr << "  -v,--validate    Validate the Snps                        [ Default: False ]"  << std::endl;
+    std::cerr << "  -o,--out         The output file prefix."                                      << std::endl;
+    std::cerr << "  -h,-?,--help     Display the detail help message"                              << std::endl;
+    std::cerr << std::endl;
+
 }
 
+void Command::printQuantUsage(){
+    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
+    std::cerr << "| Snp HeRitability Estimation Kit                                             |" << std::endl;
+    std::cerr << "| version "<<m_version <<"                                                                |" << std::endl;
+    std::cerr << "| (C) 2014 Johnny Kwan, Sam Choi                                              |" << std::endl;
+    std::cerr << "| The University of Hong Kong                                                 |" << std::endl;
+    std::cerr << "| GNU General Public License v2.0                                             |" << std::endl;
+    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
+    std::cerr << "usage: ./SHREK quant [options]"         << std::endl;
+    std::cerr << "Required options: "                                                              << std::endl;
+    std::cerr << "  -p,--pfile       The p-value file.                              < Required >"  << std::endl;
+    std::cerr << "  -b,--bfile       The linkage  file prefix.                      < Required >"  << std::endl;
+    std::cerr << "  -i,--index       The column of statistic.                       < Required >"  << std::endl;
+    std::cerr << "  -c,--chr         The column number of chromosome              < Default: 1 >"  << std::endl;
+    std::cerr << "  -r,--rs          The column number of rsid                    < Default: 2 >"  << std::endl;
+    std::cerr << "  -l,--loc         The column number of coordinate              < Default: 3 >"  << std::endl;
+    std::cerr << "  -x,--sampleIndex The sample column index.                     < Default: 4 >"  << std::endl;
+    std::cerr << "  -n,--no_correct  Turn off LD correction. "                                     << std::endl;
+    std::cerr << "  -f,--maf         The minor allele frequency filtering. "                       << std::endl;
+    std::cerr << "  -s,--sampleSize  The number of sample used."                                   << std::endl;
+    std::cerr << "  -e,--extreme     The extreme phenotype adjustment ratio."                      << std::endl;
+    std::cerr << "General options: " << std::endl;
+    std::cerr << "  -u,--pvalue      Input is p-value                         [ Default: False ]"  << std::endl;
+    std::cerr << "  -m,--minBlock    The minimum block size                    [ Default: None ]"  << std::endl;
+    std::cerr << "  -M,--maxBlock    The maximum block size                    [ Default: None ]"  << std::endl;
+    std::cerr << "  -L,--region      Region information"                                           << std::endl;
+    std::cerr << "  -t,--thread      The number of thread                         [ Default: 1 ]"  << std::endl;
+    std::cerr << "  -v,--validate    Validate the Snps                        [ Default: False ]"  << std::endl;
+    std::cerr << "  -o,--out         The output file prefix."                                      << std::endl;
+    std::cerr << "  -h,-?,--help     Display the detail help message"                              << std::endl;
+    std::cerr << std::endl;
+}
+
+//Archive
 void Command::printUsage(){
 
     std::cerr << "------------------------------------------------------------------------------"  << std::endl;
