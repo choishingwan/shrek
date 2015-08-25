@@ -206,7 +206,7 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
                     }
                 }
 
-                double currentMaf = (alleleCount+0.0)/(2*m_ldSampleSize*1.0);
+                double currentMaf = (alleleCount+0.0)/(2.0*m_ldSampleSize*1.0);
                 currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
                 //remove snps with maf too low
                 if(maf >= 0.0 && maf > currentMaf){

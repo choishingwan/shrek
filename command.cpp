@@ -6,8 +6,7 @@ size_t Command::GetmaxBlock() const { return m_maxBlock; }
 size_t Command::GetsampleSize() const { return m_sampleSize; }
 size_t Command::GetcaseSize() const { return m_caseSize; }
 size_t Command::GetcontrolSize() const { return m_controlSize; }
-size_t Command::GetcIndex() const { return m_cIndex; }
-size_t Command::GettIndex() const { return m_tIndex; }
+size_t Command::GetIndex() const { return m_Index; }
 size_t Command::GetbpIndex() const { return m_bpIndex; }
 size_t Command::GetchrIndex() const { return m_chrIndex; }
 size_t Command::GetrsIndex() const { return m_rsIndex; }
@@ -42,6 +41,7 @@ Command::Command(){
 	m_provideSampleSize = false;
     m_quantitative = false;
     m_caseControl = false;
+    m_risk = false;
     m_maxBlockSet = false;
     m_thread = 1;
     m_chrIndex = 0;
@@ -58,8 +58,7 @@ Command::Command(){
 	m_caseSize=0;
 	m_controlSize=0;
 	m_distance = 2000000;
-	m_cIndex=7;
-    m_tIndex=7;
+	m_Index=7;
     m_prevalence=1.0;
     m_extremeAdjust=1.0;
     m_outputPrefix="";
@@ -67,6 +66,7 @@ Command::Command(){
     m_ldFilePrefix="";
 	m_regionList="";
 	m_directionFile="";
+	m_genotypeFilePrefix="";
 }
 
 bool Command::generalCheck(){
@@ -124,12 +124,12 @@ bool Command::caseControlCheck(){
         std::cerr << "WARNING! Your case control study has 0 control and we are uncertain how will this affect the result." << std::endl;
         std::cerr << "Please be cautious with the result" << std::endl;
     }
-    if(m_cIndex == m_bpIndex || m_cIndex == m_chrIndex || m_cIndex == m_rsIndex ||
+    if(m_Index == m_bpIndex || m_Index == m_chrIndex || m_Index == m_rsIndex ||
 			m_bpIndex==m_chrIndex || m_bpIndex == m_rsIndex ||
             m_chrIndex == m_rsIndex){
         error = true;
         std::cerr << "Duplicated index! Please make sure the index are not duplicated!" << std::endl;
-        std::cerr << "Statistic index: " << m_cIndex << std::endl;
+        std::cerr << "Statistic index: " << m_Index << std::endl;
         std::cerr << "bp index: " << m_bpIndex << std::endl;
         std::cerr << "chr index: " << m_chrIndex << std::endl;
         std::cerr << "rsId index: " << m_rsIndex << std::endl;
@@ -153,13 +153,13 @@ bool Command::quantitativeCheck(){
         std::cerr << "Please check you have the correct input" << std::endl;
     }
 
-    if(m_tIndex == m_bpIndex || m_tIndex == m_chrIndex || m_tIndex == m_rsIndex || m_tIndex == m_sampleSizeIndex ||
+    if(m_Index == m_bpIndex || m_Index == m_chrIndex || m_Index == m_rsIndex || m_Index == m_sampleSizeIndex ||
        m_bpIndex == m_chrIndex || m_bpIndex == m_rsIndex || m_bpIndex == m_sampleSizeIndex ||
        m_chrIndex == m_rsIndex || m_chrIndex == m_sampleSizeIndex ||
        m_rsIndex == m_sampleSizeIndex){
         error = true;
         std::cerr << "Duplicated index! Please make sure the index are not duplicated!" << std::endl;
-        std::cerr << "Statistic index: " << m_tIndex << std::endl;
+        std::cerr << "Statistic index: " << m_Index << std::endl;
         std::cerr << "bp index: " << m_bpIndex << std::endl;
         std::cerr << "chr index: " << m_chrIndex << std::endl;
         std::cerr << "rsId index: " << m_rsIndex << std::endl;
@@ -182,7 +182,7 @@ void Command::initialize(int argc, char* argv[]){
         throw "You have not provided any arguments. Please provide all the required arguments";
     }
 	m_programmeName =argv[0];
-	static const char *optString = "a:b:c:C:d:e:f:Hh?k:l:L:M:m:no:p:q:R:r:i:t:s:uvx:";
+	static const char *optString = "a:b:c:C:d:e:f:g:Hh?k:K:l:L:M:m:no:p:q:R:r:i:t:s:uvx:";
 	static const struct option longOpts[]={
 		{"case",required_argument,NULL,'a'},
 		{"bfile",required_argument,NULL,'b'},
@@ -191,7 +191,9 @@ void Command::initialize(int argc, char* argv[]){
 		{"dir",required_argument,NULL,'d'},
 		{"extreme",required_argument,NULL,'e'},
 		{"maf",required_argument,NULL,'f'},
+		{"geno",required_argument,NULL,'g'},
 		{"prevalence",required_argument,NULL,'k'},
+		{"risk",required_argument,NULL,'K'},
 		{"loc",required_argument,NULL,'l'},
 		{"region",required_argument,NULL,'L'},
 		{"maxBlock",required_argument,NULL,'M'},
@@ -212,7 +214,7 @@ void Command::initialize(int argc, char* argv[]){
 		{"help",no_argument,NULL,'h'},
 		{NULL, 0, 0, 0}
 	};
-	int longIndex;
+	int longIndex=0;
 	int opt = 0;
 	std::string interpret="";
 	opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
@@ -225,7 +227,7 @@ void Command::initialize(int argc, char* argv[]){
                 m_ldFilePrefix = optarg;
                 break;
 			case 'c':
-				m_cIndex= atoi(optarg)-1;
+				m_Index= atoi(optarg)-1;
 				m_caseControl = true;
 				break;
 			case 'C':
@@ -242,6 +244,9 @@ void Command::initialize(int argc, char* argv[]){
                 m_maf = atof(optarg);
                 m_providedMaf= true;
                 break;
+			case 'f':
+                m_genotypeFilePrefix = optarg;
+                break;
             case 'H':
                 m_hasHeader=true;
                 break;
@@ -256,6 +261,10 @@ void Command::initialize(int argc, char* argv[]){
 			case 'k':
 				m_prevalence = atof(optarg);
 				m_providedPrevalence =true;
+				break;
+			case 'K':
+				m_risk = true;
+				m_index=atoi(optarg);
 				break;
 			case 'l':
 				m_bpIndex=atoi(optarg)-1;
@@ -280,7 +289,7 @@ void Command::initialize(int argc, char* argv[]){
 				m_pValueFileName = optarg;
 				break;
 			case 'q':
-				m_tIndex= atoi(optarg)-1;
+				m_Index= atoi(optarg)-1;
 				m_quantitative = true;
 				break;
 			case 'R':
@@ -491,7 +500,7 @@ void Command::printRunSummary(std::string regionMessage){
 		<< "Performing analysis using the following parameters: " << std::endl
 		<< "===============================================================" << std::endl
 		<< "Essential Input  " <<std::endl;
-		std::cerr	<< "Genotype File Prefix : " << m_ldFilePrefix << std::endl;
+		std::cerr	<< "Linkage File Prefix  : " << m_ldFilePrefix << std::endl;
 	    std::cerr 	<< "P-Value File         : " << m_pValueFileName << std::endl;
 	if(!m_directionFile.empty())std::cerr   << "Direction File       : " << m_directionFile << std::endl;
 	    std::cerr   << "Input is P-Value     : ";
@@ -506,10 +515,14 @@ void Command::printRunSummary(std::string regionMessage){
 					<< "Number of Control    : " << m_controlSize << std::endl
 					<< "Prevalence           : " << m_prevalence << std::endl << std::endl;
 	}
-	else{
+	else if(m_quantitative){
 		std::cerr	<< "Mode                 : Quantitative Trait" << std::endl;
 		if(m_provideSampleSize) std::cerr	<< "Sample Size          : " << m_sampleSize << std::endl;
 		if(m_provideExtremeAdjustment) std::cerr <<   "Extreme Adjustment   : " << m_extremeAdjust << std::endl << std::endl;
+	}
+	else if(m_risk){
+        std::cerr	<< "Mode                 : Risk Prediction" << std::endl;
+        std::cerr   << "Genotype File Prefix : " << m_genotypeFilePrefix << std::endl;
 	}
     std::cerr	<< "===============================================================" << std::endl
 				<< "Options " << std::endl

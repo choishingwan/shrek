@@ -54,10 +54,8 @@ class Command
         size_t GetcaseSize() const;
         /** return the number of control */
         size_t GetcontrolSize() const;
-        /** return the column containing the test statistic/p-value for case control study */
-        size_t GetcIndex() const;
-        /** return the column containing the test statistic/p-value for quantitative trait study */
-        size_t GettIndex() const;
+        /** return the column containing the test statistic/p-value*/
+        size_t GetIndex() const;
         /** return the column containing the bp information */
         size_t GetbpIndex() const;
         /** return the column containing the chromosome information */
@@ -105,16 +103,17 @@ class Command
         size_t m_thread; //!< Number of thread used
         size_t m_minBlock; //!< minimum block size required
         size_t m_maxBlock; //!< maximum block size allowed
-        size_t m_sampleSize; //!< sample size
+        size_t m_sampleSize; //!< sample size, use for quantitative trait
         size_t m_caseSize; //!< number of cases
         size_t m_controlSize; //!< number of control
-        size_t m_cIndex; //!< the column containing the chi square information (or p-value), for case control, 1-based
-        size_t m_tIndex; //!< the column containing the t-statistic information (or p-value), for quantitative traits, 1-based
+        size_t m_Index; //!< the column containing the chi square information (or p-value), for case control, 1-based
         size_t m_bpIndex; //!< the column containing the location of the snp
         size_t m_chrIndex; //!< the column containing the chromosome information
         size_t m_rsIndex; //!< the column containing the rs-id
         size_t m_sampleSizeIndex; //!< the column containing the sample size information. Not use if sample size is specified
-        size_t m_distance; //!< the distance between snps. Any snps further than this is considered as invalid
+        size_t m_refIndex; //!< the column containing the reference allele. Only use for risk prediction
+        size_t m_altIndex; //!< the column containing the alternative allele. Only use for risk prediction
+        size_t m_distance; //!< the distance between snps. Any snps further than this is considered as invalid (Have not implement any function to use this information)
         double m_prevalence; //!< the prevalence
         double m_maf; //!< the maf filtering threshold. Snps with maf less then this threshold will be filtered out
         double m_extremeAdjust; //!< the extreme adjustment parameter
@@ -122,16 +121,18 @@ class Command
         bool m_validate; //!< if the snp information should be validated
         bool m_isPvalue; //!< if the input is p-value instead of test statistics
         bool m_provideSampleSize;//!< whether if sample size information is provided
-        bool m_quantitative; //!< whether if it is quantitative trait. Mutually exclusive with m_caseControl
-        bool m_caseControl; //!< whether if it is case control. Mutually exclusive with m_quantitative
+        bool m_quantitative; //!< whether if it is quantitative trait. Mutually exclusive with m_caseControl and m_risk
+        bool m_caseControl; //!< whether if it is case control. Mutually exclusive with m_quantitative and m_risk
+        bool m_risk; //!< whether if it is risk prediction. Mutually exclusive with m_quantitative and m_caseControl
         bool m_maxBlockSet; //!< whether if the maximum block size is set
         bool m_providedMaf; //!< Indicate whether if the maf threshold is provided
         bool m_providedPrevalence; //!< Indicate whether if the prevalence information is provided
         bool m_provideExtremeAdjustment; //!< Indicate whether if the prevalence information is provided
-        bool m_hasHeader; //!< Indicate whether if the p-value file contains header
+        bool m_hasHeader; //!< Indicate whether if the p-value file contains header (Actually, should always contains header)
         std::string m_outputPrefix; //!< the output prefix
         std::string m_pValueFileName; //!< the p-value input file
         std::string m_directionFile; //!< the direction file. Contain information of the direction of effect
+        std::string m_genotypeFilePrefix; //!< the genotype file. Contain information of the sample for prediction
         std::string m_ldFilePrefix; //!< the file prefix of the genotype file for the ld construction
         std::string m_regionList; //!< a list of region informations
         std::string m_programmeName; //!< the programme name. Use for the help message only

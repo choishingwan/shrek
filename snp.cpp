@@ -132,8 +132,7 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
     size_t chrIndex = commander->GetchrIndex();
     size_t rsIndex = commander->GetrsIndex();
     size_t index = 0, sIndex=0;
-    if(commander->caseControl()) index=commander->GetcIndex();
-    if(commander->quantitative()) index=commander->GettIndex();
+    index=commander->GetIndex();
     if(!commander->provideSampleSize()) sIndex= commander->GetsampleSizeIndex();
     std::string removeSnps="";
     while(std::getline(pValue, line)){
