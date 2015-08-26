@@ -4,9 +4,14 @@
 #include <string>
 #include <fstream>
 #include <map>
+#include <Eigen/Core>
+#include <Eigen/Dense>
 #include "snp.h"
 #include "command.h"
 #include "usefulTools.h"
+#include "linkage.h"
+#include "decomposition.h"
+#include "genotypefilehandler.h"
 
 class RiskPrediction
 {
@@ -16,6 +21,7 @@ class RiskPrediction
         /** Default destructor */
         virtual ~RiskPrediction();
         void checkGenotype();
+        void run();
     protected:
     private:
         std::vector<Snp*> *m_snpList;
@@ -28,7 +34,10 @@ class RiskPrediction
         bool m_ldCorrection;
         bool m_keep;
         bool m_maxBlockSet;
+        bool m_validate;
         std::string m_genotypeFilePrefix;
+        std::string m_ldFilePrefix;
+        std::string m_outPrefix;
         std::map<std::string, size_t> snpIndex;
 };
 

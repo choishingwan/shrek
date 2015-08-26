@@ -10,6 +10,9 @@ RiskPrediction::RiskPrediction(const Command *commander,std::vector<Snp*> *snpLi
     m_keep = commander->keep();
     m_maxBlockSet = commander->maxBlockSet();
     m_genotypeFilePrefix = commander->GetgenotypeFile();
+    m_ldFilePrefix = commander->GetldFilePrefix();
+    m_outPrefix = commander->GetoutputPrefix();
+    m_validate = commander->validate();
 }
 
 
@@ -53,6 +56,7 @@ void RiskPrediction::checkGenotype(){
     size_t corDiff = 0;
     size_t positive = 0;
     size_t notFound = 0;
+    std::map<std::string, size_t> concordanceIndex;
     while(std::getline(bimFile, line)){
         line = usefulTools::trim(line);
         std::vector<std::string> token;
@@ -93,6 +97,7 @@ void RiskPrediction::checkGenotype(){
                                 dupCheck[rsId] = true;
                                 positive++;
                                 m_genoInclude.back() = sIndex;
+                                concordanceIndex[rsId] = sIndex;
                             }
                         }
                         else if(curRef.compare(altAllele)==0 && curAlt.compare(refAllele)==0){
@@ -106,6 +111,7 @@ void RiskPrediction::checkGenotype(){
                                 dupCheck[rsId] = true;
                                 positive++;
                                 m_genoInclude.back() = sIndex;
+                                concordanceIndex[rsId] = sIndex;
                             }
                         }
                         else{
@@ -126,5 +132,47 @@ void RiskPrediction::checkGenotype(){
     if(!m_keep && ambiguous != 0) std::cerr << ambiguous <<  " SNPs with ambiguous allele information removed." << std::endl;
     else if(ambiguous != 0) std::cerr << ambiguous <<  " SNPs with ambiguous allele information kept." << std::endl;
     std::cerr << positive  << " SNPs will be used for risk prediction" << std::endl;
-
+    snpIndex = concordanceIndex;
 }
+
+void RiskPrediction::run(){
+    GenotypeFileHandler *genotypeFileHandler = new GenotypeFileHandler(m_ldFilePrefix, m_thread, m_outPrefix);
+    GenotypeFileHandler *targetGenotype = new GenotypeFileHandler(m_genotypeFilePrefix, m_thread, m_outPrefix);
+    genotypeFileHandler->initialize(snpIndex, m_snpList, m_validate, m_maxBlockSet, m_maxBlock, m_minBlock,m_maf);
+    targetGenotype->initialize();
+    //To know whether if the SNP is in all three file, we only have to check the flag 0 of each SNP.
+    //If false, then it is not included in the LD file.
+	Genotype::SetsampleNum(genotypeFileHandler->GetsampleSize());
+	ProcessCode process = startProcess;
+    std::deque<Genotype*> genotype;
+    Eigen::MatrixXd normalizedGenotype;
+    std::deque<size_t> snpLoc;
+    bool chromosomeStart= true;
+    bool chromosomeEnd = false;
+    size_t prevResidual;
+    size_t blockSize;
+    Linkage *linkageMatrix = new Linkage();
+    linkageMatrix->setSnpList(m_snpList);
+    linkageMatrix->setSnpLoc(&snpLoc);
+    linkageMatrix->setThread(m_thread);
+    Decomposition *decompositionHandler = new Decomposition( m_snpList, linkageMatrix, m_thread);
+    size_t numProcessed = 0;
+    size_t totalNum = genotypeFileHandler->GetestimateSnpTotal()*3;
+	while(process != completed && process != fatalError){
+        //Now everything should almost be the same as that in the snpestimation except for the function called
+        process = genotypeFileHandler->getSnps(genotype, snpLoc, m_snpList, chromosomeStart, chromosomeEnd, m_maf,prevResidual, blockSize);
+        //Now we need to get the corresponding genotype based on snpLoc
+        //This is the new thing, get the XB matrix
+        //normalizedGenotype should contain previous stuff.
+        .
+	}
+
+
+    delete genotypeFileHandler;
+    delete linkageMatrix;
+}
+
+
+
+
+

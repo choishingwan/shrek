@@ -34,6 +34,7 @@ class Decomposition
 	public:
 		/**Default constructor */
 		Decomposition( std::vector<Snp*> *snpList, Linkage *linkageMatrix, size_t thread, Region *regionInfo);
+		Decomposition( std::vector<Snp*> *snpList, Linkage *linkageMatrix, size_t thread);
 		/**Default destructor */
 		virtual ~Decomposition();
         /** The decomposition processor */

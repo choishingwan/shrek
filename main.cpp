@@ -89,6 +89,7 @@ int main(int argc, char *argv[]){
     if(commander->risk()){
         RiskPrediction *riskPrediction = new RiskPrediction(commander,&snpList);
         riskPrediction->checkGenotype();
+        riskPrediction->run();
     }
     else{
         try{

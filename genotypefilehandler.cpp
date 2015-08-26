@@ -11,6 +11,18 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, size_t 
 	m_snpIter =0;
 }
 
+void GenotypeFileHandler::initialize(){
+    std::string bedFileName = m_genotypeFilePrefix+".bed";
+	bool bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_bedFile); //We will try to open the connection to bedFile
+    if(bfile_SNP_major){
+        //This is ok
+    }
+    else{
+        throw "We currently have no plan of implementing the individual-major mode. Please use the snp-major format";
+    }
+    m_processed = 0;
+	m_targetProcessed=0;
+}
 
 void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock, double const maf){
     size_t safeBlockRange = 1.0; //Use to multiply the #Snp in 1mb region to make sure the block will always include everything within the region
@@ -612,5 +624,13 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 	}
     chromosomeEnd = true;
 	return completed;
+
+}
+
+
+
+void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList){
+    //This should update the sample matrix so that it can be send to decomposition right away without needing any additional processing.
+
 
 }

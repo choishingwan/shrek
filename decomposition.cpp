@@ -4,6 +4,8 @@
 
 Decomposition::Decomposition( std::vector<Snp*> *snpList, Linkage *linkageMatrix, size_t thread, Region *regionInfo):m_snpList(snpList), m_linkage(linkageMatrix), m_thread(thread), m_regionInfo(regionInfo){}
 
+Decomposition::Decomposition( std::vector<Snp*> *snpList, Linkage *linkageMatrix, size_t thread):m_snpList(snpList), m_linkage(linkageMatrix), m_thread(thread){}
+
 Decomposition::~Decomposition()
 {
 	//dtor
