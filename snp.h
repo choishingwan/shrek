@@ -63,7 +63,7 @@ public:
          *  \param [in]  isPvalue, indicate whether if the input is p-value only
          */
         static void generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList, const size_t &caseSize, const size_t &controlSize, const double &prevalence, Region *regionList, bool isPvalue);
-        static void generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList);
+        static void generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList, std::string genotypeFileName, bool keep);
         virtual ~Snp();
         std::string Getchr() const;
         std::string GetrsId() const;

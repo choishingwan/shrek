@@ -158,7 +158,7 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
                 std::string rsId = token[rsIndex];
                 size_t sizeOfSample = 0;
                 if(!commander->provideSampleSize()) sizeOfSample = atoi(token[sIndex].c_str());
-                else size_ofSample = commander->GetsampleSize();
+                else sizeOfSample = commander->GetsampleSize();
                 std::string refAllele = "";
                 std::string altAllele = "";
                 if(commander->risk()){
@@ -183,7 +183,7 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
         }
     }
     if(!removeSnps.empty()){
-        std::cerr << removeSnpsCount << " SNPs removed with missing values." << std::endl;
+        std::cerr << removeSnpCount << " SNPs removed with missing values." << std::endl;
     }
     pValue.close();
     std::sort(snpList.begin(), snpList.end(), Snp::sortSnp);
@@ -285,8 +285,23 @@ void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<
 }
 
 
-void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList, const size_t &caseSize, const size_t &controlSize, const double &prevalence, Region *regionList, bool isPvalue){
-	std::vector<size_t> regionIncrementationIndex(regionList->GetnumRegion(), 0);
+void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList, std::string genotypeFileName, bool keep){
+    //If we do keep the ambiguous SNPs, we need to make sure it is the correct orientation
+    //not the most sophisticated method though.
+    std::string bimFileName = genotypeFileName;
+    bimFileName.append(".bim");
+    std::ifstream bimFile;
+    bimFile.open(bimFileName.c_str());
+    if(!bimFile.is_open()){
+        std::string message = "Cannot open bim file: ";
+        message.append(bimFileName);
+        throw message;
+    }
+    std::string line;
+    while(std::getline(bimFile,line)){
+        line =usefulTools::trim(line);
+    }
+    bimFile.close();
 	size_t duplicate = 0;
 	for(size_t i = 0; i < snpList.size(); ++i){
         if(snpIndex.find(snpList[i]->GetrsId())==snpIndex.end()){

@@ -87,6 +87,7 @@ class Command
         bool caseControl() const;
         /** return whether if maximum block size is set */
         bool maxBlockSet() const;
+        bool keep() const;
         /** return output prefix */
         std::string GetoutputPrefix() const;
         /** return p-value file name */
@@ -99,6 +100,7 @@ class Command
         std::string GetprogrammeName() const;
         /** return the direction file name */
         std::string GetdirectionFile() const;
+        std::string GetgenotypeFile() const;
     protected:
     private:
         size_t m_thread; //!< Number of thread used
@@ -132,6 +134,7 @@ class Command
         bool m_providedMaf; //!< Indicate whether if the maf threshold is provided
         bool m_providedPrevalence; //!< Indicate whether if the prevalence information is provided
         bool m_provideExtremeAdjustment; //!< Indicate whether if the prevalence information is provided
+        bool m_keep; //!< Indicate whether if the ambiguous SNPs should be removed
         bool m_hasHeader; //!< Indicate whether if the p-value file contains header (Actually, should always contains header)
         std::string m_outputPrefix; //!< the output prefix
         std::string m_pValueFileName; //!< the p-value input file

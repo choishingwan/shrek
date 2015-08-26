@@ -24,12 +24,14 @@ bool Command::quantitative() const { return m_quantitative; }
 bool Command::caseControl() const { return m_caseControl; }
 bool Command::risk() const {return m_risk; }
 bool Command::maxBlockSet() const { return m_maxBlockSet; }
+bool Command::keep() const{ return m_keep; }
 std::string Command::GetoutputPrefix() const { return m_outputPrefix; }
 std::string Command::GetpValueFileName() const { return m_pValueFileName; }
 std::string Command::GetldFilePrefix() const { return m_ldFilePrefix; }
 std::string Command::GetregionList() const { return m_regionList; }
 std::string Command::GetdirectionFile() const {return m_directionFile; }
 std::string Command::GetprogrammeName() const { return m_programmeName; }
+std::string Command::GetgenotypeFile() const { return m_genotypeFilePrefix; }
 
 
 Command::Command(){
@@ -45,6 +47,7 @@ Command::Command(){
     m_caseControl = false;
     m_risk = false;
     m_maxBlockSet = false;
+    m_keep = true;
     m_thread = 1;
     m_chrIndex = 0;
     m_rsIndex = 1;
@@ -110,7 +113,7 @@ bool Command::generalCheck(){
 
 
 void Command::riskMode(int argc, char* argv[]){
-static const char *optString = "a:b:c:f:g:Hh?i:l:M:m:no:p:r:R:t:v";
+static const char *optString = "a:b:c:f:g:Hh?i:kl:M:m:no:p:r:R:t:v";
 	static const struct option longOpts[]={
 	    {"alt",required_argument,NULL, 'a'},
 		{"bfile",required_argument,NULL,'b'},
@@ -118,6 +121,7 @@ static const char *optString = "a:b:c:f:g:Hh?i:l:M:m:no:p:r:R:t:v";
 		{"maf",required_argument,NULL,'f'},
 		{"geno", required_argument, NULL, 'g'},
 		{"index", required_argument, NULL, 'i'},
+		{"keep", no_argument, NULL, 'k'},
 		{"loc",required_argument,NULL,'l'},
 		{"maxBlock",required_argument,NULL,'M'},
 		{"minBlock",required_argument,NULL,'m'},
@@ -153,14 +157,17 @@ static const char *optString = "a:b:c:f:g:Hh?i:l:M:m:no:p:r:R:t:v";
             case 'g':
                 m_genotypeFilePrefix = optarg;
                 break;
-            case 'i':
-                m_Index = atoi(optarg)-1;;
-                break;
 			case 'h':
 			case '?':
  				printRiskUsage();
                 throw 0;
 				break;
+            case 'i':
+                m_Index = atoi(optarg)-1;;
+                break;
+            case 'k':
+                m_keep = false;
+                break;
 			case 'l':
 				m_bpIndex=atoi(optarg)-1;
 				break;
