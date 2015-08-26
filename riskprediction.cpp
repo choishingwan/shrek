@@ -27,7 +27,7 @@ void RiskPrediction::checkGenotype(){
 	size_t duplicate = 0;
 	for(size_t i = 0; i < (*m_snpList).size(); ++i){
         if(snpIndex.find((*m_snpList)[i]->GetrsId())==snpIndex.end()){
-            snpIndex[(*m_snpList)[i]->GetrsId()] = i;
+            snpIndex.insert(std::pair<std::string,size_t>((*m_snpList)[i]->GetrsId(),i));
             (*m_snpList)[i]->addFlag(false);
         }
         else{

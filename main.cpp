@@ -88,8 +88,19 @@ int main(int argc, char *argv[]){
 
     if(commander->risk()){
         RiskPrediction *riskPrediction = new RiskPrediction(commander,&snpList);
-        riskPrediction->checkGenotype();
-        riskPrediction->run();
+        try{
+            riskPrediction->checkGenotype();
+            riskPrediction->run();
+        }
+        catch(const char *e){
+            std::cerr << e << std::endl;
+            delete commander;
+            regionInfo->clean();
+            delete regionInfo;
+            Snp::cleanSnp(snpList);
+            delete riskPrediction;
+            return EXIT_FAILURE;
+        }
     }
     else{
         try{

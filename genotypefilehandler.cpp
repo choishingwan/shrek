@@ -641,14 +641,15 @@ void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const 
         throw "Something is wrong, the start location when reading the genotype can never be negative";
     }
     normalizedGenotype-> conservativeResize(snpLoc.size(), sampleSize);
-    while(m_snpIter < m_inputSnp && currentLoc < snpLoc.size()){
+    while(m_snpIter < m_inputSnp && (unsigned)currentLoc < snpLoc.size()){
         //The concept is to read through the snpLoc until we reaches the end of it.
         //If we have any SNPs with loc bigger than the current SNP loc, then something is wrong.
+        bool snp = false;
         std::vector<double> genotype;
-        if(include[m_snpIter] != -1 && include[m_snpIter] == snpLoc[currentLoc]){
+        if(include[m_snpIter] != -1 && include[m_snpIter] == (signed)snpLoc[currentLoc]){
             snp=true;
         }
-        else if(include[m_snpIter] > snpLoc[currentLoc]){
+        else if((unsigned)include[m_snpIter] > snpLoc[currentLoc]){
             throw "The SNP ordering between the LD file and the genotype file does not match. Please make sure both files are coordinately sorted in the same way e.g. both are 1,2,3,4... or 1,10,11,12...";
         }
         size_t indx = 0; //The iterative count
@@ -673,7 +674,7 @@ void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const 
                         genotype.push_back(-1);
 					}
 					else{
-                        genotypepush_back(first+second);
+                        genotype.push_back(first+second);
                         if(first+second ==2) homAlt++;
                         else if(first+second==1) het++;
                         else homRef++;
@@ -694,7 +695,7 @@ void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const 
 
             double stdev = sqrt(accum / (genotype.size()-1));
             for(size_t i = 0; i < genotype.size(); ++i){
-                (*normalizedGenotype)(currentLoc,i) = ((genotype[i]-mean)/sd) * (*snpList)[snpLoc[currentLoc]]->Getbeta();
+                (*normalizedGenotype)(currentLoc,i) = ((genotype[i]-m)/stdev) * (*snpList)[snpLoc[currentLoc]]->Getbeta();
             }
             currentLoc++;
 		}
