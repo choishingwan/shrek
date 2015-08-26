@@ -4,13 +4,11 @@ size_t Snp::m_maxSampleSize=0;
 size_t Snp::m_perfectId=0;
 double Snp::m_adjustment = 1.0;
 
-Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double original):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original){
+Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double original, std::string refAllele, std::string altAllele):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original){
 	m_beta = std::make_shared<double>(original);
 	m_sqrtChiSq = std::make_shared<double>(original);
 	m_heritability = std::make_shared<double>(0.0);
 	m_effectiveNumber=0.0;
-	m_additionVariance =0.0;
-	m_variance =0.0;
 	m_snpLDSC = 0.0;
 	m_targetClass = this;
 	m_sign = usefulTools::signum(original);
@@ -18,6 +16,8 @@ Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double o
 	if(Snp::m_maxSampleSize < m_sampleSize){
         Snp::m_maxSampleSize = m_sampleSize;
 	}
+    m_ref = refAllele;
+    m_alt = altAllele;
 }
 
 std::string Snp::Getchr() const { return m_chr; }
@@ -125,33 +125,54 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
         throw "Cannot read the p-value file";
     }
     std::string line;
-    if(commander->hasHeader()){ //If the p-value file contain a header, we will ignore it
-        std::getline(pValue, line);
-    }
+    //Assume the p-value file should always has a header
+    std::getline(pValue, line);
+
     size_t bpIndex = commander->GetbpIndex();
+    size_t maxIndex= bpIndex;
     size_t chrIndex = commander->GetchrIndex();
+    if(chrIndex > maxIndex) maxIndex =chrIndex;
     size_t rsIndex = commander->GetrsIndex();
-    size_t index = 0, sIndex=0;
-    index=commander->GetIndex();
+    if(rsIndex > maxIndex) maxIndex = rsIndex;
+    size_t sIndex = 0;
+    size_t index = commander->GetIndex();
+    if(index > maxIndex) maxIndex = index;
+    size_t altIndex = 0;
+    size_t refIndex = 0;
+
+    if(commander->risk()){
+        altIndex = commander->GetaltIndex();
+        if(altIndex > maxIndex) maxIndex = maxIndex;
+        refIndex = commander->GetrefIndex();
+        if(refIndex > maxIndex) maxIndex = refIndex;
+    }
     if(!commander->provideSampleSize()) sIndex= commander->GetsampleSizeIndex();
+    if(sIndex > maxIndex) maxIndex = sIndex;
     std::string removeSnps="";
+    size_t removeSnpCount = 0;
     while(std::getline(pValue, line)){
         line =usefulTools::trim(line);
         if(!line.empty()){
             std::vector<std::string> token;
             usefulTools::tokenizer(line, " \t", &token);
-            if(token.size() > bpIndex && token.size() > chrIndex &&
-               token.size() > rsIndex && token.size() > index &&
-               token.size() > sIndex){
+            if(token.size() > maxIndex){
                 std::string chr = token[chrIndex];
                 size_t bp = atoi(token[bpIndex].c_str());
                 std::string rsId = token[rsIndex];
-                size_t sizeOfSample = commander->GetsampleSize();
+                size_t sizeOfSample = 0;
                 if(!commander->provideSampleSize()) sizeOfSample = atoi(token[sIndex].c_str());
+                else size_ofSample = commander->GetsampleSize();
+                std::string refAllele = "";
+                std::string altAllele = "";
+                if(commander->risk()){
+                    refAllele = token[refIndex];
+                    altAllele = token[altIndex];
+                }
                 if(!usefulTools::isNumeric(token[index])){
                     //Check if the input is a number. If it is not, then it should be filtered out.
                     removeSnps.append(rsId);
                     removeSnps.append(",");
+                    removeSnpCount++;
                 }
                 else{
                     double predictedBeta = atof(token[index].c_str());
@@ -159,13 +180,13 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
                         std::cerr << rsId << " does not have finite input ("<< predictedBeta <<"), will set it to zero" << std::endl;
                         predictedBeta=0;
                     }
-                    snpList.push_back(new Snp(chr, rsId, bp, sizeOfSample, predictedBeta));
+                    snpList.push_back(new Snp(chr, rsId, bp, sizeOfSample, predictedBeta, refAllele, altAllele));
                 }
             }
         }
     }
     if(!removeSnps.empty()){
-        std::cerr << "Remove: " << removeSnps << " because its statistic/p-value isn't numeric" << std::endl;
+        std::cerr << removeSnpsCount << " SNPs removed with missing values." << std::endl;
     }
     pValue.close();
     std::sort(snpList.begin(), snpList.end(), Snp::sortSnp);

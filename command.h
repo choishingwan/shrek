@@ -64,6 +64,8 @@ class Command
         size_t GetrsIndex() const;
         /** return the column containing the sample size information */
         size_t GetsampleSizeIndex() const;
+        size_t GetaltIndex() const;
+        size_t GetrefIndex() const;
         /** return the prevalence */
         double Getprevalence() const;
         /** return the maf threshold */
@@ -80,12 +82,11 @@ class Command
         bool provideSampleSize() const;
         /** return whether if it is a quantitative trait study */
         bool quantitative() const;
+        bool risk() const;
         /** return whether if it is a case control study */
         bool caseControl() const;
         /** return whether if maximum block size is set */
         bool maxBlockSet() const;
-        /** return whether if the p-value file contain a header */
-        bool hasHeader() const;
         /** return output prefix */
         std::string GetoutputPrefix() const;
         /** return p-value file name */

@@ -29,7 +29,7 @@ class Snp
 {
 public:
         /** Default constructor */
-        Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double original);
+        Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double original, std::string refAllele, std::string altAllele);
         /** \brief Batch constructor for multiple Snps
          *  \param [out] snpList vector containing the pointer to all the Snps
          *  \param [in] commander structure that contains all the required
@@ -106,6 +106,8 @@ protected:
 private:
         std::string m_chr;
         std::string m_rs;
+        std::string m_ref;
+        std::string m_alt;
         size_t m_bp;
         size_t m_blockInfo;
         int m_sign;
@@ -118,15 +120,20 @@ private:
         double m_sigmaPowerFour;
         double m_snpLDSC;
         size_t m_perfectLdId;
-        //std::shared_ptr<double> m_ncp;
         std::shared_ptr<double> m_beta; //Average of all Snps with perfect LD
         std::shared_ptr<double> m_sqrtChiSq; //Sqrt of the chiSquare, considered the sign.
         std::shared_ptr<double> m_heritability; //The master heritability
         std::vector<bool> m_regionFlag;
+
+
+
         /** This is use to form linked list between Snps that are in perfect LD */
         Snp* m_targetClass; //The master heritability
+
+
         void computeVarianceExplainedChi(const size_t &caseSize, const size_t &controlSize, const double &prevalence, bool isPvalue);
         void computeVarianceExplainedChi(bool isPvalue, double extremeRatio);
+
         static size_t m_perfectId;
         static double m_adjustment;
         static size_t m_maxSampleSize;
