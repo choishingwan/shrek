@@ -117,8 +117,6 @@ class Command
         size_t m_refIndex; //!< the column containing the reference allele. Only use for risk prediction
         size_t m_altIndex; //!< the column containing the alternative allele. Only use for risk prediction
         size_t m_distance; //!< the distance between snps. Any snps further than this is considered as invalid (Have not implement any function to use this information)
-        size_t m_alt; //!< the column containing the alternative allele, only used for risk prediction
-        size_t m_ref; //!< the column containing the reference allele, only used for risk prediction
         double m_prevalence; //!< the prevalence
         double m_maf; //!< the maf filtering threshold. Snps with maf less then this threshold will be filtered out
         double m_extremeAdjust; //!< the extreme adjustment parameter

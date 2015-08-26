@@ -67,6 +67,8 @@ public:
         virtual ~Snp();
         std::string Getchr() const;
         std::string GetrsId() const;
+        std::string Getref() const;
+        std::string Getalt() const;
         size_t Getbp() const;
         size_t GetregionSize() const;
         size_t GetperfectId () const;
@@ -101,7 +103,7 @@ public:
         static size_t GetmaxSampleSize();
         static double Getadjustment();
         static void Setadjustment(const double prevalence, const size_t caseSize, const size_t controlSize);
-
+        static bool ambiguousAllele(const std::string refAllele, const std::string altAllele);
 
 protected:
 private:

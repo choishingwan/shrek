@@ -22,6 +22,8 @@ Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double o
 
 std::string Snp::Getchr() const { return m_chr; }
 std::string Snp::GetrsId() const { return m_rs; }
+std::string Snp::Getref() const { return m_ref; }
+std::string Snp::Getalt() const { return m_alt; }
 size_t Snp::GetperfectId() const { return m_perfectLdId; }
 size_t Snp::Getbp() const { return m_bp; }
 size_t Snp::GetregionSize() const {return m_regionFlag.size(); }
@@ -164,6 +166,7 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
                 if(commander->risk()){
                     refAllele = token[refIndex];
                     altAllele = token[altIndex];
+
                 }
                 if(!usefulTools::isNumeric(token[index])){
                     //Check if the input is a number. If it is not, then it should be filtered out.
@@ -405,6 +408,18 @@ void Snp::cleanSnp(std::vector<Snp*> &snpList){
 
 bool Snp::Concordant(std::string chr, size_t bp, std::string rsId) const{
     return chr.compare(m_chr) ==0 && bp==m_bp && rsId.compare(m_rs) == 0;
+}
+
+bool Snp::ambiguousAllele(const std::string refAllele, const std::string altAllele){
+    if( (refAllele.compare("A")==0 || refAllele.compare("a")==0) &&
+        (altAllele.compare("T")==0 || refAllele.compare("t")==0)) return true;
+    if( (refAllele.compare("T")==0 || refAllele.compare("t")==0) &&
+        (altAllele.compare("A")==0 || refAllele.compare("a")==0)) return true;
+    if( (refAllele.compare("G")==0 || refAllele.compare("G")==0) &&
+        (altAllele.compare("C")==0 || refAllele.compare("c")==0)) return true;
+    if( (refAllele.compare("C")==0 || refAllele.compare("c")==0) &&
+        (altAllele.compare("G")==0 || refAllele.compare("g")==0)) return true;
+    return false;
 }
 
 

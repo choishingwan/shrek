@@ -142,7 +142,7 @@ static const char *optString = "a:b:c:f:g:Hh?i:kl:M:m:no:p:r:R:t:v";
     while(opt!=-1){
 		switch(opt){
 			case 'a':
-                m_alt = atoi(optarg)-1;
+                m_altIndex = atoi(optarg)-1;
                 break;
 			case 'b':
                 m_ldFilePrefix = optarg;
@@ -194,7 +194,7 @@ static const char *optString = "a:b:c:f:g:Hh?i:kl:M:m:no:p:r:R:t:v";
 				m_rsIndex = atoi(optarg)-1;
 				break;
             case 'R':
-                m_ref = atoi(optarg)-1;
+                m_refIndex = atoi(optarg)-1;
 			case 't':
 				m_thread = atoi(optarg);
 				break;
@@ -207,20 +207,20 @@ static const char *optString = "a:b:c:f:g:Hh?i:kl:M:m:no:p:r:R:t:v";
 		opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
     bool error = generalCheck();
-    if( m_Index == m_bpIndex || m_Index == m_chrIndex || m_Index == m_rsIndex || m_Index == m_alt || m_Index == m_ref ||
-        m_bpIndex == m_chrIndex || m_bpIndex == m_rsIndex || m_bpIndex == m_alt || m_bpIndex == m_ref ||
-        m_chrIndex == m_rsIndex || m_chrIndex == m_alt || m_chrIndex == m_ref ||
-        m_alt == m_ref){
+    if( m_Index == m_bpIndex || m_Index == m_chrIndex || m_Index == m_rsIndex || m_Index == m_altIndex || m_Index == m_refIndex ||
+        m_bpIndex == m_chrIndex || m_bpIndex == m_rsIndex || m_bpIndex == m_altIndex || m_bpIndex == m_refIndex ||
+        m_chrIndex == m_rsIndex || m_chrIndex == m_altIndex || m_chrIndex == m_refIndex ||
+        m_altIndex == m_refIndex){
         error = true;
         std::cerr << "Duplicated index! Please make sure the index are not duplicated!" << std::endl;
         std::cerr << "Statistic index: " << m_Index << std::endl;
         std::cerr << "bp index: " << m_bpIndex << std::endl;
         std::cerr << "chr index: " << m_chrIndex << std::endl;
         std::cerr << "rsId index: " << m_rsIndex << std::endl;
-        std::cerr << "alt allele index: " << m_alt << std::endl;
-        std::cerr << "ref allele index: " << m_ref << std::endl;
+        std::cerr << "alt allele index: " << m_altIndex << std::endl;
+        std::cerr << "ref allele index: " << m_refIndex << std::endl;
     }
-    if(m_genotypeFilePrefix.empty() ||!usefulTools::fileExists(m_genotypeFilePrefix)){
+    if(m_genotypeFilePrefix.empty()){
         error = true;
         std::cerr << "The genotype file of the individual are required for risk prediction" << std::endl;
     }
@@ -540,14 +540,26 @@ void Command::initialize(int argc, char* argv[]){
 	std::string mode(argv[1]);
     if(mode.compare("quant")==0){
         m_quantitative = true;
+        if(argc < 3){
+            printQuantUsage();
+            throw "You have not provided any arguments. Please provide all the required arguments";
+        }
         quantMode(argc, argv);
     }
     else if(mode.compare("caseControl")==0){
         m_caseControl = true;
+        if(argc < 3){
+            printCCUsage();
+            throw "You have not provided any arguments. Please provide all the required arguments";
+        }
         ccMode(argc, argv);
     }
     else if(mode.compare("risk")==0){
         m_risk=true;
+        if(argc < 3){
+            printRiskUsage();
+            throw "You have not provided any arguments. Please provide all the required arguments";
+        }
         riskMode(argc, argv);
     }
     else{
