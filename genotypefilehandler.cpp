@@ -102,6 +102,7 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
                         //This is something that we need
                         if(!validate || (*snpList).at(snpLoc)->Concordant(chr, bp, rs)){
                             snpLoc = snpIndex.at(rs);
+                            std::cerr << snpLoc << std::endl;
                             (*snpList).at(snpLoc)->setFlag(0, true); //Now that it is in the genotype file, it contains the LD info.
                             m_inclusion.back()=snpLoc;
                             locList.push_back(bp);
@@ -412,6 +413,7 @@ void GenotypeFileHandler::skipSnps(size_t const skipNum){
 	}
 }
 
+//This is the new one
 ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &prevResidual, size_t &blockSize){
     /** Now that we know exactly how many SNPs are in each chromosome
      *  and how many SNPs that we need from each chromosome, we can
@@ -531,7 +533,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 }
 
 
-
+//This is an archive. Was previously used for perfect LD situation. Yet we found that perfect LD bring more difficulties than benefits
 ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &numSnp){
 	//We will get snps according to the distance
 	//We want to use flanking distance, e.g. getting the 1mb flanking on the both side
@@ -629,8 +631,78 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 
 
 
-void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList){
+void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, size_t processNumber, std::vector<int> &include, size_t sampleSize){
     //This should update the sample matrix so that it can be send to decomposition right away without needing any additional processing.
+    //Each row = SNP
+    //Each column = samples
+    //ProcessNumber = the number of snps we need to read.
+    int currentLoc = snpLoc.size() - processNumber;
+    if(currentLoc < 0){
+        throw "Something is wrong, the start location when reading the genotype can never be negative";
+    }
+    normalizedGenotype-> conservativeResize(snpLoc.size(), sampleSize);
+    while(m_snpIter < m_inputSnp && currentLoc < snpLoc.size()){
+        //The concept is to read through the snpLoc until we reaches the end of it.
+        //If we have any SNPs with loc bigger than the current SNP loc, then something is wrong.
+        std::vector<double> genotype;
+        if(include[m_snpIter] != -1 && include[m_snpIter] == snpLoc[currentLoc]){
+            snp=true;
+        }
+        else if(include[m_snpIter] > snpLoc[currentLoc]){
+            throw "The SNP ordering between the LD file and the genotype file does not match. Please make sure both files are coordinately sorted in the same way e.g. both are 1,2,3,4... or 1,10,11,12...";
+        }
+        size_t indx = 0; //The iterative count
+        size_t homRef=0, homAlt=0, het=0;
+		while ( indx < sampleSize ){
+			std::bitset<8> b; //Initiate the bit array
+			char ch[1];
+			m_bedFile.read(ch,1); //Read the information
+			if (!m_bedFile){
+				throw "Problem with the BED file...has the FAM/BIM file been changed?";
+			}
+			b = ch[0];
+			int c=0;
+			while (c<7 && indx < m_ldSampleSize ){ //Going through the bit flag. Stop when it have read all the samples as the end == NULL
+				//As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
 
+                ++indx; //so that we only need to modify the indx when adding samples but not in the mean and variance calculation
+				if (snp){
+					int first = b[c++];
+					int second = b[c++];
+					if(first == 1 && second == 0){
+                        genotype.push_back(-1);
+					}
+					else{
+                        genotypepush_back(first+second);
+                        if(first+second ==2) homAlt++;
+                        else if(first+second==1) het++;
+                        else homRef++;
+					}
+				}
+				else{
+					c+=2;
+				}
+			}
+		}
+		if(snp){
+            double sum = std::accumulate(std::begin(genotype), std::end(genotype), 0.0);
+            double m =  sum / genotype.size();
+            double accum = 0.0;
+            std::for_each (std::begin(genotype), std::end(genotype), [&](const double d) {
+                accum += (d - m) * (d - m);
+            });
 
+            double stdev = sqrt(accum / (genotype.size()-1));
+            for(size_t i = 0; i < genotype.size(); ++i){
+                (*normalizedGenotype)(currentLoc,i) = ((genotype[i]-mean)/sd) * (*snpList)[snpLoc[currentLoc]]->Getbeta();
+            }
+            currentLoc++;
+		}
+		m_snpIter++;
+    }
+
+}
+
+void GenotypeFileHandler::setInputSnp(size_t const inputSnp){
+    m_inputSnp = inputSnp;
 }

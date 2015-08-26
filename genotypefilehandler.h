@@ -19,6 +19,7 @@
 #include <math.h>
 #include <fstream>
 #include <map>
+#include <Eigen/Dense>
 #include "usefulTools.h"
 #include "snp.h"
 #include "genotype.h"
@@ -52,7 +53,8 @@ public:
         ProcessCode getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &numSnp);
         size_t GetsampleSize() const;
         size_t GetestimateSnpTotal() const;
-        void Getsamples(Eigen::MatrixXd *normalizedGenotype, const std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList);
+        void Getsamples(Eigen::MatrixXd *normalizedGenotype, const std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, size_t processNumber, std::vector<int> &include, size_t sampleSize);
+        void setInputSnp(size_t inputSnp);
 protected:
 private:
         std::string m_genotypeFilePrefix;

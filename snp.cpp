@@ -397,7 +397,9 @@ void Snp::computeVarianceExplainedChi(const size_t &caseSize, const size_t &cont
 void Snp::setFlag(size_t index, bool value){
     m_regionFlag.at(index) = value;
 }
-
+void Snp::addFlag(bool value){
+    m_regionFlag.push_back(value);
+}
 
 void Snp::cleanSnp(std::vector<Snp*> &snpList){
     for(size_t i= 0; i < snpList.size(); ++i){

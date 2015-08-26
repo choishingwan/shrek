@@ -86,6 +86,7 @@ public:
         void Setheritability(double heritability);
         void SeteffectiveNumber(double effective);
         void setFlag(size_t index, bool value);
+        void addFlag(bool value);
         void shareHeritability( Snp* i );
         void Setvariance(double i );
         void SetsnpLDSC(double i );
