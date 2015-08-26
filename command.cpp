@@ -10,6 +10,8 @@ size_t Command::GetIndex() const { return m_Index; }
 size_t Command::GetbpIndex() const { return m_bpIndex; }
 size_t Command::GetchrIndex() const { return m_chrIndex; }
 size_t Command::GetrsIndex() const { return m_rsIndex; }
+size_t Command::GetaltIndex() const { return m_altIndex; }
+size_t Command::GetrefIndex() const { return m_refIndex; }
 size_t Command::GetsampleSizeIndex() const { return m_sampleSizeIndex; }
 double Command::Getprevalence() const { return m_prevalence; }
 double Command::Getmaf() const { return m_maf; }
@@ -20,20 +22,21 @@ bool Command::isPvalue() const { return m_isPvalue; }
 bool Command::provideSampleSize() const { return m_provideSampleSize; }
 bool Command::quantitative() const { return m_quantitative; }
 bool Command::caseControl() const { return m_caseControl; }
+bool Command::risk() const {return m_risk; }
 bool Command::maxBlockSet() const { return m_maxBlockSet; }
-bool Command::hasHeader() const {return m_hasHeader; }
+bool Command::keep() const{ return m_keep; }
 std::string Command::GetoutputPrefix() const { return m_outputPrefix; }
 std::string Command::GetpValueFileName() const { return m_pValueFileName; }
 std::string Command::GetldFilePrefix() const { return m_ldFilePrefix; }
 std::string Command::GetregionList() const { return m_regionList; }
 std::string Command::GetdirectionFile() const {return m_directionFile; }
 std::string Command::GetprogrammeName() const { return m_programmeName; }
+std::string Command::GetgenotypeFile() const { return m_genotypeFilePrefix; }
 
 
 Command::Command(){
     m_version = 0.01;
-    m_hasHeader =true;
-	m_provideExtremeAdjustment = false;
+    m_provideExtremeAdjustment = false;
 	m_providedPrevalence = false;
     m_providedMaf= false;
     m_ldCorrection = true;
@@ -44,6 +47,7 @@ Command::Command(){
     m_caseControl = false;
     m_risk = false;
     m_maxBlockSet = false;
+    m_keep = true;
     m_thread = 1;
     m_chrIndex = 0;
     m_rsIndex = 1;
@@ -109,7 +113,7 @@ bool Command::generalCheck(){
 
 
 void Command::riskMode(int argc, char* argv[]){
-static const char *optString = "a:b:c:f:g:Hh?i:l:M:m:no:p:r:R:t:v";
+static const char *optString = "a:b:c:f:g:Hh?i:kl:M:m:no:p:r:R:t:v";
 	static const struct option longOpts[]={
 	    {"alt",required_argument,NULL, 'a'},
 		{"bfile",required_argument,NULL,'b'},
@@ -117,6 +121,7 @@ static const char *optString = "a:b:c:f:g:Hh?i:l:M:m:no:p:r:R:t:v";
 		{"maf",required_argument,NULL,'f'},
 		{"geno", required_argument, NULL, 'g'},
 		{"index", required_argument, NULL, 'i'},
+		{"keep", no_argument, NULL, 'k'},
 		{"loc",required_argument,NULL,'l'},
 		{"maxBlock",required_argument,NULL,'M'},
 		{"minBlock",required_argument,NULL,'m'},
@@ -152,14 +157,17 @@ static const char *optString = "a:b:c:f:g:Hh?i:l:M:m:no:p:r:R:t:v";
             case 'g':
                 m_genotypeFilePrefix = optarg;
                 break;
-            case 'i':
-                m_Index = atoi(optarg)-1;;
-                break;
 			case 'h':
 			case '?':
  				printRiskUsage();
                 throw 0;
 				break;
+            case 'i':
+                m_Index = atoi(optarg)-1;;
+                break;
+            case 'k':
+                m_keep = false;
+                break;
 			case 'l':
 				m_bpIndex=atoi(optarg)-1;
 				break;
@@ -232,7 +240,7 @@ static const char *optString = "a:b:c:f:g:Hh?i:l:M:m:no:p:r:R:t:v";
 
 
 void Command::quantMode(int argc, char* argv[]){
-    static const char *optString = "b:c:e:f:Hh?i:l:L:M:m:no:p:r:s:t:uvx:";
+    static const char *optString = "b:c:e:f:h?i:l:L:M:m:no:p:r:s:t:uvx:";
 	static const struct option longOpts[]={
 		{"bfile",required_argument,NULL,'b'},
 		{"chr",required_argument,NULL,'c'},
@@ -253,7 +261,6 @@ void Command::quantMode(int argc, char* argv[]){
 		{"pvalue",no_argument,NULL,'u'},
 		{"validate",no_argument,NULL,'v'},
 		{"sampleIndex",required_argument,NULL,'x'},
-		{"header",no_argument,NULL,'H'},
 		{"help",no_argument,NULL,'h'},
 		{NULL, 0, 0, 0}
 	};
@@ -281,10 +288,7 @@ void Command::quantMode(int argc, char* argv[]){
             case 'i':
                 m_Index = atoi(optarg)-1;;
                 break;
-            case 'H':
-                m_hasHeader=true;
-                break;
-			case 'h':
+    		case 'h':
 			case '?':
  				printQuantUsage();
                 throw 0;
@@ -376,7 +380,7 @@ void Command::quantMode(int argc, char* argv[]){
 
 
 void Command::ccMode(int argc, char* argv[]){
-    static const char *optString = "a:b:c:f:Hh?i:k:l:L:M:m:no:p:R:r:t:uv";
+    static const char *optString = "a:b:c:f:h?i:k:l:L:M:m:no:p:R:r:t:uv";
 	static const struct option longOpts[]={
 		{"case",required_argument,NULL,'a'},
 		{"bfile",required_argument,NULL,'b'},
@@ -397,7 +401,6 @@ void Command::ccMode(int argc, char* argv[]){
 		{"thread",required_argument,NULL,'t'},
 		{"pvalue",no_argument,NULL,'u'},
 		{"validate",no_argument,NULL,'v'},
-		{"header",no_argument,NULL,'H'},
 		{"help",no_argument,NULL,'h'},
 		{NULL, 0, 0, 0}
 	};
@@ -423,9 +426,6 @@ void Command::ccMode(int argc, char* argv[]){
                 break;
             case 'i':
                 m_Index = atoi(optarg)-1;
-                break;
-            case 'H':
-                m_hasHeader=true;
                 break;
 			case 'h':
 			case '?':

@@ -4,13 +4,11 @@ size_t Snp::m_maxSampleSize=0;
 size_t Snp::m_perfectId=0;
 double Snp::m_adjustment = 1.0;
 
-Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double original):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original){
+Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double original, std::string refAllele, std::string altAllele):m_chr(chr), m_rs(rs), m_bp(bp), m_sampleSize(sampleSize), m_original(original){
 	m_beta = std::make_shared<double>(original);
 	m_sqrtChiSq = std::make_shared<double>(original);
 	m_heritability = std::make_shared<double>(0.0);
 	m_effectiveNumber=0.0;
-	m_additionVariance =0.0;
-	m_variance =0.0;
 	m_snpLDSC = 0.0;
 	m_targetClass = this;
 	m_sign = usefulTools::signum(original);
@@ -18,6 +16,8 @@ Snp::Snp(std::string chr, std::string rs, size_t bp, double sampleSize, double o
 	if(Snp::m_maxSampleSize < m_sampleSize){
         Snp::m_maxSampleSize = m_sampleSize;
 	}
+    m_ref = refAllele;
+    m_alt = altAllele;
 }
 
 std::string Snp::Getchr() const { return m_chr; }
@@ -109,10 +109,7 @@ void Snp::shareHeritability( Snp* i ){
 
 
 bool Snp::GetFlag(size_t index) const {
-	if(index>= m_regionFlag.size()){
-        throw std::out_of_range("Region was out of bound");
-    }
-	return m_regionFlag[index];
+	return m_regionFlag.at(index);
 }
 
 
@@ -125,33 +122,54 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
         throw "Cannot read the p-value file";
     }
     std::string line;
-    if(commander->hasHeader()){ //If the p-value file contain a header, we will ignore it
-        std::getline(pValue, line);
-    }
+    //Assume the p-value file should always has a header
+    std::getline(pValue, line);
+
     size_t bpIndex = commander->GetbpIndex();
+    size_t maxIndex= bpIndex;
     size_t chrIndex = commander->GetchrIndex();
+    if(chrIndex > maxIndex) maxIndex =chrIndex;
     size_t rsIndex = commander->GetrsIndex();
-    size_t index = 0, sIndex=0;
-    index=commander->GetIndex();
+    if(rsIndex > maxIndex) maxIndex = rsIndex;
+    size_t sIndex = 0;
+    size_t index = commander->GetIndex();
+    if(index > maxIndex) maxIndex = index;
+    size_t altIndex = 0;
+    size_t refIndex = 0;
+
+    if(commander->risk()){
+        altIndex = commander->GetaltIndex();
+        if(altIndex > maxIndex) maxIndex = maxIndex;
+        refIndex = commander->GetrefIndex();
+        if(refIndex > maxIndex) maxIndex = refIndex;
+    }
     if(!commander->provideSampleSize()) sIndex= commander->GetsampleSizeIndex();
+    if(sIndex > maxIndex) maxIndex = sIndex;
     std::string removeSnps="";
+    size_t removeSnpCount = 0;
     while(std::getline(pValue, line)){
         line =usefulTools::trim(line);
         if(!line.empty()){
             std::vector<std::string> token;
             usefulTools::tokenizer(line, " \t", &token);
-            if(token.size() > bpIndex && token.size() > chrIndex &&
-               token.size() > rsIndex && token.size() > index &&
-               token.size() > sIndex){
+            if(token.size() > maxIndex){
                 std::string chr = token[chrIndex];
                 size_t bp = atoi(token[bpIndex].c_str());
                 std::string rsId = token[rsIndex];
-                size_t sizeOfSample = commander->GetsampleSize();
+                size_t sizeOfSample = 0;
                 if(!commander->provideSampleSize()) sizeOfSample = atoi(token[sIndex].c_str());
+                else sizeOfSample = commander->GetsampleSize();
+                std::string refAllele = "";
+                std::string altAllele = "";
+                if(commander->risk()){
+                    refAllele = token[refIndex];
+                    altAllele = token[altIndex];
+                }
                 if(!usefulTools::isNumeric(token[index])){
                     //Check if the input is a number. If it is not, then it should be filtered out.
                     removeSnps.append(rsId);
                     removeSnps.append(",");
+                    removeSnpCount++;
                 }
                 else{
                     double predictedBeta = atof(token[index].c_str());
@@ -159,13 +177,13 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
                         std::cerr << rsId << " does not have finite input ("<< predictedBeta <<"), will set it to zero" << std::endl;
                         predictedBeta=0;
                     }
-                    snpList.push_back(new Snp(chr, rsId, bp, sizeOfSample, predictedBeta));
+                    snpList.push_back(new Snp(chr, rsId, bp, sizeOfSample, predictedBeta, refAllele, altAllele));
                 }
             }
         }
     }
     if(!removeSnps.empty()){
-        std::cerr << "Remove: " << removeSnps << " because its statistic/p-value isn't numeric" << std::endl;
+        std::cerr << removeSnpCount << " SNPs removed with missing values." << std::endl;
     }
     pValue.close();
     std::sort(snpList.begin(), snpList.end(), Snp::sortSnp);
@@ -227,36 +245,6 @@ void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<
     else std::cerr <<  "There are a total of " << duplicate << " duplicated rsID(s) in the p-value file" << std::endl << std::endl;
 }
 
-void Snp::addDirection(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList,std::string dirFile){
-    if(dirFile.empty()){
-        throw "Should not happen as we direction file was not requested";
-    }
-    std::ifstream direction;
-    direction.open(dirFile.c_str());
-    if(!direction.is_open()){
-        throw "Cannot open the direction file";
-    }
-    //Assume no header
-    std::string line;
-    while(std::getline(direction, line)){
-        line = usefulTools::trim(line);
-        if(!line.empty()){
-            std::vector<std::string> token;
-            usefulTools::tokenizer(line, "\t ", &token);
-            //The first should be rsId, the second should be the direction
-            if(token.size() > 1){
-                if(snpIndex.find(token.at(0)) != snpIndex.end()){
-                    size_t refId = snpIndex.at(token.at(0));
-                    snpList.at(refId)->Setsign(atoi(line.c_str()));
-                }
-                else{
-                    throw "The direction file contains Snps not found in p-value file. Most likely they are not matched. Please check your input!";
-                }
-            }
-        }
-    }
-    direction.close();
-}
 
 void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList, const size_t &caseSize, const size_t &controlSize, const double &prevalence, Region *regionList, bool isPvalue){
 	std::vector<size_t> regionIncrementationIndex(regionList->GetnumRegion(), 0);
@@ -294,6 +282,71 @@ void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<
     }
     if(duplicate == 0) std::cerr << "There are no duplicated rsID in the p-value file" << std::endl << std::endl;
     else std::cerr <<  "There are a total of " << duplicate << " duplicated rsID(s) in the p-value file" << std::endl << std::endl;
+}
+
+
+void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList, std::string genotypeFileName, bool keep){
+    //If we do keep the ambiguous SNPs, we need to make sure it is the correct orientation
+    //not the most sophisticated method though.
+    std::string bimFileName = genotypeFileName;
+    bimFileName.append(".bim");
+    std::ifstream bimFile;
+    bimFile.open(bimFileName.c_str());
+    if(!bimFile.is_open()){
+        std::string message = "Cannot open bim file: ";
+        message.append(bimFileName);
+        throw message;
+    }
+    std::string line;
+    while(std::getline(bimFile,line)){
+        line =usefulTools::trim(line);
+    }
+    bimFile.close();
+	size_t duplicate = 0;
+	for(size_t i = 0; i < snpList.size(); ++i){
+        if(snpIndex.find(snpList[i]->GetrsId())==snpIndex.end()){
+            snpIndex[snpList[i]->GetrsId()] = i;
+        }
+        else{
+            duplicate++;
+        }
+
+    }
+    if(duplicate == 0) std::cerr << "There are no duplicated rsID in the p-value file" << std::endl << std::endl;
+    else std::cerr <<  "There are a total of " << duplicate << " duplicated rsID(s) in the p-value file" << std::endl << std::endl;
+}
+
+
+
+void Snp::addDirection(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList,std::string dirFile){
+    if(dirFile.empty()){
+        throw "Should not happen as we direction file was not requested";
+    }
+    std::ifstream direction;
+    direction.open(dirFile.c_str());
+    if(!direction.is_open()){
+        throw "Cannot open the direction file";
+    }
+    //Assume no header
+    std::string line;
+    while(std::getline(direction, line)){
+        line = usefulTools::trim(line);
+        if(!line.empty()){
+            std::vector<std::string> token;
+            usefulTools::tokenizer(line, "\t ", &token);
+            //The first should be rsId, the second should be the direction
+            if(token.size() > 1){
+                if(snpIndex.find(token.at(0)) != snpIndex.end()){
+                    size_t refId = snpIndex.at(token.at(0));
+                    snpList.at(refId)->Setsign(atoi(line.c_str()));
+                }
+                else{
+                    throw "The direction file contains Snps not found in p-value file. Most likely they are not matched. Please check your input!";
+                }
+            }
+        }
+    }
+    direction.close();
 }
 
 void Snp::computeVarianceExplainedChi(bool isPvalue, double extremeRatio){
