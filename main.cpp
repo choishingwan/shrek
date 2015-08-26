@@ -83,6 +83,8 @@ int main(int argc, char *argv[]){
         Snp::cleanSnp(snpList);
         return EXIT_FAILURE;
     }
+
+
     try{
         /** Generate the Snp Index */
         if(commander->quantitative()){
@@ -92,6 +94,9 @@ int main(int argc, char *argv[]){
             Snp::generateSnpIndex(snpIndex, snpList,commander->GetcaseSize(), commander->GetcontrolSize(), commander->Getprevalence(), regionInfo, commander->isPvalue());
             /** For case control study, set the liability adjustment */
             Snp::Setadjustment(commander->Getprevalence(), commander->GetcaseSize(), commander->GetcontrolSize());
+        }
+        else if(commander->risk()){
+            Snp::generateSnpIndex(snpIndex, snpList);
         }
         regionInfo->clean();
     }

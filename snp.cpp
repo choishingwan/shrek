@@ -109,10 +109,7 @@ void Snp::shareHeritability( Snp* i ){
 
 
 bool Snp::GetFlag(size_t index) const {
-	if(index>= m_regionFlag.size()){
-        throw std::out_of_range("Region was out of bound");
-    }
-	return m_regionFlag[index];
+	return m_regionFlag.at(index);
 }
 
 
@@ -248,36 +245,6 @@ void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<
     else std::cerr <<  "There are a total of " << duplicate << " duplicated rsID(s) in the p-value file" << std::endl << std::endl;
 }
 
-void Snp::addDirection(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList,std::string dirFile){
-    if(dirFile.empty()){
-        throw "Should not happen as we direction file was not requested";
-    }
-    std::ifstream direction;
-    direction.open(dirFile.c_str());
-    if(!direction.is_open()){
-        throw "Cannot open the direction file";
-    }
-    //Assume no header
-    std::string line;
-    while(std::getline(direction, line)){
-        line = usefulTools::trim(line);
-        if(!line.empty()){
-            std::vector<std::string> token;
-            usefulTools::tokenizer(line, "\t ", &token);
-            //The first should be rsId, the second should be the direction
-            if(token.size() > 1){
-                if(snpIndex.find(token.at(0)) != snpIndex.end()){
-                    size_t refId = snpIndex.at(token.at(0));
-                    snpList.at(refId)->Setsign(atoi(line.c_str()));
-                }
-                else{
-                    throw "The direction file contains Snps not found in p-value file. Most likely they are not matched. Please check your input!";
-                }
-            }
-        }
-    }
-    direction.close();
-}
 
 void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList, const size_t &caseSize, const size_t &controlSize, const double &prevalence, Region *regionList, bool isPvalue){
 	std::vector<size_t> regionIncrementationIndex(regionList->GetnumRegion(), 0);
@@ -315,6 +282,56 @@ void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<
     }
     if(duplicate == 0) std::cerr << "There are no duplicated rsID in the p-value file" << std::endl << std::endl;
     else std::cerr <<  "There are a total of " << duplicate << " duplicated rsID(s) in the p-value file" << std::endl << std::endl;
+}
+
+
+void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList, const size_t &caseSize, const size_t &controlSize, const double &prevalence, Region *regionList, bool isPvalue){
+	std::vector<size_t> regionIncrementationIndex(regionList->GetnumRegion(), 0);
+	size_t duplicate = 0;
+	for(size_t i = 0; i < snpList.size(); ++i){
+        if(snpIndex.find(snpList[i]->GetrsId())==snpIndex.end()){
+            snpIndex[snpList[i]->GetrsId()] = i;
+        }
+        else{
+            duplicate++;
+        }
+
+    }
+    if(duplicate == 0) std::cerr << "There are no duplicated rsID in the p-value file" << std::endl << std::endl;
+    else std::cerr <<  "There are a total of " << duplicate << " duplicated rsID(s) in the p-value file" << std::endl << std::endl;
+}
+
+
+
+void Snp::addDirection(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> &snpList,std::string dirFile){
+    if(dirFile.empty()){
+        throw "Should not happen as we direction file was not requested";
+    }
+    std::ifstream direction;
+    direction.open(dirFile.c_str());
+    if(!direction.is_open()){
+        throw "Cannot open the direction file";
+    }
+    //Assume no header
+    std::string line;
+    while(std::getline(direction, line)){
+        line = usefulTools::trim(line);
+        if(!line.empty()){
+            std::vector<std::string> token;
+            usefulTools::tokenizer(line, "\t ", &token);
+            //The first should be rsId, the second should be the direction
+            if(token.size() > 1){
+                if(snpIndex.find(token.at(0)) != snpIndex.end()){
+                    size_t refId = snpIndex.at(token.at(0));
+                    snpList.at(refId)->Setsign(atoi(line.c_str()));
+                }
+                else{
+                    throw "The direction file contains Snps not found in p-value file. Most likely they are not matched. Please check your input!";
+                }
+            }
+        }
+    }
+    direction.close();
 }
 
 void Snp::computeVarianceExplainedChi(bool isPvalue, double extremeRatio){
