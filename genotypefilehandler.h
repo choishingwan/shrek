@@ -53,7 +53,7 @@ public:
         ProcessCode getSnps(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, bool &chromosomeStart, bool &chromosomeEnd, double const maf, size_t &numSnp);
         size_t GetsampleSize() const;
         size_t GetestimateSnpTotal() const;
-        void Getsamples(Eigen::MatrixXd *normalizedGenotype, const std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, size_t processNumber);
+        void Getsamples(Eigen::MatrixXd *normalizedGenotype, const std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, size_t processNumber, std::vector<bool> &flipping);
         size_t mafCheck(std::vector<int> include, size_t sampleSize);
 protected:
 private:

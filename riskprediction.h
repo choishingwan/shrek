@@ -28,6 +28,7 @@ class RiskPrediction
         std::vector<bool> m_flipCheck;
         std::vector<int> m_genoInclude;
         std::vector<std::string> m_sampleId;
+        std::vector<double> m_samplePheno;
         size_t m_thread;
         size_t m_minBlock;
         size_t m_maxBlock;

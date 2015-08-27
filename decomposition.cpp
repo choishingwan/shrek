@@ -10,7 +10,30 @@ Decomposition::~Decomposition()
 {
 	//dtor
 }
+void Decomposition::Decompose(const size_t &blockSize, std::deque<size_t> &snpLoc, std::deque<Genotype*> &genotype, bool chromosomeStart, bool chromosomeEnd, std::vector<double> &samplePheno, Eigen::MatrixXd &sampleMatrix){
+    if(genotype.size() == 0) throw "No genotype to work on";
+    size_t processSize = snpLoc.size();
+    size_t currentBlockSize = blockSize;
+    if(currentBlockSize > processSize) currentBlockSize = processSize;
+    std::vector<size_t> startLoc;
+    size_t stepSize = currentBlockSize/3;
+    if(stepSize == 0){
+        if(processSize > 2){
+            std::cerr << "Something is wrong. I don't expect step size = 0 when there are more than 2 snp input" << std::endl;
+            throw "Unexpected error";
+        }
+    	Eigen::MatrixXd result;
+        result = m_linkage->solve(0, processSize, &sampleMatrix,Snp::GetmaxSampleSize(),snpLoc[0]);
+		//std::cerr << "Single " << processSize << std::endl;
+        for(size_t j = 0; j < samplePheno.size(); ++j){
+            samplePheno[j] += result.col(j).segment(0,processSize).sum();
+        }
+    }
 
+
+
+
+}
 ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t> &snpLoc, std::deque<Genotype*> &genotype, bool chromosomeStart, bool chromosomeEnd){
     //First, build the vector for beta
     if(genotype.size() == 0){

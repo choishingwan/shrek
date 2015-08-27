@@ -66,6 +66,7 @@ void RiskPrediction::checkGenotype(){
             usefulTools::tokenizer(line, "\t ", &token);
             if(token.size() > 2){ //This will not be a proper fam file format, but as we only need the sample id, this is all what we need
                 m_sampleId.push_back(token[1]);
+                m_samplePheno.push_back(0.0);
             }
         }
     }
@@ -193,14 +194,18 @@ void RiskPrediction::run(){
 			//Now calculate the LD matrix
 			linkageMatrix->Initialize(genotype, prevResidual, blockSize);
 			linkageMatrix->Construct(genotype, prevResidual, blockSize, m_ldCorrection);
-            targetGenotype->Getsamples(&normalizedGenotype, snpLoc, m_snpList, genotype.size() - normalizedGenotype.rows());
-
+            targetGenotype->Getsamples(&normalizedGenotype, snpLoc, m_snpList, genotype.size() - normalizedGenotype.rows(), m_flipCheck);
             numProcessed+= genotype.size(); //Finished the LD construction
+            //Now perform the decomposition, which only involve distributing the matrix to different stuff to work on
+            decompositionHandler->Decompose(blockSize, snpLoc, genotype, chromosomeStart, chromosomeEnd, m_samplePheno, normalizedGenotype);
+
+
             if(!chromosomeEnd){
 				if(blockSize > genotype.size()) throw "When block size is bigger than the number of genotype, it must be the end of chromosome";
 				size_t retain = blockSize/3*2;
 				//Will also need to remove the front of the normalizedGenotype
-                normalizedGenotype = normalizedGenotype.bottomRows(blockSize/3*2);
+                Eigen::MatrixXd temp = normalizedGenotype.bottomRows(blockSize/3*2);
+                normalizedGenotype = temp;
 				Genotype::clean(genotype, retain);
 				size_t removeCount = snpLoc.size() - retain;
 				for(size_t i = 0; i < removeCount; ++i)	snpLoc.pop_front();

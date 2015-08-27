@@ -39,6 +39,7 @@ class Decomposition
 		virtual ~Decomposition();
         /** The decomposition processor */
 		ProcessCode Decompose(const size_t &blockSize, std::deque<size_t> &snpLoc, std::deque<Genotype*> &genotype, bool chromosomeStart, bool chromosomeEnd);
+		void Decompose(const size_t &blockSize, std::deque<size_t> &snpLoc, std::deque<Genotype*> &genotype, bool chromosomeStart, bool chromosomeEnd, std::vector<double> &samplePheno, Eigen::MatrixXd &sampleMatrix);
 	protected:
 	private:
         std::vector<Snp*> *m_snpList;

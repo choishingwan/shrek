@@ -65,6 +65,7 @@ class Linkage
 		Eigen::MatrixXd blockSqrt(size_t blockStart, size_t lengthOfBlock);
 		/** Solving the matrix equation using the linkage matrix */
 		Eigen::VectorXd solve(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::VectorXd *perSnpEffect, Eigen::VectorXd *effectiveReturnResult, size_t sampleSize,size_t snpStart);
+		Eigen::MatrixXd solve(size_t start, size_t length, Eigen::MatrixXd const *const sampleMatrix, size_t sampleSize,size_t snpStart);
 
 		/** Removing perfectLD by setting them to 0 so that they will be updated */
         size_t Remove();

@@ -456,7 +456,6 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 		}
 		if(snp){
             genotype.push_back(new Genotype());
-            std::cerr << m_inclusion[m_snpIter] << "\t" << (*snpList)[m_inclusion[m_snpIter]]->GetrsId() << std::endl;
             snpLoc.push_back(m_inclusion[m_snpIter]);
 		}
 		size_t indx = 0; //The iterative count
@@ -634,7 +633,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 
 
 
-void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, size_t processNumber){
+void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, size_t processNumber, std::vector<bool> &flipping){
     //This should update the sample matrix so that it can be send to decomposition right away without needing any additional processing.
     //Each row = SNP
     //Each column = samples
@@ -648,18 +647,16 @@ void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const 
         //The concept is to read through the snpLoc until we reaches the end of it.
         //If we have any SNPs with loc bigger than the current SNP loc, then something is wrong.
         bool snp = false;
+        bool flipRequired = false;
         std::vector<double> genotype;
-        std::cerr <<m_inclusion[m_snpIter] << "\t" << snpLoc[currentLoc] << "\t" << m_snpIter << "\t" << currentLoc <<  std::endl;
         if(m_inclusion[m_snpIter] != -1 && m_inclusion[m_snpIter] == (signed)snpLoc[currentLoc]){
             snp=true;
+            if(flipping[m_snpIter]) flipRequired = true;
         }
-        else if((unsigned)m_inclusion[m_snpIter] > snpLoc[currentLoc]){
-            std::cerr << (unsigned)m_inclusion[m_snpIter] << "\t" << snpLoc[currentLoc] << std::endl;
-            std::cerr << (*snpList)[snpLoc[currentLoc]]->GetrsId() << std::endl;
+        else if(m_inclusion[m_snpIter] > (signed)snpLoc[currentLoc]){
             throw "The SNP ordering between the LD file and the genotype file does not match. Please make sure both files are coordinately sorted in the same way e.g. both are 1,2,3,4... or 1,10,11,12...";
         }
         size_t indx = 0; //The iterative count
-        size_t homRef=0, homAlt=0, het=0;
 		while ( indx < m_ldSampleSize ){
 			std::bitset<8> b; //Initiate the bit array
 			char ch[1];
@@ -680,10 +677,8 @@ void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const 
                         genotype.push_back(-1);
 					}
 					else{
-                        genotype.push_back(first+second);
-                        if(first+second ==2) homAlt++;
-                        else if(first+second==1) het++;
-                        else homRef++;
+                        if(flipRequired) genotype.push_back(fabs(2-first-second));
+                        else genotype.push_back(first+second);
 					}
 				}
 				else{
@@ -701,8 +696,14 @@ void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const 
 
             double stdev = sqrt(accum / (genotype.size()-1));
             for(size_t i = 0; i < genotype.size(); ++i){
-                (*normalizedGenotype)(currentLoc,i) = ((genotype[i]-m)/stdev) * (*snpList)[snpLoc[currentLoc]]->Getbeta();
+                if(genotype[i] == -1){
+                    (*normalizedGenotype)(currentLoc,i)=0.0;
+                }
+                else{
+                    (*normalizedGenotype)(currentLoc,i) = ((genotype[i]-m)/stdev) * (*snpList)[snpLoc[currentLoc]]->Getbeta();
+                }
             }
+            std::cerr << (*snpList)[snpLoc[currentLoc]]->Getbeta() << std::endl;
             currentLoc++;
 		}
 		m_snpIter++;
