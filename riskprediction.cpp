@@ -81,11 +81,13 @@ void RiskPrediction::checkGenotype(){
     size_t positive = 0;
     size_t notFound = 0;
     std::map<std::string, size_t> concordanceIndex;
+    size_t lineNum = 0;
     while(std::getline(bimFile, line)){
         line = usefulTools::trim(line);
         std::vector<std::string> token;
         usefulTools::tokenizer(line, "\t ", &token);
         if(!line.empty() && token.size() >= 6 ){
+                lineNum++;
             std::string chr = token[0];
             std::string rsId = token[1];
             size_t loc = atoi(token[3].c_str());
@@ -110,7 +112,8 @@ void RiskPrediction::checkGenotype(){
                         std::string curAlt = (*m_snpList)[sIndex]->Getalt();
                         bool isAmbiguous = Snp::ambiguousAllele(refAllele, altAllele);
                         //std::cerr << curRef << "\t" << curAlt << "\t" << refAllele << "\t" << altAllele << std::endl;
-                        if(curRef.compare(refAllele)==0 && curAlt.compare(altAllele)==0){
+                        int compareStatus = compareAllele(refAllele, altAllele, curRef, curAlt);
+                        if(compareStatus==1){
                             //ok
                             if(isAmbiguous && !m_keep){
                                 ambiguous++;
@@ -124,7 +127,7 @@ void RiskPrediction::checkGenotype(){
                                 concordanceIndex[rsId] = sIndex;
                             }
                         }
-                        else if(curRef.compare(altAllele)==0 && curAlt.compare(refAllele)==0){
+                        else if(compareStatus==2){
                             //flip
                             if(isAmbiguous && !m_keep){
                                 ambiguous++;
@@ -240,7 +243,7 @@ void RiskPrediction::run(){
 void RiskPrediction::result(){
     if(!m_outPrefix.empty()){
         std::string outputName = m_outPrefix;
-        outputName.append(".result");
+        outputName.append(".res");
         std::ofstream result;
         result.open(outputName.c_str());
         if(!result.is_open()){
@@ -266,6 +269,41 @@ void RiskPrediction::result(){
     }
 }
 
+std::string RiskPrediction::convert(std::string allele){
+    if(allele.compare("A")==0 ||allele.compare("a")==0  ) return "T";
+    if(allele.compare("T")==0 ||allele.compare("t")==0  ) return "A";
+    if(allele.compare("C")==0 ||allele.compare("c")==0  ) return "G";
+    if(allele.compare("G")==0 ||allele.compare("g")==0  ) return "C";
+    return "-";
+}
 
+std::string RiskPrediction::upper(std::string &str){
+    std::string converted;
+	for(size_t i = 0; i < str.size(); ++i)
+		converted += std::toupper(str[i]);
 
+	return converted;
+}
+int RiskPrediction::compareAllele(std::string refAllele, std::string altAllele, std::string targetRef, std::string targetAlt){
+    //same = 1
+    //flip = 2;
+    //different = 3;
+    std::string refA = upper(refAllele);
+    std::string altA = upper(altAllele);
+    std::string tRefA = upper(targetRef);
+    std::string tAltA = upper(targetAlt);
+    if(refA.compare(tRefA)==0 && altA.compare(tAltA)==0){
+        return 1;
+    }
+    else if(refA.compare(tAltA)==0 && altA.compare(tRefA)==0){
+        return 2;
+    }
+    else if(convert(refA).compare(tRefA)==0 && convert(altA).compare(tAltA)==0){
+        return 1;
+    }
+    else if(convert(refA).compare(tAltA)==0 && convert(altA).compare(tRefA)==0){
+        return 2;
+    }
+    else return 3;
+}
 

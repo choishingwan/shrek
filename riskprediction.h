@@ -6,6 +6,7 @@
 #include <map>
 #include <Eigen/Core>
 #include <Eigen/Dense>
+#include <locale>
 #include "snp.h"
 #include "command.h"
 #include "usefulTools.h"
@@ -43,6 +44,9 @@ class RiskPrediction
         std::string m_outPrefix;
         std::map<std::string, size_t> snpIndex;
         GenotypeFileHandler *targetGenotype;
+        int compareAllele(std::string refAllele, std::string altAllele, std::string targetRef, std::string targetAlt);
+        std::string convert(std::string allele);
+        std::string upper(std::string &str);
 };
 
 #endif // RISKPREDICTION_H
