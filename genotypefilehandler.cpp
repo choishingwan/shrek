@@ -11,6 +11,7 @@ GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, size_t 
 	m_snpIter =0;
 }
 
+
 void GenotypeFileHandler::initialize(){
     std::string bedFileName = m_genotypeFilePrefix+".bed";
 	bool bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_bedFile); //We will try to open the connection to bedFile
@@ -22,6 +23,7 @@ void GenotypeFileHandler::initialize(){
     }
     m_processed = 0;
 	m_targetProcessed=0;
+    m_snpIter = 0;
 }
 
 void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, std::vector<Snp*> *snpList, bool validate, bool maxBlockSet, size_t maxBlock, size_t minBlock, double const maf){
@@ -454,6 +456,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 		}
 		if(snp){
             genotype.push_back(new Genotype());
+            std::cerr << m_inclusion[m_snpIter] << "\t" << (*snpList)[m_inclusion[m_snpIter]]->GetrsId() << std::endl;
             snpLoc.push_back(m_inclusion[m_snpIter]);
 		}
 		size_t indx = 0; //The iterative count
@@ -631,7 +634,7 @@ ProcessCode GenotypeFileHandler::getSnps(std::deque<Genotype*> &genotype, std::d
 
 
 
-void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, size_t processNumber, std::vector<int> &include, size_t sampleSize){
+void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const std::deque<size_t> &snpLoc, std::vector<Snp*> *snpList, size_t processNumber){
     //This should update the sample matrix so that it can be send to decomposition right away without needing any additional processing.
     //Each row = SNP
     //Each column = samples
@@ -640,21 +643,24 @@ void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const 
     if(currentLoc < 0){
         throw "Something is wrong, the start location when reading the genotype can never be negative";
     }
-    normalizedGenotype-> conservativeResize(snpLoc.size(), sampleSize);
+    normalizedGenotype-> conservativeResize(snpLoc.size(), m_ldSampleSize);
     while(m_snpIter < m_inputSnp && (unsigned)currentLoc < snpLoc.size()){
         //The concept is to read through the snpLoc until we reaches the end of it.
         //If we have any SNPs with loc bigger than the current SNP loc, then something is wrong.
         bool snp = false;
         std::vector<double> genotype;
-        if(include[m_snpIter] != -1 && include[m_snpIter] == (signed)snpLoc[currentLoc]){
+        std::cerr <<m_inclusion[m_snpIter] << "\t" << snpLoc[currentLoc] << "\t" << m_snpIter << "\t" << currentLoc <<  std::endl;
+        if(m_inclusion[m_snpIter] != -1 && m_inclusion[m_snpIter] == (signed)snpLoc[currentLoc]){
             snp=true;
         }
-        else if((unsigned)include[m_snpIter] > snpLoc[currentLoc]){
+        else if((unsigned)m_inclusion[m_snpIter] > snpLoc[currentLoc]){
+            std::cerr << (unsigned)m_inclusion[m_snpIter] << "\t" << snpLoc[currentLoc] << std::endl;
+            std::cerr << (*snpList)[snpLoc[currentLoc]]->GetrsId() << std::endl;
             throw "The SNP ordering between the LD file and the genotype file does not match. Please make sure both files are coordinately sorted in the same way e.g. both are 1,2,3,4... or 1,10,11,12...";
         }
         size_t indx = 0; //The iterative count
         size_t homRef=0, homAlt=0, het=0;
-		while ( indx < sampleSize ){
+		while ( indx < m_ldSampleSize ){
 			std::bitset<8> b; //Initiate the bit array
 			char ch[1];
 			m_bedFile.read(ch,1); //Read the information
@@ -704,6 +710,48 @@ void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const 
 
 }
 
-void GenotypeFileHandler::setInputSnp(size_t const inputSnp){
-    m_inputSnp = inputSnp;
+size_t GenotypeFileHandler::mafCheck(std::vector<int> include, size_t sampleSize){
+    size_t mafFilter = 0;
+    m_inputSnp = include.size();
+    m_ldSampleSize = sampleSize;
+    m_inclusion = include;
+    while(m_snpIter < m_inputSnp){
+        bool snp = false;
+		if(m_inclusion[m_snpIter] != -1){//indicate whether if we need this snp
+			snp=true;
+		}
+		size_t indx = 0; //The iterative count
+        size_t alleleCount=0;
+		while ( indx < m_ldSampleSize ){
+			std::bitset<8> b; //Initiate the bit array
+			char ch[1];
+			m_bedFile.read(ch,1); //Read the information
+			if (!m_bedFile){
+				throw "Problem with the BED file...has the FAM/BIM file been changed?";
+			}
+			b = ch[0];
+			int c=0;
+			while (c<7 && indx < m_ldSampleSize ){ //Going through the bit flag. Stop when it have read all the samples as the end == NULL
+				//As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
+
+                ++indx; //so that we only need to modify the indx when adding samples but not in the mean and variance calculation
+				if (snp){
+					int first = b[c++];
+					int second = b[c++];
+					if(first == 1 && second == 0) first = 0; //We consider the missing value to be reference
+					alleleCount += first+second;
+				}
+				else{
+					c+=2;
+				}
+			}
+		}
+		if(snp && (alleleCount==0 || alleleCount == m_ldSampleSize*2)){
+            m_inclusion[m_snpIter] = -1;
+            mafFilter++;
+		}
+		m_snpIter++;
+    }
+    m_bedFile.close();
+    return mafFilter;
 }

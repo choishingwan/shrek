@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <sstream>
 #define _USE_MATH_DEFINES
 #include <math.h>
 

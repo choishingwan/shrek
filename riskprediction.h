@@ -40,6 +40,7 @@ class RiskPrediction
         std::string m_ldFilePrefix;
         std::string m_outPrefix;
         std::map<std::string, size_t> snpIndex;
+        GenotypeFileHandler *targetGenotype;
 };
 
 #endif // RISKPREDICTION_H

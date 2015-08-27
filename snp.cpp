@@ -172,6 +172,7 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
                     //Check if the input is a number. If it is not, then it should be filtered out.
                     removeSnps.append(rsId);
                     removeSnps.append(",");
+                    std::cerr << "Remove: " << rsId << "\t" << token[index] << std::endl;
                     removeSnpCount++;
                 }
                 else{

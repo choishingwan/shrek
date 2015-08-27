@@ -13,6 +13,7 @@ RiskPrediction::RiskPrediction(const Command *commander,std::vector<Snp*> *snpLi
     m_ldFilePrefix = commander->GetldFilePrefix();
     m_outPrefix = commander->GetoutputPrefix();
     m_validate = commander->validate();
+    targetGenotype = new GenotypeFileHandler(m_genotypeFilePrefix, m_thread, m_outPrefix);
 }
 
 
@@ -146,22 +147,23 @@ void RiskPrediction::checkGenotype(){
         }
     }
     bimFile.close();
+    targetGenotype->initialize();
+    size_t mafFilter = targetGenotype->mafCheck(m_genoInclude, m_sampleId.size());
     if(notFound != 0)    std::cerr << notFound << " SNPs does not have statistic information." << std::endl;
     if(duplicate != 0)    std::cerr << duplicate << " SNPs were duplicated in the genotype file." << std::endl;
     if(corDiff != 0)    std::cerr << corDiff << " SNPs with different coordinate removed." << std::endl;
     if(problem != 0)    std::cerr << problem << " SNPs with unresolved allele information removed." << std::endl;
     if(!m_keep && ambiguous != 0) std::cerr << ambiguous <<  " SNPs with ambiguous allele information removed." << std::endl;
     else if(ambiguous != 0) std::cerr << ambiguous <<  " SNPs with ambiguous allele information kept." << std::endl;
+    if(mafFilter != 0) std::cerr << mafFilter <<  " monomorphic SNPs removed." << std::endl;
     std::cerr << positive  << " SNPs will be used for risk prediction" << std::endl;
     snpIndex = concordanceIndex;
 }
 
 void RiskPrediction::run(){
     GenotypeFileHandler *genotypeFileHandler = new GenotypeFileHandler(m_ldFilePrefix, m_thread, m_outPrefix);
-    GenotypeFileHandler *targetGenotype = new GenotypeFileHandler(m_genotypeFilePrefix, m_thread, m_outPrefix);
     genotypeFileHandler->initialize(snpIndex, m_snpList, m_validate, m_maxBlockSet, m_maxBlock, m_minBlock,m_maf);
     targetGenotype->initialize();
-    targetGenotype->setInputSnp(m_genoInclude.size());
     //To know whether if the SNP is in all three file, we only have to check the flag 0 of each SNP.
     //If false, then it is not included in the LD file.
 	Genotype::SetsampleNum(genotypeFileHandler->GetsampleSize());
@@ -191,7 +193,7 @@ void RiskPrediction::run(){
 			//Now calculate the LD matrix
 			linkageMatrix->Initialize(genotype, prevResidual, blockSize);
 			linkageMatrix->Construct(genotype, prevResidual, blockSize, m_ldCorrection);
-            targetGenotype->Getsamples(&normalizedGenotype, snpLoc, m_snpList, genotype.size() - normalizedGenotype.rows(), m_genoInclude, m_sampleId.size());
+            targetGenotype->Getsamples(&normalizedGenotype, snpLoc, m_snpList, genotype.size() - normalizedGenotype.rows());
 
             numProcessed+= genotype.size(); //Finished the LD construction
             if(!chromosomeEnd){

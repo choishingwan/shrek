@@ -44,34 +44,11 @@ bool usefulTools::fileExists(const std::string fileName){
 }
 
 bool usefulTools::isNumeric(const std::string seq) {
-    // clean out the special characters at the end of the sequence
-    std::string numSeq = trim(seq);
-    bool foundDigit = false;
-    if(isdigit(numSeq.at(0))){
-        //Continue checking until the end
-        size_t seqLength = numSeq.length();
-        for(size_t i = 1; i < seqLength; ++i){
-            if(!isdigit(numSeq.at(i)) && numSeq.at(i)=='.' && !foundDigit){
-                foundDigit=true;
-            }
-            else if(!isdigit(numSeq.at(i))){
-                return false;
-            }
-        }
-    }
-    else if((numSeq.at(0) == '+' || numSeq.at(0)=='-') && numSeq.length() != 1){
-        //There is a sign in front
-        size_t seqLength = numSeq.length();
-        for(size_t i = 1; i < seqLength; ++i){
-            if(!isdigit(numSeq.at(i)) && numSeq.at(i)=='.' && !foundDigit){
-                foundDigit=true;
-            }
-            else if(!isdigit(numSeq.at(i))){
-                return false;
-            }
-        }
-    }
-      else return false;
+    //Need to handle scientific notation
+    double number;
+    std::string s = trim(seq);
+    std::istringstream ss(s);
+    if (!(ss >> number))  return false;
     return true;
 }
 
