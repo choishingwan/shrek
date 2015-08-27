@@ -22,6 +22,7 @@ class RiskPrediction
         virtual ~RiskPrediction();
         void checkGenotype();
         void run();
+        void result();
     protected:
     private:
         std::vector<Snp*> *m_snpList;

@@ -57,7 +57,6 @@ public:
         size_t mafCheck(std::vector<int> include, size_t sampleSize);
 protected:
 private:
-        std::string m_genotypeFilePrefix;
         std::map<std::string, size_t> m_blockSizeTract;
         std::map<std::string, size_t> m_chrCount;
         std::map<std::string, size_t> m_chrProcessCount;
@@ -73,10 +72,11 @@ private:
         size_t m_targetProcessed;
         std::ifstream m_bedFile;
         std::string m_outPrefix;
-        bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
+        std::string m_genotypeFilePrefix;
         std::deque<std::string> m_chrExists;
         std::vector<int> m_inclusion;
         std::vector<size_t> m_locTract;
+        bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
         void skipSnps(size_t const skipNum);
 
 };

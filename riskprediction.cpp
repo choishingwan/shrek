@@ -13,13 +13,14 @@ RiskPrediction::RiskPrediction(const Command *commander,std::vector<Snp*> *snpLi
     m_ldFilePrefix = commander->GetldFilePrefix();
     m_outPrefix = commander->GetoutputPrefix();
     m_validate = commander->validate();
-    targetGenotype = new GenotypeFileHandler(m_genotypeFilePrefix, m_thread, m_outPrefix);
+    targetGenotype = new GenotypeFileHandler(commander->GetgenotypeFile(), commander->Getthread(), commander->GetoutputPrefix());
 }
 
 
 RiskPrediction::~RiskPrediction()
 {
     //dtor
+    delete targetGenotype;
 }
 
 
@@ -182,7 +183,7 @@ void RiskPrediction::run(){
     linkageMatrix->setThread(m_thread);
     Decomposition *decompositionHandler = new Decomposition( m_snpList, linkageMatrix, m_thread);
     size_t numProcessed = 0;
-    size_t totalNum = genotypeFileHandler->GetestimateSnpTotal()*3;
+    //size_t totalNum = genotypeFileHandler->GetestimateSnpTotal()*3;
 	while(process != completed && process != fatalError){
         //Now everything should almost be the same as that in the snpestimation except for the function called
         process = genotypeFileHandler->getSnps(genotype, snpLoc, m_snpList, chromosomeStart, chromosomeEnd, m_maf,prevResidual, blockSize);
@@ -236,6 +237,34 @@ void RiskPrediction::run(){
     delete linkageMatrix;
 }
 
+void RiskPrediction::result(){
+    if(!m_outPrefix.empty()){
+        std::string outputName = m_outPrefix;
+        outputName.append(".result");
+        std::ofstream result;
+        result.open(outputName.c_str());
+        if(!result.is_open()){
+            std::cerr << "Cannot open file: " << outputName << std::endl;
+            std::cerr << "Will output to stdout" << std::endl;
+            std::cout << "sampleId\tpheno"<<std::endl;
+            for(size_t i = 0; i < m_sampleId.size(); ++i){
+                std::cout << m_sampleId[i] << "\t" << m_samplePheno[i] << std::endl;
+            }
+        }
+        else{
+            result <<"sampleId\tpheno" << std::endl;
+            for(size_t i = 0; i < m_sampleId.size(); ++i){
+                result << m_sampleId[i] << "\t" << m_samplePheno[i] << std::endl;
+            }
+        }
+    }
+    else{
+        std::cout << "sampleId\tpheno"<<std::endl;
+        for(size_t i = 0; i < m_sampleId.size(); ++i){
+            std::cout << m_sampleId[i] << "\t" << m_samplePheno[i] << std::endl;
+        }
+    }
+}
 
 
 

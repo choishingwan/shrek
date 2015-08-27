@@ -3,7 +3,7 @@
 size_t GenotypeFileHandler::GetsampleSize() const { return m_ldSampleSize; }
 size_t GenotypeFileHandler::GetestimateSnpTotal() const { return m_expectedNumberOfSnp; }
 
-GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, size_t thread, std::string outPrefix):m_genotypeFilePrefix(genotypeFilePrefix), m_thread(thread), m_outPrefix(outPrefix){
+GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, size_t thread, std::string outPrefix):m_thread(thread),m_outPrefix(outPrefix),m_genotypeFilePrefix(genotypeFilePrefix){
 	m_defaultDistance=2000000;
 	m_ldSampleSize = 0;
 	m_expectedNumberOfSnp = 0;
@@ -104,7 +104,6 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
                         //This is something that we need
                         if(!validate || (*snpList).at(snpLoc)->Concordant(chr, bp, rs)){
                             snpLoc = snpIndex.at(rs);
-                            std::cerr << snpLoc << std::endl;
                             (*snpList).at(snpLoc)->setFlag(0, true); //Now that it is in the genotype file, it contains the LD info.
                             m_inclusion.back()=snpLoc;
                             locList.push_back(bp);
@@ -703,7 +702,6 @@ void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const 
                     (*normalizedGenotype)(currentLoc,i) = ((genotype[i]-m)/stdev) * (*snpList)[snpLoc[currentLoc]]->Getbeta();
                 }
             }
-            std::cerr << (*snpList)[snpLoc[currentLoc]]->Getbeta() << std::endl;
             currentLoc++;
 		}
 		m_snpIter++;

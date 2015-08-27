@@ -34,10 +34,12 @@ class DecompositionThread
 
 		/** Default constructor */
 		DecompositionThread(size_t start, size_t length, Eigen::VectorXd const * const betaEstimate, Eigen::VectorXd const * const chiSq, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, Region *regionInfo);
+		DecompositionThread(size_t start, size_t length, Eigen::MatrixXd const * const sampleMatrix,Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, std::vector<double> *samplePheno, bool chrStart);
 		/** Default destructor */
 		virtual ~DecompositionThread();
         /** Function called by the threading algorithm */
 		static void *ThreadProcesser(void *in);
+		static void *SampleProcesser(void *in);
 	protected:
 	private:
 		size_t m_start;
@@ -45,19 +47,27 @@ class DecompositionThread
 		size_t m_sampleSize;
 		Eigen::VectorXd const * const m_betaEstimate;
 		Eigen::VectorXd const * const m_sqrtChiSq;
+		Eigen::MatrixXd const * const m_sampleMatrix;
 		Linkage *m_linkage;
 		std::deque<size_t> const *m_snpLoc;
         std::vector<Snp*> *m_snpList;
+        std::vector<double> *m_samplePheno;
         bool m_chrStart;
         Region *m_regionInfo;
         static std::mutex decomposeMtx;
 
 		/** Function to actually handle the solving */
 		void solve();
+		void sampleSolve();
         void fullProcess(Eigen::VectorXd const * const variance, Eigen::VectorXd const *const result, Eigen::VectorXd const *const effectiveReturnResult);
         void chromosomeStartProcess(Eigen::VectorXd const * const variance, Eigen::VectorXd const *const result, Eigen::VectorXd const *const effectiveReturnResult);
         void normalProcess(Eigen::VectorXd const * const variance, Eigen::VectorXd const *const result, Eigen::VectorXd const *const effectiveReturnResult);
         void endBlockProcess(Eigen::VectorXd const * const variance, Eigen::VectorXd const *const result, Eigen::VectorXd const *const effectiveReturnResult);
+
+        void fullProcess(Eigen::MatrixXd const *const result, std::vector<double> *m_samplePheno);
+        void chromosomeStartProcess(Eigen::MatrixXd const *const result, std::vector<double> *m_samplePheno);
+        void normalProcess(Eigen::MatrixXd const *const result, std::vector<double> *m_samplePheno);
+        void endBlockProcess(Eigen::MatrixXd const *const result, std::vector<double> *m_samplePheno);
 };
 
 #endif // DECOMPOSITIONTHREAD_H

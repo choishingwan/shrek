@@ -4,16 +4,24 @@ std::mutex DecompositionThread::decomposeMtx;
 Eigen::MatrixXd DecompositionThread::checking;
 
 
-DecompositionThread::DecompositionThread(size_t start, size_t length, Eigen::VectorXd const * const betaEstimate, Eigen::VectorXd const * const sqrtChiSq, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, Region *regionInfo):m_start(start), m_length(length), m_betaEstimate(betaEstimate), m_sqrtChiSq(sqrtChiSq),m_linkage(linkage), m_snpLoc(snpLoc), m_snpList(snpList), m_chrStart(chrStart), m_regionInfo(regionInfo){}
+DecompositionThread::DecompositionThread(size_t start, size_t length, Eigen::VectorXd const * const betaEstimate, Eigen::VectorXd const * const sqrtChiSq, Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, bool chrStart, Region *regionInfo):m_start(start), m_length(length), m_betaEstimate(betaEstimate), m_sqrtChiSq(sqrtChiSq),m_sampleMatrix(nullptr),m_linkage(linkage), m_snpLoc(snpLoc), m_snpList(snpList), m_chrStart(chrStart), m_regionInfo(regionInfo){}
 
 DecompositionThread::~DecompositionThread()
 {}
-
 
 void *DecompositionThread::ThreadProcesser(void *in){
     ((DecompositionThread *) in)->solve();
 	return nullptr;
 }
+
+
+void *DecompositionThread::SampleProcesser(void *in){
+    ((DecompositionThread *) in)->sampleSolve();
+    return nullptr;
+}
+
+
+
 void DecompositionThread::fullProcess(Eigen::VectorXd const * const perSnpEffect, Eigen::VectorXd const *const result, Eigen::VectorXd const *const effectiveReturnResult){
 //This is the case where we have the full block to decompose at once
     std::vector<double> regionVariance(m_regionInfo->GetnumRegion(), 0.0);
@@ -209,3 +217,61 @@ void DecompositionThread::solve(){
     else normalProcess(&variance, &result);
 */
 }
+
+/**
+ *  This sections are for risk prediction
+ */
+
+
+DecompositionThread::DecompositionThread(size_t start, size_t length, Eigen::MatrixXd const * const sampleMatrix,Linkage *linkage, std::deque<size_t>  *snpLoc, std::vector<Snp*> *snpList, std::vector<double> *samplePheno, bool chrStart):m_start(start), m_length(length), m_betaEstimate(nullptr), m_sqrtChiSq(nullptr), m_sampleMatrix(sampleMatrix),m_linkage(linkage), m_snpLoc(snpLoc), m_snpList(snpList),m_samplePheno(samplePheno), m_chrStart(chrStart){}
+
+void DecompositionThread::sampleSolve(){
+    size_t betaLength = (*m_sampleMatrix).rows();
+    size_t processLength = m_length;
+    if(betaLength-m_start-m_length < m_length/3) processLength = betaLength-m_start;
+	Eigen::MatrixXd result;
+    result = m_linkage->solve(m_start, processLength, m_sampleMatrix,Snp::GetmaxSampleSize(),(*m_snpLoc)[m_start]);
+
+    size_t first = (*m_snpList)[(*m_snpLoc)[m_start]]->GetblockInfo();
+    size_t last = (*m_snpList)[(*m_snpLoc)[m_start+processLength-1]]->GetblockInfo();
+    if(first == 1 && last == 1) fullProcess(&result,m_samplePheno);
+    else if(first==1 && last != 1) chromosomeStartProcess(&result,m_samplePheno);
+    else if(last == 1 && first != 1) endBlockProcess(&result,m_samplePheno);
+    else normalProcess(&result,m_samplePheno);
+
+}
+
+void DecompositionThread::chromosomeStartProcess(Eigen::MatrixXd const *const result, std::vector<double> *m_samplePheno){
+    decomposeMtx.lock();
+    for(size_t i = 0; i < (*m_samplePheno).size(); ++i){
+        (*m_samplePheno)[i] += (*result).col(i).segment(0, m_length/3*2).sum();
+    }
+    decomposeMtx.unlock();
+}
+
+void DecompositionThread::endBlockProcess(Eigen::MatrixXd const *const result, std::vector<double> *m_samplePheno){
+    size_t actualProcessSize = (*result).rows();
+    decomposeMtx.lock();
+    for(size_t i = 0; i < (*m_samplePheno).size(); ++i){
+        (*m_samplePheno)[i] += (*result).col(i).segment(m_length/3,actualProcessSize-m_length/3).sum();
+    }
+    decomposeMtx.unlock();
+}
+
+void DecompositionThread::normalProcess(Eigen::MatrixXd const *const result, std::vector<double> *m_samplePheno){
+    decomposeMtx.lock();
+    for(size_t i = 0; i < (*m_samplePheno).size(); ++i){
+        (*m_samplePheno)[i] += (*result).col(i).segment(m_length/3,m_length/3).sum();
+    }
+    decomposeMtx.unlock();
+}
+
+void DecompositionThread::fullProcess(Eigen::MatrixXd const *const result, std::vector<double> *m_samplePheno){
+    decomposeMtx.lock();
+    for(size_t i = 0; i < (*m_samplePheno).size(); ++i){
+        //Don't bother, just take everything
+        (*m_samplePheno)[i] += (*result).col(i).sum();
+    }
+    decomposeMtx.unlock();
+}
+

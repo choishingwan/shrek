@@ -28,7 +28,8 @@
 
 int main(int argc, char *argv[]){
     //Parsing the parameters
-    Command *commander = new Command();
+    Command *commander = nullptr;
+    commander=new Command();
     try{
         /** Parse the parameters using the command handler */
 		commander->initialize(argc, argv);
@@ -42,7 +43,8 @@ int main(int argc, char *argv[]){
 		delete commander;
         return EXIT_SUCCESS;
     }
-    Region *regionInfo = new Region();
+    Region *regionInfo = nullptr;
+    regionInfo = new Region();
     try{
         /** Preparing the region vectors for storage and also for the
          *  Snp flag process
@@ -87,10 +89,14 @@ int main(int argc, char *argv[]){
 
 
     if(commander->risk()){
-        RiskPrediction *riskPrediction = new RiskPrediction(commander,&snpList);
+        RiskPrediction *riskPrediction = nullptr;
+        riskPrediction = new RiskPrediction(commander,&snpList);
         try{
             riskPrediction->checkGenotype();
             riskPrediction->run();
+            riskPrediction->result();
+            std::cerr << "Completed" << std::endl;
+            return EXIT_SUCCESS;
         }
         catch(const char *e){
             std::cerr << e << std::endl;
@@ -137,7 +143,8 @@ int main(int argc, char *argv[]){
             }
         }
         //From now on, we are only allow to iterate through snpList through snpIndex
-        GenotypeFileHandler *genotypeFileHandler = new GenotypeFileHandler(commander->GetldFilePrefix(), commander->Getthread(), commander->GetoutputPrefix());
+        GenotypeFileHandler *genotypeFileHandler = nullptr;
+        genotypeFileHandler = new GenotypeFileHandler(commander->GetldFilePrefix(), commander->Getthread(), commander->GetoutputPrefix());
         try{
             genotypeFileHandler->initialize(snpIndex, &snpList, commander->validate(), commander->maxBlockSet(), commander->GetmaxBlock(), commander->GetminBlock(),commander->Getmaf());
         }
@@ -151,7 +158,8 @@ int main(int argc, char *argv[]){
             return EXIT_FAILURE;
         }
 
-        SnpEstimation *snpEstimation = new SnpEstimation(genotypeFileHandler, &snpIndex, &snpList, commander->Getthread(), commander->Getmaf(), commander->ldCorrect(), regionInfo);
+        SnpEstimation *snpEstimation = nullptr;
+        snpEstimation = new SnpEstimation(genotypeFileHandler, &snpIndex, &snpList, commander->Getthread(), commander->Getmaf(), commander->ldCorrect(), regionInfo);
 
         try{
             snpEstimation->Estimate();

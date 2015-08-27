@@ -24,12 +24,74 @@ void Decomposition::Decompose(const size_t &blockSize, std::deque<size_t> &snpLo
         }
     	Eigen::MatrixXd result;
         result = m_linkage->solve(0, processSize, &sampleMatrix,Snp::GetmaxSampleSize(),snpLoc[0]);
-		//std::cerr << "Single " << processSize << std::endl;
         for(size_t j = 0; j < samplePheno.size(); ++j){
             samplePheno[j] += result.col(j).segment(0,processSize).sum();
         }
     }
+    else if(stepSize> 0){
+        for(size_t i = 0; i < processSize; i+= stepSize){
+			if(i+currentBlockSize <= processSize){
+				startLoc.push_back(i);
+			}
+		}
+		if(!startLoc.empty() && processSize - startLoc.back() < stepSize){
+			startLoc.pop_back();
+		}
+		std::vector<pthread_t*> threadList;
+		std::vector<DecompositionThread* > garbageCollection;
+        for(size_t i = 0; i < startLoc.size(); ++i){
+            garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &sampleMatrix,m_linkage, &snpLoc, m_snpList, &samplePheno, chromosomeStart));
+        }
+        if(m_thread >= garbageCollection.size()){
+            //More thread than work
+            for(size_t i = 0; i < garbageCollection.size(); ++i){
+                pthread_t *thread1 = new pthread_t();
+				threadList.push_back(thread1);
+				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::SampleProcesser, garbageCollection[i]);
+				if(threadStatus != 0){
+					throw "Failed to spawn thread with status: "+std::to_string(threadStatus);
+				}
+            }
+			for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter) pthread_join(*threadList[threadIter], NULL);
+			for(size_t i = 0; i < threadList.size(); ++i) delete threadList[i];
+            for(size_t i = 0; i < garbageCollection.size(); ++i) delete garbageCollection[i];
+			garbageCollection.clear();
+            threadList.clear();
+        }
+        else{
+            //More work than thread
+            for(size_t i = 0; i < m_thread; ++i){
+                pthread_t *thread1 = new pthread_t();
+				threadList.push_back(thread1);
+				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::SampleProcesser, garbageCollection[i]);
+				if(threadStatus != 0){
+					throw "Failed to spawn thread with status: "+std::to_string(threadStatus);
+				}
+            }
+			for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter) pthread_join(*threadList[threadIter], NULL);
+			for(size_t i = 0; i < threadList.size(); ++i) delete threadList[i];
+			threadList.clear();
+            for(size_t i= m_thread; i < garbageCollection.size(); ++i){
+                pthread_t *thread1 = new pthread_t();
+				threadList.push_back(thread1);
+				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::SampleProcesser, garbageCollection[i]);
+				if(threadStatus != 0){
+					throw "Failed to spawn thread with status: "+std::to_string(threadStatus);
+				}
+            }
 
+			for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter) pthread_join(*threadList[threadIter], NULL);
+			for(size_t i = 0; i < threadList.size(); ++i) delete threadList[i];
+            for(size_t i = 0; i < garbageCollection.size(); ++i) delete garbageCollection[i];
+			garbageCollection.clear();
+            threadList.clear();
+
+        }
+
+    }
+    else{
+        throw "Undefined behaviour! Step size should never be negative as block size is positive";
+	}
 
 
 
