@@ -195,6 +195,7 @@ static const char *optString = "a:b:c:f:g:Hh?i:kl:M:m:no:p:r:R:t:v";
 				break;
             case 'R':
                 m_refIndex = atoi(optarg)-1;
+                break;
 			case 't':
 				m_thread = atoi(optarg);
 				break;
@@ -799,6 +800,8 @@ void Command::printRunSummary(std::string regionMessage){
 	else if(m_risk){
         std::cerr	<< "Mode                 : Risk Prediction" << std::endl;
         std::cerr   << "Genotype File Prefix : " << m_genotypeFilePrefix << std::endl;
+        std::cerr   << "Ref Allele           : " << m_refIndex << std::endl;
+        std::cerr   << "Alt Allele           : " << m_altIndex << std::endl;
 	}
     std::cerr	<< "===============================================================" << std::endl
 				<< "Options " << std::endl

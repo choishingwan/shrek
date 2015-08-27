@@ -354,8 +354,8 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 			if ( b[0] ) bfile_SNP_major = true;
 			else bfile_SNP_major = false;
 
-			if (bfile_SNP_major) std::cerr << "Detected that binary PED file is v1.00 SNP-major mode" << std::endl;
-			else std::cerr << "Detected that binary PED file is v1.00 individual-major mode" << std::endl;
+			//if (bfile_SNP_major) std::cerr << "Detected that binary PED file is v1.00 SNP-major mode" << std::endl;
+			//else std::cerr << "Detected that binary PED file is v1.00 individual-major mode" << std::endl;
 
 		} else v1_bfile = false;
 
