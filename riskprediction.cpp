@@ -73,6 +73,7 @@ void RiskPrediction::checkGenotype(){
     }
     famFile.close();
     size_t prevLoc = 0; //This is use to check if the ordering is correct. If the prev > current, then the ordering of the two file is different, and will cause problem.
+    std::string prevChr = "";
     std::map<std::string, bool> dupCheck;
     duplicate = 0;
     size_t ambiguous=0;
@@ -94,8 +95,16 @@ void RiskPrediction::checkGenotype(){
             std::string refAllele = token[4];
             std::string altAllele = token[5];
             m_genoInclude.push_back(-1);
+            m_flipCheck.push_back(false);
             if(snpIndex.find(rsId)!= snpIndex.end()){
-                if(prevLoc > (*m_snpList)[snpIndex[rsId]]->Getbp()){
+                if(prevChr.empty()){
+                    prevChr = chr;
+                }
+                else if(prevChr.compare(chr) != 0){
+                    prevChr = chr;
+                }
+                else if(prevLoc > (*m_snpList)[snpIndex[rsId]]->Getbp()){
+                    //std::cerr << prevLoc << "\t" << (*m_snpList)[snpIndex[rsId]]->Getbp() << std::endl;
                     throw "Ordering of the genotype file and the p-value file differ, please check if both file are coordinately sorted";
                 }
                 prevLoc =(*m_snpList)[snpIndex[rsId]]->Getbp();
@@ -120,7 +129,7 @@ void RiskPrediction::checkGenotype(){
                             }
                             else{
                                 if(isAmbiguous) ambiguous++;
-                                m_flipCheck.push_back(false);
+                                m_flipCheck.back()=false;
                                 dupCheck[rsId] = true;
                                 positive++;
                                 m_genoInclude.back() = sIndex;
@@ -134,7 +143,7 @@ void RiskPrediction::checkGenotype(){
                             }
                             else{
                                 if(isAmbiguous) ambiguous++;
-                                m_flipCheck.push_back(true);
+                                m_flipCheck.back()=true;
                                 dupCheck[rsId] = true;
                                 positive++;
                                 m_genoInclude.back() = sIndex;

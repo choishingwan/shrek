@@ -706,7 +706,6 @@ void GenotypeFileHandler::Getsamples(Eigen::MatrixXd *normalizedGenotype, const 
 		}
 		m_snpIter++;
     }
-
 }
 
 size_t GenotypeFileHandler::mafCheck(std::vector<int> include, size_t sampleSize){

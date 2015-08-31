@@ -373,17 +373,17 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd cons
 
 
 Eigen::MatrixXd Linkage::solve(size_t start, size_t length, Eigen::MatrixXd const *const sampleMatrix, size_t sampleSize, size_t snpStart){
+
     /** Perform the eigen value decomposition here */
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     /** Calculate the tolerance threshold */
     double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().maxCoeff();
     /** Generate the pseudo inverse by removing any eigenvalues less than the tolerance threshold */
-    Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
 
+    Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
     Eigen::MatrixXd result= rInverse*(*sampleMatrix).block(start, 0,length, (*sampleMatrix).cols());
     /** Here we try to perform the iterative adjustment to reduce the relative error */
 
-/*
     Eigen::MatrixXd error =m_linkage.block(start, start, length, length)*result - (*sampleMatrix).block(start, 0,length, (*sampleMatrix).cols());
 	double bNorm = (*sampleMatrix).block(start, 0,length, (*sampleMatrix).cols()).norm();
     double relative_error = error.norm() / bNorm;
@@ -398,7 +398,8 @@ Eigen::MatrixXd Linkage::solve(size_t start, size_t length, Eigen::MatrixXd cons
         if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
-    */
+    //std::cout << result << std::endl;
+    //exit(-1);
     return result;
 }
 

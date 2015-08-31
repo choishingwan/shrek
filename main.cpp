@@ -95,7 +95,6 @@ int main(int argc, char *argv[]){
             riskPrediction->checkGenotype();
             riskPrediction->run();
             riskPrediction->result();
-            std::cerr << "Completed" << std::endl;
             return EXIT_SUCCESS;
         }
         catch(const char *e){
