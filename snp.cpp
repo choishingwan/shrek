@@ -138,7 +138,8 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
     if(index > maxIndex) maxIndex = index;
     size_t altIndex = 0;
     size_t refIndex = 0;
-
+    std::map<std::string, bool> duplication;
+    size_t duplicateCount=;
     if(commander->risk()){
         altIndex = commander->GetaltIndex();
         if(altIndex > maxIndex) maxIndex = maxIndex;
@@ -159,29 +160,35 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
                 size_t bp = atoi(token[bpIndex].c_str());
                 std::string rsId = token[rsIndex];
                 size_t sizeOfSample = 0;
-                if(!commander->provideSampleSize()) sizeOfSample = atoi(token[sIndex].c_str());
-                else sizeOfSample = commander->GetsampleSize();
-                std::string refAllele = "";
-                std::string altAllele = "";
-                if(commander->risk()){
-                    refAllele = token[refIndex];
-                    altAllele = token[altIndex];
-
-                }
-                if(!usefulTools::isNumeric(token[index])){
-                    //Check if the input is a number. If it is not, then it should be filtered out.
-                    removeSnps.append(rsId);
-                    removeSnps.append(",");
-                    std::cerr << "Remove: " << rsId << "\t" << token[index] << std::endl;
-                    removeSnpCount++;
+                if(duplication.find(rsId) !=duplication.end()){
+                    duplicateCount++;
                 }
                 else{
-                    double predictedBeta = atof(token[index].c_str());
-                    if(!std::isfinite(predictedBeta)){
-                        std::cerr << rsId << " does not have finite input ("<< predictedBeta <<"), will set it to zero" << std::endl;
-                        predictedBeta=0;
+                    if(!commander->provideSampleSize()) sizeOfSample = atoi(token[sIndex].c_str());
+                    else sizeOfSample = commander->GetsampleSize();
+                    std::string refAllele = "";
+                    std::string altAllele = "";
+                    if(commander->risk()){
+                        refAllele = token[refIndex];
+                        altAllele = token[altIndex];
+
                     }
-                    snpList.push_back(new Snp(chr, rsId, bp, sizeOfSample, predictedBeta, refAllele, altAllele));
+                    if(!usefulTools::isNumeric(token[index])){
+                        //Check if the input is a number. If it is not, then it should be filtered out.
+                        removeSnps.append(rsId);
+                        removeSnps.append(",");
+                        std::cerr << "Remove: " << rsId << "\t" << token[index] << std::endl;
+                        removeSnpCount++;
+                    }
+                    else{
+                        double predictedBeta = atof(token[index].c_str());
+                        if(!std::isfinite(predictedBeta)){
+                            std::cerr << rsId << " does not have finite input ("<< predictedBeta <<"), will set it to zero" << std::endl;
+                            predictedBeta=0;
+                        }
+                        snpList.push_back(new Snp(chr, rsId, bp, sizeOfSample, predictedBeta, refAllele, altAllele));
+                        duplication[rsId] = true;
+                    }
                 }
             }
         }
@@ -190,8 +197,12 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
         std::cerr << removeSnpCount << " SNPs removed with missing values." << std::endl;
     }
     pValue.close();
+
+    //This can be slow when we have a large amount of SNPs. Remove all duplicated SNPs here might be a good choice
     std::sort(snpList.begin(), snpList.end(), Snp::sortSnp);
-    snpList.erase( unique( snpList.begin(), snpList.end() ), snpList.end() );
+//    snpList.erase( unique( snpList.begin(), snpList.end() ), snpList.end() );
+    if(duplicate == 0) std::cerr << "There are no duplicated rsID in the p-value file" << std::endl << std::endl;
+    else std::cerr <<  "There are a total of " << duplicate << " duplicated rsID(s) in the p-value file" << std::endl << std::endl;
     std::cerr << "There are a total of " << snpList.size() << " Snps in the input" << std::endl;
     if(snpList.size() ==0) throw "Programme terminated as there are no snp provided";
 }
@@ -245,8 +256,7 @@ void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, std::vector<
         }
 
     }
-    if(duplicate == 0) std::cerr << "There are no duplicated rsID in the p-value file" << std::endl << std::endl;
-    else std::cerr <<  "There are a total of " << duplicate << " duplicated rsID(s) in the p-value file" << std::endl << std::endl;
+
 }
 
 
@@ -394,6 +404,29 @@ void Snp::computeVarianceExplainedChi(const size_t &caseSize, const size_t &cont
     (*m_beta) = ((*m_beta)-1.0)/(totalSampleSize -2.0+(*m_beta));
     Snp::m_maxSampleSize = totalSampleSize;
 }
+
+
+void Snp::computeVarianceExplainedChi(bool isPvalue){
+    if(isPvalue){
+        (*m_beta) = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
+        if(!std::isfinite((*m_beta))) (*m_beta) = usefulTools::qnorm(((m_original+0.0)/2.0));
+        if(!std::isfinite((*m_beta))){
+            //This will only happen when the p-value is either 1 or 0
+            if(m_original >= 1.0){
+                (*m_beta) = 0.0; //There is no effect anyway
+            }
+            else{
+                throw "WARNING! A p-value of 0 is observed. We don't know how to convert it into chi square. Will skip this snp "+m_rs;
+            }
+        }
+    }
+    m_sampleSize = 20000;
+    (*m_beta) = (*m_beta)*(*m_beta);
+    (*m_sqrtChiSq)= sqrt((*m_beta))*m_sign;
+	(*m_beta) = ((*m_beta)-1)/(m_sampleSize-2.0+(*m_beta));
+}
+
+
 
 void Snp::setFlag(size_t index, bool value){
     m_regionFlag.at(index) = value;

@@ -13,6 +13,7 @@ RiskPrediction::RiskPrediction(const Command *commander,std::vector<Snp*> *snpLi
     m_ldFilePrefix = commander->GetldFilePrefix();
     m_outPrefix = commander->GetoutputPrefix();
     m_validate = commander->validate();
+    m_isP = commander->isPvalue();
     targetGenotype = new GenotypeFileHandler(commander->GetgenotypeFile(), commander->Getthread(), commander->GetoutputPrefix());
 }
 
@@ -31,6 +32,7 @@ void RiskPrediction::checkGenotype(){
         if(snpIndex.find((*m_snpList)[i]->GetrsId())==snpIndex.end()){
             snpIndex.insert(std::pair<std::string,size_t>((*m_snpList)[i]->GetrsId(),i));
             (*m_snpList)[i]->addFlag(false);
+            //(*m_snpList)[i]->computeVarianceExplainedChi(m_isP);
         }
         else{
             duplicate++;

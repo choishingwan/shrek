@@ -39,6 +39,7 @@ class RiskPrediction
         bool m_keep;
         bool m_maxBlockSet;
         bool m_validate;
+        bool m_isP;
         std::string m_genotypeFilePrefix;
         std::string m_ldFilePrefix;
         std::string m_outPrefix;

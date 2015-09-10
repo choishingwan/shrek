@@ -520,14 +520,15 @@ void Command::ccMode(int argc, char* argv[]){
 
 
 void Command::initialize(int argc, char* argv[]){
+    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
+    std::cerr << "| Snp HeRitability Estimation Kit                                             |" << std::endl;
+    std::cerr << "| version "<<m_version <<"                                                                |" << std::endl;
+    std::cerr << "| (C) 2014 Johnny Kwan, Sam Choi                                              |" << std::endl;
+    std::cerr << "| The University of Hong Kong                                                 |" << std::endl;
+    std::cerr << "| GNU General Public License v2.0                                             |" << std::endl;
+    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
+
     if(argc==1){
-        std::cerr << "------------------------------------------------------------------------------"  << std::endl;
-        std::cerr << "| Snp HeRitability Estimation Kit                                             |" << std::endl;
-        std::cerr << "| version "<<m_version <<"                                                                |" << std::endl;
-        std::cerr << "| (C) 2014 Johnny Kwan, Sam Choi                                              |" << std::endl;
-        std::cerr << "| The University of Hong Kong                                                 |" << std::endl;
-        std::cerr << "| GNU General Public License v2.0                                             |" << std::endl;
-        std::cerr << "------------------------------------------------------------------------------"  << std::endl;
         std::cerr << "Usage: ./SHREK <command> [options]"                                      << std::endl;
         std::cerr << "Command:    quant          Quantitative Trait"                                   << std::endl;
         std::cerr << "            caseControl    Case control study"                                   << std::endl;
@@ -557,6 +558,10 @@ void Command::initialize(int argc, char* argv[]){
     }
     else if(mode.compare("risk")==0){
         m_risk=true;
+/**
+ * We will want to subdivide the risk prediction into cc and qt. So that we can use the test statistic directly.
+ */
+
         if(argc < 3){
             printRiskUsage();
             throw "You have not provided any arguments. Please provide all the required arguments";
@@ -574,13 +579,6 @@ Command::~Command()
 }
 
 void Command::printCCUsage(){
-    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
-    std::cerr << "| Snp HeRitability Estimation Kit                                             |" << std::endl;
-    std::cerr << "| version "<<m_version <<"                                                                |" << std::endl;
-    std::cerr << "| (C) 2014 Johnny Kwan, Sam Choi                                              |" << std::endl;
-    std::cerr << "| The University of Hong Kong                                                 |" << std::endl;
-    std::cerr << "| GNU General Public License v2.0                                             |" << std::endl;
-    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
     std::cerr << "usage: ./SHREK caseControl [options]"         << std::endl;
     std::cerr << "Required options: "                                                              << std::endl;
     std::cerr << "  -p,--pfile       The p-value file.                              < Required >"  << std::endl;
@@ -607,13 +605,6 @@ void Command::printCCUsage(){
 
 }
 void Command::printRiskUsage(){
-    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
-    std::cerr << "| Snp HeRitability Estimation Kit                                             |" << std::endl;
-    std::cerr << "| version "<<m_version <<"                                                                |" << std::endl;
-    std::cerr << "| (C) 2014 Johnny Kwan, Sam Choi                                              |" << std::endl;
-    std::cerr << "| The University of Hong Kong                                                 |" << std::endl;
-    std::cerr << "| GNU General Public License v2.0                                             |" << std::endl;
-    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
     std::cerr << "usage: ./SHREK risk [options]"         << std::endl;
     std::cerr << "Required options: "                                                              << std::endl;
     std::cerr << "  -p,--pfile       The p-value file.                              < Required >"  << std::endl;
@@ -639,13 +630,6 @@ void Command::printRiskUsage(){
 }
 
 void Command::printQuantUsage(){
-    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
-    std::cerr << "| Snp HeRitability Estimation Kit                                             |" << std::endl;
-    std::cerr << "| version "<<m_version <<"                                                                |" << std::endl;
-    std::cerr << "| (C) 2014 Johnny Kwan, Sam Choi                                              |" << std::endl;
-    std::cerr << "| The University of Hong Kong                                                 |" << std::endl;
-    std::cerr << "| GNU General Public License v2.0                                             |" << std::endl;
-    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
     std::cerr << "usage: ./SHREK quant [options]"         << std::endl;
     std::cerr << "Required options: "                                                              << std::endl;
     std::cerr << "  -p,--pfile       The p-value file.                              < Required >"  << std::endl;
@@ -674,13 +658,6 @@ void Command::printQuantUsage(){
 //Archive
 void Command::printUsage(){
 
-    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
-    std::cerr << "| Snp HeRitability Estimation Kit                                             |" << std::endl;
-    std::cerr << "| version 0.01                                                                |" << std::endl;
-    std::cerr << "| (C) 2014 Johnny Kwan, Sam Choi                                              |" << std::endl;
-    std::cerr << "| The University of Hong Kong                                                 |" << std::endl;
-    std::cerr << "| Haven't figure out which license                                            |" << std::endl;
-    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
     std::cerr << "usage: ./Jest [-p <p-value_file>] [--tstat <t-stat_index> | --chi <chi_index>]"  << std::endl;
     std::cerr << "              [ --g <genotype_prefix> ] ..."                << std::endl;
     std::cerr << "Required options: "                                                              << std::endl;

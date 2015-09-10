@@ -317,7 +317,6 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd cons
     /** Generate the pseudo inverse by removing any eigenvalues less than the tolerance threshold */
     Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
 
-
     Eigen::VectorXd result= rInverse*(*betaEstimate).segment(start, length);
     /** Here we try to perform the iterative adjustment to reduce the relative error */
     Eigen::VectorXd error =m_linkage.block(start, start, length, length)*result - (*betaEstimate).segment(start, length);

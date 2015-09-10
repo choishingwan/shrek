@@ -105,7 +105,8 @@ public:
         static double Getadjustment();
         static void Setadjustment(const double prevalence, const size_t caseSize, const size_t controlSize);
         static bool ambiguousAllele(const std::string refAllele, const std::string altAllele);
-
+        //This is for risk prediction. Currently it is called from the risk prediction class, so it cannot be private
+        void computeVarianceExplainedChi(bool isPvalue);
 protected:
 private:
         std::string m_chr;
