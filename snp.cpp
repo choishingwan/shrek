@@ -139,7 +139,7 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
     size_t altIndex = 0;
     size_t refIndex = 0;
     std::map<std::string, bool> duplication;
-    size_t duplicateCount=;
+    size_t duplicateCount=0;
     if(commander->risk()){
         altIndex = commander->GetaltIndex();
         if(altIndex > maxIndex) maxIndex = maxIndex;
@@ -201,8 +201,8 @@ void Snp::generateSnpList(std::vector<Snp*> &snpList, const Command *commander){
     //This can be slow when we have a large amount of SNPs. Remove all duplicated SNPs here might be a good choice
     std::sort(snpList.begin(), snpList.end(), Snp::sortSnp);
 //    snpList.erase( unique( snpList.begin(), snpList.end() ), snpList.end() );
-    if(duplicate == 0) std::cerr << "There are no duplicated rsID in the p-value file" << std::endl << std::endl;
-    else std::cerr <<  "There are a total of " << duplicate << " duplicated rsID(s) in the p-value file" << std::endl << std::endl;
+    if(duplicateCount == 0) std::cerr << "There are no duplicated rsID in the p-value file" << std::endl << std::endl;
+    else std::cerr <<  "There are a total of " << duplicateCount << " duplicated rsID(s) in the p-value file" << std::endl << std::endl;
     std::cerr << "There are a total of " << snpList.size() << " Snps in the input" << std::endl;
     if(snpList.size() ==0) throw "Programme terminated as there are no snp provided";
 }
@@ -407,6 +407,8 @@ void Snp::computeVarianceExplainedChi(const size_t &caseSize, const size_t &cont
 
 
 void Snp::computeVarianceExplainedChi(bool isPvalue){
+    std::cerr << "not supported yet!" << std::endl;
+    exit(-1);
     if(isPvalue){
         (*m_beta) = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
         if(!std::isfinite((*m_beta))) (*m_beta) = usefulTools::qnorm(((m_original+0.0)/2.0));

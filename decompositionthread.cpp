@@ -230,7 +230,9 @@ void DecompositionThread::sampleSolve(){
     size_t processLength = m_length;
     if(betaLength-m_start-m_length < m_length/3) processLength = betaLength-m_start;
 	Eigen::MatrixXd result;
+	decomposeMtx.lock();
     result = m_linkage->solve(m_start, processLength, m_sampleMatrix,Snp::GetmaxSampleSize(),(*m_snpLoc)[m_start]);
+    decomposeMtx.unlock();
     size_t first = (*m_snpList)[(*m_snpLoc)[m_start]]->GetblockInfo();
     size_t last = (*m_snpList)[(*m_snpLoc)[m_start+processLength-1]]->GetblockInfo();
     if(first == 1 && last == 1) fullProcess(&result,m_samplePheno);
