@@ -4,7 +4,7 @@ size_t GenotypeFileHandler::GetsampleSize() const { return m_ldSampleSize; }
 size_t GenotypeFileHandler::GetestimateSnpTotal() const { return m_expectedNumberOfSnp; }
 
 GenotypeFileHandler::GenotypeFileHandler(std::string genotypeFilePrefix, size_t thread, std::string outPrefix):m_thread(thread),m_outPrefix(outPrefix),m_genotypeFilePrefix(genotypeFilePrefix){
-	m_defaultDistance=2000000;
+	m_defaultDistance=3000000;
 	m_ldSampleSize = 0;
 	m_expectedNumberOfSnp = 0;
     m_inputSnp =0;
@@ -78,6 +78,8 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
 	std::deque<size_t> locList;
 	std::string prevChr="";
 	size_t prevSnpLoc = 0;
+	size_t ignoreSnp = 0;
+    size_t mafSnp = 0;
     while(std::getline(bimFile, line)){
         line = usefulTools::trim(line);
         if(!line.empty()){
@@ -110,8 +112,9 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
                             duplicateCheck[rs] = true;
                         }
                         else{
-                            std::cerr << rs << " has different information from p-value file! Will ignore Snp." << std::endl;
+                            //std::cerr << rs << " has different information from p-value file! Will ignore Snp." << std::endl;
                             //basically we ignore the snp
+                            ignoreSnp++;
                         }
                     }
                 }
@@ -135,8 +138,9 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
                                 locList.push_back(bp);
                             }
                             else{
-                                std::cerr << rs << " has different information from p-value file! Will ignore Snp." << std::endl;
+                                //std::cerr << rs << " has different information from p-value file! Will ignore Snp." << std::endl;
                                 //basically we ignore the snp
+                                ignoreSnp++;
                             }
                         }
                         else if(duplicateCheck.find(rs)!=duplicateCheck.end()){
@@ -156,14 +160,14 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
 					if(currentMaxBlock%3 != 0){
                         currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
 					}
-					if(stdOut) std::cerr <<prevChr << "\t" << currentMaxBlock <<"\t";
-					else blockRecommendOut << prevChr << "\t" << currentMaxBlock <<"\t";
+					std::cerr <<prevChr << "\t" << currentMaxBlock <<"\t";
+					if(!stdOut) blockRecommendOut << prevChr << "\t" << currentMaxBlock <<"\t";
 					if(maxBlockSet && maxBlock < currentMaxBlock ){
 						currentMaxBlock = maxBlock;
 					}
 					if(currentMaxBlock < minBlock) currentMaxBlock = minBlock;
-					if(stdOut) std::cerr << currentMaxBlock << std::endl;
-					else blockRecommendOut << currentMaxBlock << std::endl;
+					std::cerr << currentMaxBlock << std::endl;
+					if(!stdOut) blockRecommendOut << currentMaxBlock << std::endl;
 					m_blockSizeTract[prevChr]=currentMaxBlock;
 					locList.clear();
 					//All new now
@@ -182,8 +186,9 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
                             duplicateCheck[rs] = true;
                         }
                         else{
-                            std::cerr << rs << " has different information from p-value file! Will ignore Snp." << std::endl;
+                            //std::cerr << rs << " has different information from p-value file! Will ignore Snp." << std::endl;
                             //basically we ignore the snp
+                            ignoreSnp++;
                         }
                     }
                 }
@@ -225,7 +230,8 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
                 //remove snps with maf too low
                 if(maf >= 0.0 && maf > currentMaf){
                     m_inclusion.back()= -1;
-                    std::cerr << "Snp: " << rs << " not included due to maf filtering" << std::endl;
+                    //std::cerr << "Snp: " << rs << " not included due to maf filtering" << std::endl;
+                    mafSnp++;
                 }
                 else if(m_inclusion.back() != -1){
                     if(m_chrProcessCount.find(chr)==m_chrProcessCount.end()) m_chrProcessCount[chr] = 1;
@@ -242,14 +248,14 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
     if(currentMaxBlock%3 != 0){
         currentMaxBlock = currentMaxBlock+3-currentMaxBlock%3;
     }
-    if(stdOut) std::cerr << prevChr << "\t" << currentMaxBlock << "\t";
-    else blockRecommendOut << prevChr << "\t" << currentMaxBlock << "\t";
+    std::cerr << prevChr << "\t" << currentMaxBlock << "\t";
+    if(!stdOut) blockRecommendOut << prevChr << "\t" << currentMaxBlock << "\t";
     if(maxBlockSet && maxBlock < currentMaxBlock ){
         currentMaxBlock = maxBlock;
     }
     if(currentMaxBlock < minBlock) currentMaxBlock = minBlock;
-    if(stdOut) std::cerr << currentMaxBlock << std::endl;
-    else blockRecommendOut << currentMaxBlock << std::endl;
+    std::cerr << currentMaxBlock << std::endl;
+    if(stdOut) blockRecommendOut << currentMaxBlock << std::endl;
     m_blockSizeTract[prevChr]=currentMaxBlock;
 	//The reason of not using this check is because the currentMaxBlock is used for all chromosome
 	//If the chromosome does not have anything in the p-value file, currentMaxBlock will most likely be 0
@@ -258,12 +264,9 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
 
     bimFile.close();
     m_bedFile.close();
-    if(duplicateCount == 0) std::cerr << "There are no duplicated snps in the LD file" << std::endl;
-    else{
-		std::cerr << "A total of " << duplicateCount << " Snps in the LD file were duplicated" << std::endl;
-		std::cerr << "Only the first instance of each Snp will be used" << std::endl;
-    }
-	std::cerr << std::endl;
+    std::cerr << "Duplicated SNPs: " << duplicateCount << std::endl;
+    std::cerr << "Invalid SNPs:    " << ignoreSnp << std::endl;
+    std::cerr << "Filtered SNPs:   " << mafSnp << std::endl;
     bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_bedFile); //We will try to open the connection to bedFile
     if(bfile_SNP_major){
         //This is ok

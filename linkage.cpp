@@ -373,7 +373,6 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd cons
 
 
 Eigen::MatrixXd Linkage::solve(size_t start, size_t length, Eigen::MatrixXd const *const sampleMatrix, size_t sampleSize, size_t snpStart){
-
     /** Perform the eigen value decomposition here */
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     /** Calculate the tolerance threshold */

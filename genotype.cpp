@@ -56,8 +56,8 @@ void Genotype::GetbothR(Genotype* snpB, bool correction, double &r, double &rSq)
     rSq = r*r;
 	if(correction){
         r= r*(1+(1-r*r)/(2*(m_sampleNum-4))); //POPA
-        //rSq = 1.0-((m_sampleNum-3.0)/(m_sampleNum-2.0))*(1.0-rSq)*(1.0+(2.0*(1.0-rSq))/(m_sampleNum-3.3));
-        rSq = r*r - (1.0-r*r)/(m_sampleNum-2);
+        rSq = 1.0-((m_sampleNum-3.0)/(m_sampleNum-2.0))*(1.0-rSq)*(1.0+(2.0*(1.0-rSq))/(m_sampleNum-3.3));
+        //rSq = r*r - (1.0-r*r)/(m_sampleNum-2);
 	}
 }
 
