@@ -311,11 +311,13 @@ void Linkage::Update(std::deque<Genotype*> &genotype, std::deque<size_t> &snpLoc
 
 Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd const *const betaEstimate, Eigen::VectorXd const *const sqrtChiSq, Eigen::VectorXd *perSnpEffect,  Eigen::VectorXd *effectiveReturnResult,  size_t sampleSize, size_t snpStart){
     /** Perform the eigen value decomposition here */
-
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(start, start, length, length));
     /** Calculate the tolerance threshold */
+    //double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().maxCoeff();
     double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().maxCoeff();
+
     /** Generate the pseudo inverse by removing any eigenvalues less than the tolerance threshold */
+    //Find the maximum gap
     Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
 
     Eigen::VectorXd result= rInverse*(*betaEstimate).segment(start, length);
@@ -337,7 +339,30 @@ Eigen::VectorXd Linkage::solve(size_t start, size_t length, Eigen::VectorXd cons
         if(relative_error < 1e-300) relative_error = 0;
         result = result+update;
     }
-
+    /*
+    if(result.maxCoeff() > 10){
+        std::ofstream DEBUG;
+        std::cerr << "Tolerance: " << tolerance << std::endl;
+        DEBUG.open("ld");
+        DEBUG << m_linkage.block(start, start, length, length)<<std::endl;
+        DEBUG.close();
+        DEBUG.open("inv");
+        DEBUG << rInverse << std::endl;
+        DEBUG.close();
+        DEBUG.open("beta");
+        DEBUG << (*betaEstimate).segment(start, length) << std::endl;
+        DEBUG.close();
+        DEBUG.open("res");
+        DEBUG << result << std::endl;
+        DEBUG.close();
+        DEBUG.open("ev");
+        DEBUG << es.eigenvectors() << std::endl;
+        DEBUG.close();
+        DEBUG.open("es");
+        DEBUG << es.eigenvalues() << std::endl;
+        DEBUG.close();
+    }
+    */
     Eigen::VectorXd effectiveNumber = Eigen::VectorXd::Constant(length,1.0);
     double eNorm = effectiveNumber.norm();
     Eigen::VectorXd effectiveResult = rInverse*effectiveNumber;
