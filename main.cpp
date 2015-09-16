@@ -36,6 +36,12 @@ int main(int argc, char *argv[]){
     }
     catch(const char* e){
 		std::cerr << e << std::endl;
+		std::cerr << "Available Modes are:" << std::endl;
+        std::cerr << "Model        Descriptions" << std::endl;
+        std::cerr << "quant        For estimation of heritability of quantitative traits" << std::endl;
+        std::cerr << "caseControl  For estimation of heritability of case control studies" << std::endl;
+        std::cerr << "riskQt       For risk estimation of quantitative traits" << std::endl;
+        std::cerr << "riskCC       For risk estimation of case control studies" << std::endl;
 		delete commander;
 		return EXIT_FAILURE;
     }
