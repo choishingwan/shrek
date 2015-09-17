@@ -71,9 +71,10 @@ void GenotypeFileHandler::initialize(std::map<std::string, size_t> &snpIndex, st
 	std::map<std::string, bool> duplicateCheck, sortCheck;
     int duplicateCount = 0;
     //check the optimum blockSize here
-
-    if(stdOut) std::cerr << "chr\tRecommend\tFinal"<< std::endl;
-    else blockRecommendOut << "chr\tRecommend\tFinal"<< std::endl;
+    std::cerr << "Block size information" << std::endl;
+    std::cerr << "===============================" << std::endl;
+    std::cerr << "chr\tRecommend\tFinal"<< std::endl;
+    if(!stdOut) blockRecommendOut << "chr\tRecommend\tFinal"<< std::endl;
     size_t currentMaxBlock = 0;
 	std::deque<size_t> locList;
 	std::string prevChr="";

@@ -39,7 +39,7 @@ Command::Command(){
     m_provideExtremeAdjustment = false;
 	m_providedPrevalence = false;
     m_providedMaf= false;
-    m_ldCorrection = true;
+    m_ldCorrection = false;
     m_validate = false;
 	m_isPvalue = false;
 	m_provideSampleSize = false;
@@ -182,7 +182,7 @@ static const char *optString = "a:b:c:f:g:Hh?i:kl:M:m:no:p:r:R:t:v";
 				m_minBlock = atoi(optarg);
 				break;
 			case 'n':
-				m_ldCorrection = false;
+				m_ldCorrection = true;
 				break;
 			case 'o':
 				m_outputPrefix = optarg;
@@ -308,7 +308,7 @@ void Command::quantMode(int argc, char* argv[]){
 				m_minBlock = atoi(optarg);
 				break;
 			case 'n':
-				m_ldCorrection = false;
+				m_ldCorrection = true;
 				break;
 			case 'o':
 				m_outputPrefix = optarg;
@@ -394,7 +394,7 @@ void Command::ccMode(int argc, char* argv[]){
 		{"region",required_argument,NULL,'L'},
 		{"maxBlock",required_argument,NULL,'M'},
 		{"minBlock",required_argument,NULL,'m'},
-		{"no_correct",no_argument,NULL,'n'},
+		{"correct",no_argument,NULL,'n'},
 		{"out",required_argument,NULL,'o'},
 		{"pfile",required_argument,NULL,'p'},
 		{"control",required_argument,NULL,'R'},
@@ -451,7 +451,7 @@ void Command::ccMode(int argc, char* argv[]){
 				m_minBlock = atoi(optarg);
 				break;
 			case 'n':
-				m_ldCorrection = false;
+				m_ldCorrection = true;
 				break;
 			case 'o':
 				m_outputPrefix = optarg;
@@ -587,7 +587,7 @@ void Command::printCCUsage(){
     std::cerr << "  -c,--chr         The column number of chromosome              < Default: 1 >"  << std::endl;
     std::cerr << "  -r,--rs          The column number of rsid                    < Default: 2 >"  << std::endl;
     std::cerr << "  -l,--loc         The column number of coordinate              < Default: 3 >"  << std::endl;
-    std::cerr << "  -n,--no_correct  Turn off LD correction. "                                     << std::endl;
+    std::cerr << "  -n,--correct     Turn on LD correction. "                                      << std::endl;
     std::cerr << "  -f,--maf         The minor allele frequency filtering. "                       << std::endl;
     std::cerr << "  -k,--prevalence  Prevalence of the phenotype                    < Required >"  << std::endl;
     std::cerr << "  -a,--case        The number of case used in the study           < Required >"  << std::endl;
@@ -615,7 +615,7 @@ void Command::printRiskUsage(){
     std::cerr << "  -l,--loc         The column number of coordinate              < Default: 3 >"  << std::endl;
     std::cerr << "  -R,--ref         The column number of reference allele."                       << std::endl;
     std::cerr << "  -a,--alt         The column number of alternative allele."                     << std::endl;
-    std::cerr << "  -n,--no_correct  Turn off LD correction."                                      << std::endl;
+    std::cerr << "  -n,--correct     Turn on LD correction."                                       << std::endl;
     std::cerr << "  -f,--maf         The minor allele frequency filtering. "                       << std::endl;
     std::cerr << "  -g,--geno        The genotype file for the individual(s). "                    << std::endl;
     std::cerr << "General options: " << std::endl;
@@ -639,7 +639,7 @@ void Command::printQuantUsage(){
     std::cerr << "  -r,--rs          The column number of rsid                    < Default: 2 >"  << std::endl;
     std::cerr << "  -l,--loc         The column number of coordinate              < Default: 3 >"  << std::endl;
     std::cerr << "  -x,--sampleIndex The sample column index.                     < Default: 4 >"  << std::endl;
-    std::cerr << "  -n,--no_correct  Turn off LD correction. "                                     << std::endl;
+    std::cerr << "  -n,--correct     Turn on LD correction. "                                      << std::endl;
     std::cerr << "  -f,--maf         The minor allele frequency filtering. "                       << std::endl;
     std::cerr << "  -s,--sampleSize  The number of sample used."                                   << std::endl;
     std::cerr << "  -e,--extreme     The extreme phenotype adjustment ratio."                      << std::endl;
@@ -675,11 +675,10 @@ void Command::printUsage(){
     std::cerr << "                   test statistic will be assumed to be the direction of  "      << std::endl;
     std::cerr << "                   effect. If direction of effect is unknown, the estimation "   << std::endl;
     std::cerr << "                   of the standard error will be inflated.  "                    << std::endl;
-    std::cerr << "  -n,--no_correct  Turn off LD correction. The LD correction is used when "      << std::endl;
+    std::cerr << "  -n,--correct     Turn on LD correction. The LD correction is used when "       << std::endl;
     std::cerr << "                   using the genotype file to calculate the LD matrix. The "     << std::endl;
     std::cerr << "                   LD correction is performed to adjust for number of sample"    << std::endl;
-    std::cerr << "                   used for calculating the LD. It is not recommended to turn"   << std::endl;
-    std::cerr << "                   off this function"                                            << std::endl;
+    std::cerr << "                   used for calculating the LD. "                                << std::endl;
     std::cerr << "  -m,--maf         The minor allele frequency filtering. If you provide the "    << std::endl;
     std::cerr << "                   genotype file, you may use only snps passing maf threshold"   << std::endl;
     std::cerr << "                   for the LD calculation. Has no effect otherwise."             << std::endl;
