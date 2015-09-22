@@ -28,6 +28,7 @@
 
 int main(int argc, char *argv[]){
     //Parsing the parameters
+    //Start working one by one
     Command *commander = nullptr;
     commander=new Command();
     try{
