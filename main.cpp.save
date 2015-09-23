@@ -44,7 +44,7 @@ int main(int argc, char *argv[]){
         std::map<std::string, size_t> snpIndex;
         Snp::generateSnpList(snpList, commander);
         Snp::generateSnpIndex(snpIndex, snpList, commander, regionInfo);
-        boost::ptr_vector<Interval> blockInfo; //We use this to store all block information, should be useful for both risk and not risk stuff
+        boost::ptr_vector<Interval> blockInfo; //We use this to store all block 
         if(commander->quantitative() || commander->caseControl()){
 
         }

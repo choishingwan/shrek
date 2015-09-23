@@ -14,11 +14,11 @@ class Interval
         /** Default destructor */
         virtual ~Interval();
         /** Return the chromosome information of this interval */
-        std::string Getchr() const;
+        inline std::string getChr() const {return m_chr; };
         /** Return the starting loc of this interval */
-        size_t Getstart() const;
+        inline size_t getStart() const {return m_start; };
         /** Return the last loc of this interval */
-        size_t Getend() const;
+        inline size_t getEnd() const { return m_end; };
     protected:
     private:
         std::string m_chr;
