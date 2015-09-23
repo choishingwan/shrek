@@ -32,6 +32,9 @@ public:
         Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, std::vector<std::string> &original, std::string refAllele, std::string altAllele, int direction);
         virtual ~Snp();
         static void generateSnpList(boost::ptr_vector<Snp> &snpList, const Command *commander);
+        static void generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Command *commander, Region *regionList);
+
+
         inline std::string getChr() const{return m_chr;};
         inline std::string getRs() const{return m_rs; };
         inline std::string getRef() const{return m_ref; };
@@ -39,7 +42,6 @@ public:
         inline size_t getBp() const{return m_bp;};
         inline size_t getSampleSize() const{return m_sampleSize;};
         inline int getDirection() const{return m_direction;};
-
         Snp(const Snp& that) = delete;
 protected:
 private:
@@ -51,8 +53,15 @@ private:
         size_t m_sampleSize;
         int m_direction;
         std::vector<double> m_original;
+        std::vector<double> m_heritability;
+        std::vector<double> m_beta;
         std::vector<bool> m_remove;
+        std::vector<bool> m_regionFlag;
+
+        //Functions
         static bool sortSnp(const Snp& i, const Snp& j);
+        void setFlag(const size_t i, bool flag);
+        void computeVarianceExplained(const Command *commander);
 
 };
 

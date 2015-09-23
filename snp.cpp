@@ -17,6 +17,128 @@ Snp::Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, std::vec
     }
 }
 
+void Snp::computeVarianceExplained(const Command *commander){
+    //There are 4 possibilities
+    bool qt = commander->quantitative();
+    bool cc = commander->caseControl();
+    bool rqt = commander->conRisk();
+    bool rcc = commander->diRisk();
+    bool isP = commander->isPvalue();
+    if(qt || rqt){
+        //Sample size should already be obtained for the qt runs
+        if(isP){
+            for(size_t i = 0; i < m_original.size();++i){
+                double beta = usefulTools::qnorm(1.0-((m_original[i]+0.0)/2.0));
+                if(m_original[i] >= 1.0) beta = 0.0;
+                else if(m_original[i] ==0.0){
+                    m_remove[i] = true;
+                    beta=0.0;
+                }
+                beta = beta*m_direction;
+                if(rqt) beta = beta/sqrt(m_sampleSize-2.0+beta*beta);
+                else{
+                    beta = beta*beta;
+                    beta = (beta-1.0)/(m_sampleSize-2.0+beta);
+                }
+                m_beta.push_back(beta);
+                m_heritability.push_back(0.0);
+            }
+        }
+        else{
+            for(size_t i = 0; i < m_original.size();++i){
+                double beta = m_original[i];
+                if(rqt) beta = beta/sqrt(m_sampleSize-2.0+beta*beta);
+                else if(qt){
+                    beta=beta*beta;
+                    beta = (beta-1.0)/(m_sampleSize-2.0+beta);
+                }
+                m_beta.push_back(beta);
+                m_heritability.push_back(0.0);
+            }
+        }
+    }
+    else if(cc || rcc){
+        size_t caseSize=commander->getCaseSize();
+        size_t controlSize=commander->getControlSize();
+        if(isP){
+            for(size_t i = 0; i < m_original.size();++i){
+                double beta = usefulTools::qnorm(1.0-((m_original[i]+0.0)/2.0));
+                if(m_original[i] >= 1.0) beta = 0.0;
+                else if(m_original[i] ==0.0){
+                    m_remove[i] = true;
+                    beta=0.0;
+                }
+                beta = beta*m_direction;
+                if(rcc) beta = beta/sqrt(caseSize+controlSize-2.0+beta*beta);
+                else{
+                    beta = beta*beta;
+                    beta = (beta-1.0)/(caseSize+controlSize-2.0+beta);
+                }
+                m_beta.push_back(beta);
+                m_heritability.push_back(0.0);
+            }
+        }
+        else{
+            for(size_t i = 0; i < m_original.size(); ++i){
+                double beta =m_original[i];
+                if(rcc){
+                    beta = sqrt(beta)*m_direction;
+                    beta = (beta)/(caseSize+controlSize -2.0+beta*beta);
+
+                }
+                else if(cc){
+                   beta = (beta-1.0)/(caseSize+controlSize -2.0+beta);
+                }
+                m_beta.push_back(beta);
+                m_heritability.push_back(0.0);
+            }
+        }
+    }
+    throw std::runtime_error("Undefined mode");
+}
+
+
+void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Command *commander, Region *regionList){
+    std::vector<size_t> regionIncrementationIndex(regionList->getNumRegion(), 0);
+	size_t duplicate = 0;
+
+	for(size_t i = 0; i < snpList.size(); ++i){
+        //If the snp is new
+        if(snpIndex.find(snpList[i].getRs())== snpIndex.end()){
+            snpIndex[snpList[i].getRs()] =i ;
+
+            snpList[i].computeVarianceExplained(commander);
+            //The default flag (with LD), is always false at this stage
+            snpList[i].m_regionFlag.push_back(false);
+            if(regionList->getNumRegion() != 0){
+                std::vector<bool> padding(regionList->getNumRegion(), false);
+                snpList[i].m_regionFlag.insert(snpList[i].m_regionFlag.end(), padding.begin(), padding.end());
+            }
+            for(size_t j = 0; j < regionList->getNumRegion(); ++j){
+                for(unsigned k = regionIncrementationIndex.at(j); k < regionList->getIntervalSize(j); ++k){
+                    //check whether if this snp falls within the region
+                    if( regionList->getChr(j,k).compare(snpList[i].getChr())==0 &&
+                        regionList->getStart(j,k) <= snpList[i].getBp() &&
+                        regionList->getEnd(j,k) >= snpList[i].getBp()){
+
+                        regionIncrementationIndex.at(j) = k;
+                        snpList[i].setFlag(j+1, true);
+                        break;
+                    }
+                }
+            }
+        }
+        else{
+            duplicate++;
+        }
+
+    }
+}
+
+void Snp::setFlag(const size_t i, bool flag){
+    m_regionFlag.at(i) = flag;
+}
+
 void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command *commander){
     std::ifstream pValue;
     pValue.open(commander->getPvalueFileName().c_str());

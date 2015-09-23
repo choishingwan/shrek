@@ -43,7 +43,13 @@ int main(int argc, char *argv[]){
         boost::ptr_vector<Snp> snpList;
         std::map<std::string, size_t> snpIndex;
         Snp::generateSnpList(snpList, commander);
+        Snp::generateSnpIndex(snpIndex, snpList, commander, regionInfo);
+        if(commander->quantitative() || commander->caseControl()){
 
+        }
+        else if(commander->diRisk() || commander->conRisk()){
+
+        }
     }
     catch(const std::runtime_error& error){
         std::cerr << error.what() << std::endl;
@@ -51,71 +57,11 @@ int main(int argc, char *argv[]){
     catch (std::bad_alloc& ba){
         std::cerr << ba.what() <<std::endl;
     }
+    delete commander;
+    delete regionInfo;
 
 
-    try{
-        /** Parse the parameters using the command handler */
-		commander->initialize(argc, argv);
-    }
-    catch(const char* e){
-		std::cerr << e << std::endl;
-		std::cerr << "Available Modes are:" << std::endl;
-        std::cerr << "Model        Descriptions" << std::endl;
-        std::cerr << "quant        For estimation of heritability of quantitative traits" << std::endl;
-        std::cerr << "caseControl  For estimation of heritability of case control studies" << std::endl;
-        std::cerr << "riskQt       For risk estimation of quantitative traits" << std::endl;
-        std::cerr << "riskCC       For risk estimation of case control studies" << std::endl;
-		delete commander;
-		return EXIT_FAILURE;
-    }
-    catch(const int e){
-		delete commander;
-        return EXIT_SUCCESS;
-    }
-    Region *regionInfo = nullptr;
-    regionInfo = new Region();
-    try{
-        /** Preparing the region vectors for storage and also for the
-         *  Snp flag process
-         */
-        regionInfo->generateRegion(commander->GetregionList());
-    }
-    catch(const char *e){
-        std::cerr << e << std::endl;
-        regionInfo->clean();
-        delete commander;
-        delete regionInfo;
-        return EXIT_FAILURE;
-    }
-    /** Print the run summary */
-    commander->printRunSummary(std::to_string(regionInfo->GetnumRegion()));
-    std::vector<Snp*> snpList;
-    std::map<std::string, size_t> snpIndex;
-    try{
-        /** Read all the Snp information from the file and remove the duplications
-         *  Might need to improve the validation as currently it is almost non-
-         *  existent
-         */
-        Snp::generateSnpList(snpList, commander);
-    }
-    catch (const std::ifstream::failure e) {
-        std::cerr << "Exception encountered when opening file" << std::endl;
-        std::cerr << "Please check all your input file are ok" << std::endl;
-        delete commander;
-        regionInfo->clean();
-        delete regionInfo;
-        Snp::cleanSnp(snpList);
-        return EXIT_FAILURE;
-    }
-    catch(const char *e){
-        std::cerr << e << std::endl;
-        delete commander;
-        regionInfo->clean();
-        delete regionInfo;
-        Snp::cleanSnp(snpList);
-        return EXIT_FAILURE;
-    }
-
+/*
 
     if(commander->risk()){
         RiskPrediction *riskPrediction = nullptr;
@@ -138,13 +84,17 @@ int main(int argc, char *argv[]){
     }
     else{
         try{
+        */
             /** Generate the Snp Index */
+            /*
             if(commander->quantitative()){
                 Snp::generateSnpIndex(snpIndex, snpList, regionInfo, commander->isPvalue(), commander->GetextremeAdjust());
             }
             else if(commander->caseControl()){
                 Snp::generateSnpIndex(snpIndex, snpList,commander->GetcaseSize(), commander->GetcontrolSize(), commander->Getprevalence(), regionInfo, commander->isPvalue());
+                */
                 /** For case control study, set the liability adjustment */
+                /*
                 Snp::Setadjustment(commander->Getprevalence(), commander->GetcaseSize(), commander->GetcontrolSize());
             }
             regionInfo->clean();
@@ -159,7 +109,9 @@ int main(int argc, char *argv[]){
         }
         if(!commander->GetdirectionFile().empty()){
             try{
+            */
                 /** If there is direction information, use it */
+                /*
                 Snp::addDirection(snpIndex, snpList, commander->GetdirectionFile());
             }
             catch(const char *e){
@@ -210,6 +162,6 @@ int main(int argc, char *argv[]){
     delete commander;
     regionInfo->clean();
     delete regionInfo;
-
+    */
     return 0;
 }
