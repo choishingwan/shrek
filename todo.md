@@ -3,9 +3,9 @@ You may only work on the programming when you hvae finished your share of 3 page
 
 #Performance
 - [ ] Need some refinement of classes
-- [*] Restructure command class
-- [*] Restructure region class
-- [*] Restructure snp class
+- [x] Restructure command class
+- [x] Restructure region class
+- [x] Restructure snp class
 - [ ] Restructure snp estimation class
 - [ ] Restructure risk estimation class
 - [ ] Restructure genotypefile handling class
