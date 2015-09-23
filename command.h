@@ -39,25 +39,59 @@ class Command
         Command();
         /** Default destructor */
         virtual ~Command();
-        /** initialize the command handler. read from the command line and get the parameters */
         void initialize(int argc, char* argv[]);
-        /** Print the run summary */
         void printRunSummary(std::string regionMessage);
-        /** Print the brief usage information */
         void printBriefUsage();
+
         inline size_t getCaseSize() const{ return m_caseSize; };
+        inline size_t getControlSize() const { return m_controlSize;};
+        inline size_t getChr() const { return m_chrIndex; };
+        inline size_t getRs() const { return m_rsIndex;};
+        inline size_t getBp() const { return m_bpIndex;};
+        inline size_t getSampleIndex() const {return m_sampleSizeIndex;};
+        inline size_t getDir() const { return m_dirIndex; };
+        inline size_t getRef() const { return m_ref; };
+        inline size_t getAlt() const { return m_alt; };
+        inline size_t getThread() const { return m_thread;};
+        inline size_t getMaxBlock() const {return m_maxBlock;};
+        inline size_t getMinBlock() const { return m_minBlock;};
+        inline size_t getDistance() const {return m_distance;};
+        inline size_t getSampleSize() const {return m_sampleSize;};
+        inline double getPrevalence() const { return m_prevalence;};
+        inline double getMaf() const { return m_maf;};
+        inline double getExtreme() const {return m_extremeAdjust;};
+        inline bool maxBlockSet() const{ return m_maxBlockSet;};
+        inline bool validate() const { return m_validate;};
+        inline bool isPvalue() const {return m_isPvalue;};
+        inline bool ldCorrect() const {return m_ldCorrection;};
+        inline bool quantitative() const {return m_qt;};
+        inline bool caseControl() const {return m_cc;};
+        inline bool conRisk() const {return m_rqt;};
+        inline bool diRisk() const { return m_rcc;};
+        inline bool mafFilter() const {return m_providedMaf; };
+        inline bool extremeAdjust() const {return m_provideExtremeAdjustment;};
+        inline bool sampleSizeProvided() const{return m_provideSampleSize;};
+        inline bool removeAmbig() const{return m_keep; }; //Default keeping ambiguous SNPs
+        inline std::string getPvalueFileName() const{return m_pValueFileName; };
+        inline std::string getLdFilePrefix() const{ return m_ldFilePrefix; };
+        inline std::string getOutputPrefix() const {return m_outputPrefix; };
+        inline std::string getRegion() const{ return m_regionList;};
+        inline std::string getGenotype() const{ return m_genotypeFilePrefix; };
+        inline size_t getStatIndex(size_t i) const{return m_stats.at(i);};
+        inline size_t getStatSize() const {return m_stats.size(); };
+        inline size_t maxStatIndex() const { return m_stats.back(); };
 
     protected:
     private:
         /**
                 Meta information
         */
-        double m_version;
+        double m_version=0.02;
         std::string m_programmeName; //!< the programme name. Use for the help message only
 
         //Other information
-        size_t m_caseSize;
-        size_t m_controlSize;
+        size_t m_caseSize=0;
+        size_t m_controlSize=0;
         size_t m_chrIndex = 0;
         size_t m_rsIndex = 1;
         size_t m_bpIndex = 2;
@@ -85,7 +119,7 @@ class Command
         bool m_providedMaf = false;
         bool m_provideExtremeAdjustment = false;
         bool m_provideSampleSize = false;
-        bool m_keep = true; //Default keeping ambiguous SNPs
+        bool m_keep = false; //Default not keeping ambiguous SNPs
 
         std::string m_pValueFileName="";
         std::string m_ldFilePrefix="";
@@ -107,9 +141,7 @@ class Command
         void printRiskUsage();
         /** Function to perform general checking to for all parameters */
         bool generalCheck();
-        void riskMode(int argc, char* argv[]);
-        void quantMode(int argc, char* argv[]);
-        void ccMode(int argc, char* argv[]);
+
         std::vector<size_t> processRange(std::string input);
 };
 

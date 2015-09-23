@@ -25,15 +25,19 @@ void Command::initialize(int argc, char* argv[]){
 	m_programmeName =argv[0];
 	std::string mode(argv[1]);
     if(mode.compare("quant")==0){
+        m_qt=true;
         quantitativeProcess(argc, argv);
     }
     else if(mode.compare("cc")==0){
+        m_cc=true;
         caseControlProcess(argc, argv);
     }
     else if(mode.compare("risk-qt")==0){
+        m_rqt=true;
         continuousRiskProcess(argc, argv);
     }
     else if(mode.compare("risk_cc")==0){
+        m_rcc = true;
         dichotomusRiskProcess(argc, argv);
     }
 }
@@ -312,7 +316,7 @@ void Command::dichotomusRiskProcess(int argc, char* argv[]){
                 m_genotypeFilePrefix = optarg;
                 break;
             case 'A':
-                m_keep = false;
+                m_keep = true;
                 break;
 
 		    //CC specific parameters
@@ -445,7 +449,7 @@ void Command::continuousRiskProcess(int argc, char* argv[]){
                 m_genotypeFilePrefix = optarg;
                 break;
             case 'A':
-                m_keep = false;
+                m_keep = true;
                 break;
 
 		    //Qt specific parameter
@@ -560,4 +564,85 @@ std::vector<size_t> Command::processRange(std::string input){
     }
     return index;
 }
+
+
+void Command::printRunSummary(std::string regionMessage){
+    std::cerr 	<< "SHREK\tCoding by Sam CHOI\tMethod by Johnny KWAN" <<std::endl
+        << "===============================================================" << std::endl
+		<< "Performing analysis using the following parameters: " << std::endl
+		<< "===============================================================" << std::endl
+		<< "Essential Input  " <<std::endl;
+		std::cerr	<< "Linkage File Prefix  : " << m_ldFilePrefix << std::endl;
+	    std::cerr 	<< "P-Value File         : " << m_pValueFileName << std::endl;
+	    std::cerr   << "Input is P-Value     : ";
+    if(m_isPvalue) std::cerr << "True" << std::endl;
+    else std::cerr << "False" << std::endl;
+    if(!m_outputPrefix.empty()){
+        std::cerr   << "Output File          : " << m_outputPrefix << std::endl;
+    }
+    if(m_cc){
+		std::cerr	<< "Mode                 : Case Control " << std::endl
+					<< "Number of Case       : " << m_caseSize << std::endl
+					<< "Number of Control    : " << m_controlSize << std::endl
+					<< "Prevalence           : " << m_prevalence << std::endl << std::endl;
+	}
+	else if(m_qt){
+		std::cerr	<< "Mode                 : Quantitative Trait" << std::endl;
+		if(m_provideSampleSize) std::cerr	<< "Sample Size          : " << m_sampleSize << std::endl;
+		if(m_provideExtremeAdjustment) std::cerr <<   "Extreme Adjustment   : " << m_extremeAdjust << std::endl << std::endl;
+	}
+	else if(m_rqt){
+        std::cerr	<< "Mode                 : Risk Prediction (Continuous Trait)" << std::endl;
+        std::cerr   << "Genotype File Prefix : " << m_genotypeFilePrefix << std::endl;
+        std::cerr   << "Ref Allele           : " << m_refIndex << std::endl;
+        std::cerr   << "Alt Allele           : " << m_altIndex << std::endl;
+		if(m_provideSampleSize) std::cerr	<< "Sample Size          : " << m_sampleSize << std::endl;
+	}
+	else if(m_rcc){
+        std::cerr	<< "Mode                 : Risk Prediction (Dichotomous Trait)" << std::endl;
+        std::cerr   << "Genotype File Prefix : " << m_genotypeFilePrefix << std::endl;
+        std::cerr   << "Ref Allele           : " << m_refIndex << std::endl;
+        std::cerr   << "Alt Allele           : " << m_altIndex << std::endl
+					<< "Number of Case       : " << m_caseSize << std::endl
+					<< "Number of Control    : " << m_controlSize << std::endl
+					<< "Prevalence           : " << m_prevalence << std::endl << std::endl;
+		if(m_provideSampleSize) std::cerr	<< "Sample Size          : " << m_sampleSize << std::endl;
+	}
+    std::cerr	<< "===============================================================" << std::endl
+				<< "Options " << std::endl
+				<< "Number of Thread     : " << m_thread << std::endl;
+	if(m_maxBlock != 0){
+        std::cerr << "Maximum block size   : " << m_maxBlock << std::endl;
+	}
+    if(m_minBlock != 0){
+        std::cerr << "Minimum block size   : " << m_minBlock << std::endl;
+    }
+    if(m_ldCorrection){
+        std::cerr << "Use LD correction    : True" << std::endl;
+    }
+    else{
+        std::cerr << "Use LD correction    : False" << std::endl;
+    }
+    std::cerr	<< "LD distance          : " << m_distance << std::endl;
+	std::cerr	<< "Number of regions    : " << regionMessage << std::endl;
+
+	std::cerr << std::endl << std::endl;
+
+}
+
+
+
+void printUsage(){
+
+}
+void printCCUsage(){
+
+}
+void printQuantUsage(){
+
+}
+void printRiskUsage(){
+
+}
+
 

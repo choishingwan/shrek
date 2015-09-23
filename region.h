@@ -15,6 +15,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <complex>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include "interval.h"
 #include "usefulTools.h"
 
@@ -35,52 +36,21 @@
  */
 class Region
 {
-	public:
-	    /** Default constructor */
-	    Region();
-	    /** Default destructor */
-		virtual ~Region();
-        /** Based on the given command line input, read the region information
-         *  The region should be in the format:
-         * \<Name\>:\<Bed File\>,<Name\>:\<Bed File\>...
-         */
+public:
+        Region();
+        virtual ~Region();
         void generateRegion(std::string regionList);
-        /** Remove all the interval pointers as they are no longer required */
         void clean();
-        /** Add variance to the i th region */
-        void Addvariance(double const var, size_t i);
-        void SetlastVariance(double const var, size_t i);
-        void ConfirmlastVariance();
-        void CleanlastVariance();
-        /** Set the buffer variance to the i th region */
-        void SetbufferVariance(double const var, size_t i);
-        /** Add the buffer additional variance of the i th region */
-        void AddbufferVariance(size_t i, double const var);
-        /** Remove the additional buffer */
-        void CleanBuffer();
-        /**add the buffer to the variance vectors and reset them */
-        void Debuffer();
-        /** Return the number of regions */
-        size_t GetnumRegion() const;
-        /** Return the chromosome information of the jth interval in the ith region */
-        std::string Getchr(size_t i, size_t j) const;
-        /** Return the start coordinate of the jth interval in the ith region */
-        size_t Getstart(size_t i, size_t j) const;
-        /** Return the last coordinate of the jth interval in the ith region */
-        size_t Getend(size_t i, size_t j) const;
-        /** Return the size of the ith region */
-        size_t GetintervalSize(size_t i) const;
-        /** Return the name of the i th region */
-        std::string Getname(size_t i) const;
-        /** Return the variance of the i th region given the heritability */
-        double Getvariance(double heritability, size_t i, double adjustment) const;
-	protected:
+        size_t GetnumRegion() const {return m_names.size();};
+        inline std::string Getchr(size_t i, size_t j) const {return m_intervalList.at(i).at(j).Getchr();};
+        inline size_t Getstart(size_t i, size_t j) const {return m_intervalList.at(i).at(j).Getstart();};
+        inline size_t Getend(size_t i, size_t j) const {return m_intervalList.at(i).at(j).Getend();};
+        inline size_t GetintervalSize(size_t i) const {return m_intervalList.at(i).size();};
+        inline std::string Getname(size_t i) const {return m_names.at(i);};
+        protected:
 	private:
-        std::vector<std::vector<Interval*> > m_intervalList;
+        std::vector<boost::ptr_vector<Interval> > m_intervalList;
         std::vector<std::string> m_names;
-        std::vector<double> m_variance;
-        std::vector<double> m_bufferVariance;
-        std::vector<double> m_lastVariance;
 };
 
 #endif // REGION_H

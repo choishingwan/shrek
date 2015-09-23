@@ -1,4 +1,7 @@
 #include <iostream>
+#include <exception>
+#include <stdexcept>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include "command.h"
 #include "region.h"
 #include "snp.h"
@@ -29,8 +32,27 @@
 int main(int argc, char *argv[]){
     //Parsing the parameters
     //Start working one by one
-    Command *commander = nullptr;
-    commander=new Command();
+    try{
+        Command *commander = nullptr;
+        commander=new Command();
+        commander->initialize(argc, argv);
+        Region *regionInfo = nullptr;
+        regionInfo = new Region();
+        regionInfo->generateRegion(commander->getRegion());
+        commander->printRunSummary(std::to_string(regionInfo->GetnumRegion()));
+        boost::ptr_vector<Snp> snpList;
+        std::map<std::string, size_t> snpIndex;
+        Snp::generateSnpList(snpList, commander);
+
+    }
+    catch(const std::runtime_error& error){
+        std::cerr << error.what() << std::endl;
+    }
+    catch (std::bad_alloc& ba){
+        std::cerr << ba.what() <<std::endl;
+    }
+
+
     try{
         /** Parse the parameters using the command handler */
 		commander->initialize(argc, argv);

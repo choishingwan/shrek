@@ -3,10 +3,16 @@ You may only work on the programming when you hvae finished your share of 3 page
 
 #Performance
 - [ ] Need some refinement of classes
+- [*] Restructure command class
+- [*] Restructure region class
+- [ ] Restructure snp class
 - [ ] Remove redundent actions
 - [ ] Better throw-catch management
 - [ ] Dynamic Block Size
+- [ ] Safety check for command class
 
+#Documentation
+- [ ] Need to rewrite the manual (e.g. help messages in command class)
 #Cosmetic
 - [ ] Restructure input command
 - [ ] Clearer help messages
