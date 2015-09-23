@@ -16,6 +16,9 @@
 #include <iostream>
 #include <unistd.h>
 #include <getopt.h>
+#include <exception>
+#include <stdexcept>
+#include <algorithm>
 #include "usefulTools.h"
 
 /**
@@ -42,105 +45,61 @@ class Command
         void printRunSummary(std::string regionMessage);
         /** Print the brief usage information */
         void printBriefUsage();
-        /** return the number of thread use */
-        size_t Getthread() const;
-        /** return the minimal block size requirement */
-        size_t GetminBlock() const;
-        /** return the maximum block size restriction */
-        size_t GetmaxBlock() const;
-        /** return the sample size used */
-        size_t GetsampleSize() const;
-        /** return the number of cases */
-        size_t GetcaseSize() const;
-        /** return the number of control */
-        size_t GetcontrolSize() const;
-        /** return the column containing the test statistic/p-value*/
-        size_t GetIndex() const;
-        /** return the column containing the bp information */
-        size_t GetbpIndex() const;
-        /** return the column containing the chromosome information */
-        size_t GetchrIndex() const;
-        /** return the column containing the rs id information */
-        size_t GetrsIndex() const;
-        /** return the column containing the sample size information */
-        size_t GetsampleSizeIndex() const;
-        size_t GetaltIndex() const;
-        size_t GetrefIndex() const;
-        /** return the prevalence */
-        double Getprevalence() const;
-        /** return the maf threshold */
-        double Getmaf() const;
-        /** return the extreme adjustment parameter */
-        double GetextremeAdjust() const;
-        /** return whether if r-square correction is required */
-        bool ldCorrect() const;
-        /** return whether if snp validation is required */
-        bool validate() const;
-        /** return whether if p-value instead of test-statistic is given */
-        bool isPvalue() const;
-        /** return whether if sample size is defined */
-        bool provideSampleSize() const;
-        /** return whether if it is a quantitative trait study */
-        bool quantitative() const;
-        bool risk() const;
-        /** return whether if it is a case control study */
-        bool caseControl() const;
-        /** return whether if maximum block size is set */
-        bool maxBlockSet() const;
-        bool keep() const;
-        /** return output prefix */
-        std::string GetoutputPrefix() const;
-        /** return p-value file name */
-        std::string GetpValueFileName() const;
-        /** return genotype file prefix (for ld construction) */
-        std::string GetldFilePrefix() const;
-        /** return the list of region(s) information */
-        std::string GetregionList() const;
-        /** return the programme name */
-        std::string GetprogrammeName() const;
-        /** return the direction file name */
-        std::string GetdirectionFile() const;
-        std::string GetgenotypeFile() const;
+        inline size_t getCaseSize() const{ return m_caseSize; };
+
     protected:
     private:
-        size_t m_thread; //!< Number of thread used
-        size_t m_minBlock; //!< minimum block size required
-        size_t m_maxBlock; //!< maximum block size allowed
-        size_t m_sampleSize; //!< sample size, use for quantitative trait
-        size_t m_caseSize; //!< number of cases
-        size_t m_controlSize; //!< number of control
-        size_t m_Index; //!< the column containing the chi square information (or p-value), for case control, 1-based
-        size_t m_bpIndex; //!< the column containing the location of the snp
-        size_t m_chrIndex; //!< the column containing the chromosome information
-        size_t m_rsIndex; //!< the column containing the rs-id
-        size_t m_sampleSizeIndex; //!< the column containing the sample size information. Not use if sample size is specified
-        size_t m_refIndex; //!< the column containing the reference allele. Only use for risk prediction
-        size_t m_altIndex; //!< the column containing the alternative allele. Only use for risk prediction
-        size_t m_distance; //!< the distance between snps. Any snps further than this is considered as invalid (Have not implement any function to use this information)
-        double m_prevalence; //!< the prevalence
-        double m_maf; //!< the maf filtering threshold. Snps with maf less then this threshold will be filtered out
-        double m_extremeAdjust; //!< the extreme adjustment parameter
+        /**
+                Meta information
+        */
         double m_version;
-        bool m_ldCorrection;//!< whether if the r square / r should be adjusted (default true)
-        bool m_validate; //!< if the snp information should be validated
-        bool m_isPvalue; //!< if the input is p-value instead of test statistics
-        bool m_provideSampleSize;//!< whether if sample size information is provided
-        bool m_quantitative; //!< whether if it is quantitative trait. Mutually exclusive with m_caseControl and m_risk
-        bool m_caseControl; //!< whether if it is case control. Mutually exclusive with m_quantitative and m_risk
-        bool m_risk; //!< whether if it is risk prediction. Mutually exclusive with m_quantitative and m_caseControl
-        bool m_maxBlockSet; //!< whether if the maximum block size is set
-        bool m_providedMaf; //!< Indicate whether if the maf threshold is provided
-        bool m_providedPrevalence; //!< Indicate whether if the prevalence information is provided
-        bool m_provideExtremeAdjustment; //!< Indicate whether if the prevalence information is provided
-        bool m_keep; //!< Indicate whether if the ambiguous SNPs should be removed
-        bool m_hasHeader; //!< Indicate whether if the p-value file contains header (Actually, should always contains header)
-        std::string m_outputPrefix; //!< the output prefix
-        std::string m_pValueFileName; //!< the p-value input file
-        std::string m_directionFile; //!< the direction file. Contain information of the direction of effect  (Now only use for risk prediction. Variance estimation is ok, but we will simplify the parameter input first)
-        std::string m_genotypeFilePrefix; //!< the genotype file. Contain information of the sample for prediction
-        std::string m_ldFilePrefix; //!< the file prefix of the genotype file for the ld construction
-        std::string m_regionList; //!< a list of region informations
         std::string m_programmeName; //!< the programme name. Use for the help message only
+
+        //Other information
+        size_t m_caseSize;
+        size_t m_controlSize;
+        size_t m_chrIndex = 0;
+        size_t m_rsIndex = 1;
+        size_t m_bpIndex = 2;
+        size_t m_sampleSizeIndex = 3;
+        size_t m_dirIndex = 7;
+        size_t m_ref = 0;
+        size_t m_alt = 0;
+        size_t m_thread = 1;
+        size_t m_maxBlock = 0;
+        size_t m_minBlock = 0;
+        size_t m_distance = 3000000;
+        size_t m_sampleSize = 0;
+        double m_prevalence=1.0;
+        double m_maf = -1.0;
+        double m_extremeAdjust = 1.0;
+        bool m_maxBlockSet=false;
+        bool m_validate=false;
+        bool m_isPvalue = false;
+        bool m_ldCorrection=false;
+        bool m_qt = false;
+        bool m_cc = false;
+        bool m_rqt = false;
+        bool m_rcc = false;
+        bool m_providedPrevalence = false;
+        bool m_providedMaf = false;
+        bool m_provideExtremeAdjustment = false;
+        bool m_provideSampleSize = false;
+        bool m_keep = true; //Default keeping ambiguous SNPs
+
+        std::string m_pValueFileName="";
+        std::string m_ldFilePrefix="";
+        std::string m_outputPrefix="";
+        std::string m_regionList="";
+        std::string m_genotypeFilePrefix="";
+        std::vector<size_t> m_stats;
+
+        void caseControlProcess(int argc, char* argv[]);
+        void quantitativeProcess(int argc, char* argv[]);
+        void continuousRiskProcess(int argc, char* argv[]);
+        void dichotomusRiskProcess(int argc, char* argv[]);
+
+
         /** Function to print the usage information of the programme */
         void printUsage();
         void printCCUsage();
@@ -151,6 +110,7 @@ class Command
         void riskMode(int argc, char* argv[]);
         void quantMode(int argc, char* argv[]);
         void ccMode(int argc, char* argv[]);
+        std::vector<size_t> processRange(std::string input);
 };
 
 #endif // COMMAND_H
