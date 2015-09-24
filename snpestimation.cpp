@@ -4,11 +4,16 @@ SnpEstimation::SnpEstimation(){};
 
 void SnpEstimation::Estimate(GenotypeFileHandler *genotypeFileHandler,const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, Region* regionInfo, Command *commander,boost::ptr_vector<Interval> &blockInfo){
     //Declaration
-    size_t prevResidual = 0; //This is the index of the last finished block
+    size_t genotypeResidual = 0; //This is index of the block to read SNPs
+    size_t remainLd = 0; //This is the index of the block to construct LD
     boost::ptr_deque<Genotype> genotype;
     std::deque<size_t> snpLoc;
     bool chromosomeStart = true;
     bool chromosomeEnd = false;
+
+    Linkage *linkageMatrix = nullptr;
+    linkageMatrix = new Linkage();
+
     //Start processing (will need to wrap it with a while loop
     /*
     1. Get SNPs
@@ -16,8 +21,10 @@ void SnpEstimation::Estimate(GenotypeFileHandler *genotypeFileHandler,const std:
     3. Decomposition
     */
     //The following
-    genotypeFileHandler->getSnps(genotype, snpLoc, snpList, chromosomeStart, chromosomeEnd, prevResidual, blockInfo);
+    genotypeFileHandler->getSnps(genotype, snpLoc, snpList, chromosomeStart, chromosomeEnd, genotypeResidual, blockInfo);
     //build linkage
+    linkageMatrix->Initialize(genotype, remainLd, blockSize){
+
 
 }
 
