@@ -20,6 +20,7 @@
 #include <fstream>
 #include <map>
 #include <Eigen/Dense>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include "usefulTools.h"
 #include "snp.h"
 #include "genotype.h"
@@ -41,16 +42,16 @@ public:
 
         void initialize(Command *commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Interval> &blockInfo);
 
-
+        inline size_t getSampleSize const {return m_ldSampleSize; };
 protected:
 private:
         std::string m_genotypeFilePrefix;
         std::string m_outPrefix;
-        size_t m_ldSampleSize;
         std::ifstream m_bedFile;
-        size_t m_inputSnp;
         std::vector<int> m_inclusion;
-        size_t m_thread;
+        size_t m_ldSampleSize;
+        size_t m_inputSnp;
+        size_t m_thread=1;
         size_t m_snpIter=0;
 
 

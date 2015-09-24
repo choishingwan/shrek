@@ -48,6 +48,9 @@ int main(int argc, char *argv[]){
             genotypeFileHandler = new GenotypeFileHandler();
             genotypeFileHandler->initialize(commander, snpIndex, snpList, blockInfo);
             //Now everything is prepared, we can start the SNP heritability estimation
+            SnpEstimation *snpEstimation = nullptr;
+            snpEstimation = new SnpEstimation();
+            snpEstimation->Estimate(genotypeFileHandler, snpIndex, snpList, regionInfo, commander, blockInfo);
 
         }
         else if(commander->diRisk() || commander->conRisk()){

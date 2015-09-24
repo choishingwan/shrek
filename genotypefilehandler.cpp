@@ -148,6 +148,7 @@ void GenotypeFileHandler::initialize(Command *commander, const std::map<std::str
 
 void GenotypeFileHandler::buildBlocks(std::string bimFileName, boost::ptr_vector<Interval> &blockInfo, size_t distance){
     //Should build the block here
+    //We will merge the last block such that the last block will still be > distance
     std::ifstream bimFile;
     bimFile.open(bimFileName.c_str());
     if(!bimFile.is_open()){
@@ -175,7 +176,8 @@ void GenotypeFileHandler::buildBlocks(std::string bimFileName, boost::ptr_vector
                 }
                 else if(chr.compare(currentChr)!= 0){
                     //new chromosome
-                    blockInfo.push_back(new Interval(currentChr, currentStart, prevLoc));
+                    blockInfo[blockInfo.size()-1].setEnd(prevLoc);
+                    //blockInfo.push_back(new Interval(currentChr, currentStart, prevLoc));
                     currentChr = chr;
                     currentStart = bp;
                 }
@@ -196,7 +198,7 @@ void GenotypeFileHandler::buildBlocks(std::string bimFileName, boost::ptr_vector
     }
     bimFile.close();
     if(prevLoc != blockInfo[blockInfo.size()-1].getEnd()){
-        blockInfo.push_back(new Interval(currentChr, currentStart, prevLoc));
+        blockInfo[blockInfo.size()-1].setEnd(prevLoc);
     }
 }
 
@@ -268,3 +270,79 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 	return bfile_SNP_major;
 }
 
+void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, boost::ptr_vector<Snp> &snpList, bool &chromosomeStart, bool &chromosomeEnd, size_t &prevResidual, boost::ptr_vector<Interval> &blockInfo){
+    //If this is the start of chromosome, we need to process one more bin
+    //Otherwise we will process thread bins
+    size_t startRange = blockInfo[prevResidual].getStart();
+    size_t endRange=0;
+    std::string currentChr = blockInfo[prevResidual].getChr();
+    size_t i = prevResidual;
+    size_t range = m_thread;
+    if(chromosomeStart)range +=2;
+    for(; i< range && i < blockInfo.size(); ++i){
+            if(blockInfo[i].getChr().compare(currentChr)!=0){
+            i= i-1; //This mean we working on the last block of this chromosome
+            chromosomeEnd = true;
+            break;
+        }
+    }
+    endRange = blockInfo[i].getEnd();
+    //So we will get all the required SNPs within this region
+
+    while(m_snpIter < m_inputSnp && m_snpIter <= endRange){
+        bool snp = false;
+		if(m_inclusion[m_snpIter] != -1){//indicate whether if we need this snp
+            if(m_snpIter < startRange){
+                std::logic_error("Warning, something went wrong with my logic, really sorry");
+            }
+			snp=true;
+		}
+        if(snp){
+            genotype.push_back(new Genotype());
+            snpLoc.push_back(m_inclusion[m_snpIter]);
+		}
+        size_t indx = 0; //The iterative count
+        double oldM=0.0, newM=0.0,oldS=0.0, newS=0.0;
+        size_t alleleCount=0;
+		while ( indx < m_ldSampleSize ){
+			std::bitset<8> b; //Initiate the bit array
+			char ch[1];
+			m_bedFile.read(ch,1); //Read the information
+			if (!m_bedFile){
+				throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
+			}
+			b = ch[0];
+			int c=0;
+			while (c<7 && indx < m_ldSampleSize ){ //Going through the bit flag. Stop when it have read all the samples as the end == NULL
+				//As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
+                ++indx; //so that we only need to modify the indx when adding samples but not in the mean and variance calculation
+				if (snp){
+					int first = b[c++];
+					int second = b[c++];
+					if(first == 1 && second == 0) first = 3; //Missing value should be 3
+					genotype.back()->AddsampleGenotype(first+second, indx-1); //0 1 2 or 3 where 3 is missing
+					alleleCount += first+second;
+					double value = first+second+0.0;
+                    if(indx==1){
+                        oldM = newM = value;
+                        oldS = 0.0;
+                    }
+                    else{
+                        newM = oldM + (value-oldM)/(indx);
+                        newS = oldS + (value-oldM)*(value-newM);
+                        oldM = newM;
+                        oldS = newS;
+                    }
+
+				}
+				else{
+					c+=2;
+				}
+			}
+		}
+		if(snp){
+			indx > 0 ? genotype.back()->Setmean(newM) : genotype.back()->Setmean(0.0);
+			indx > 1 ? genotype.back()->SetstandardDeviation(std::sqrt(newS/(indx - 1.0))) : genotype.back()->SetstandardDeviation(0.0);
+		}
+    }
+}

@@ -19,6 +19,7 @@ class Interval
         inline size_t getStart() const {return m_start; };
         /** Return the last loc of this interval */
         inline size_t getEnd() const { return m_end; };
+        inline void setEnd(size_t i ){ m_end = i;};
     protected:
     private:
         std::string m_chr;

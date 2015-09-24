@@ -15,7 +15,7 @@
 #include <complex>
 #include <iomanip>
 #include <map>
-#include <boost/ptr_container/ptr_vector.hpp>
+#include "processcode.h"
 #include "decomposition.h"
 #include "genotypefilehandler.h"
 #include "genotype.h"
@@ -37,13 +37,23 @@ class SnpEstimation
 {
 	public:
 	    /** Default constructor */
-		SnpEstimation();
+		SnpEstimation(GenotypeFileHandler *genotypeFileHandler,std::map<std::string, size_t> *snpIndex, std::vector<Snp*> *snpList, size_t thread, double maf, bool correction, Region* regionInfo);
 		/** Default destructor */
 		virtual ~SnpEstimation();
 		/** Initialize the estimation */
-		void Estimate(GenotypeFileHandler *genotypeFileHandler,const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, Region* regionInfo, Command *commander,boost::ptr_vector<Interval> &blockInfo);
+		void Estimate();
+		/** Output the result of the estimation */
+		void Getresult(std::string outputPrefix);
 	protected:
 	private:
+		GenotypeFileHandler *m_genotypeFileHandler;
+		std::map<std::string, size_t> *m_snpIndex;
+		std::vector<Snp*> *m_snpList;
+		size_t m_thread;
+        double m_maf;
+        double m_effective;
+        bool m_correction;
+        Region *m_regionInfo;
         static inline void loadbar(size_t x, size_t n);
 };
 
