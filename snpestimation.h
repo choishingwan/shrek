@@ -16,6 +16,7 @@
 #include <iomanip>
 #include <map>
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <boost/ptr_container/ptr_deque.hpp>
 #include "decomposition.h"
 #include "genotypefilehandler.h"
 #include "genotype.h"

@@ -21,6 +21,7 @@
 #include <map>
 #include <Eigen/Dense>
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <boost/ptr_container/ptr_deque.hpp>
 #include "usefulTools.h"
 #include "snp.h"
 #include "genotype.h"
@@ -41,8 +42,8 @@ public:
         virtual ~GenotypeFileHandler();
 
         void initialize(Command *commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Interval> &blockInfo);
-
-        inline size_t getSampleSize const {return m_ldSampleSize; };
+        void getSnps(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &ldLoc, boost::ptr_vector<Snp> &snpList, bool &chromosomeStart, bool &chromosomeEnd, size_t &prevResidual, boost::ptr_vector<Interval> &blockInfo);
+        inline size_t getSampleSize() const {return m_ldSampleSize; };
 protected:
 private:
         std::string m_genotypeFilePrefix;

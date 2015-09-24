@@ -270,7 +270,7 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 	return bfile_SNP_major;
 }
 
-void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, boost::ptr_vector<Snp> &snpList, bool &chromosomeStart, bool &chromosomeEnd, size_t &prevResidual, boost::ptr_vector<Interval> &blockInfo){
+void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &ldLoc, boost::ptr_vector<Snp> &snpList, bool &chromosomeStart, bool &chromosomeEnd, size_t &prevResidual, boost::ptr_vector<Interval> &blockInfo){
     //If this is the start of chromosome, we need to process one more bin
     //Otherwise we will process thread bins
     size_t startRange = blockInfo[prevResidual].getStart();
@@ -279,7 +279,7 @@ void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deq
     size_t i = prevResidual;
     size_t range = m_thread;
     if(chromosomeStart)range +=2;
-    for(; i< range && i < blockInfo.size(); ++i){
+    for(; i< prevResidual+range && i < blockInfo.size(); ++i){
             if(blockInfo[i].getChr().compare(currentChr)!=0){
             i= i-1; //This mean we working on the last block of this chromosome
             chromosomeEnd = true;
@@ -299,7 +299,8 @@ void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deq
 		}
         if(snp){
             genotype.push_back(new Genotype());
-            snpLoc.push_back(m_inclusion[m_snpIter]);
+            snpLoc.push_back(m_inclusion[m_snpIter]); //need better way, such that we know the block problem
+            ldLoc.push_back(m_snpIter);
 		}
         size_t indx = 0; //The iterative count
         double oldM=0.0, newM=0.0,oldS=0.0, newS=0.0;
@@ -320,7 +321,7 @@ void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deq
 					int first = b[c++];
 					int second = b[c++];
 					if(first == 1 && second == 0) first = 3; //Missing value should be 3
-					genotype.back()->AddsampleGenotype(first+second, indx-1); //0 1 2 or 3 where 3 is missing
+					genotype.back().AddsampleGenotype(first+second, indx-1); //0 1 2 or 3 where 3 is missing
 					alleleCount += first+second;
 					double value = first+second+0.0;
                     if(indx==1){
@@ -341,8 +342,8 @@ void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deq
 			}
 		}
 		if(snp){
-			indx > 0 ? genotype.back()->Setmean(newM) : genotype.back()->Setmean(0.0);
-			indx > 1 ? genotype.back()->SetstandardDeviation(std::sqrt(newS/(indx - 1.0))) : genotype.back()->SetstandardDeviation(0.0);
+			indx > 0 ? genotype.back().Setmean(newM) : genotype.back().Setmean(0.0);
+			indx > 1 ? genotype.back().SetstandardDeviation(std::sqrt(newS/(indx - 1.0))) : genotype.back().SetstandardDeviation(0.0);
 		}
     }
 }

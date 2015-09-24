@@ -12,10 +12,11 @@
 class LinkageThread;
 #include <deque>
 #include <Eigen/Dense>
-#include <Eigen/SVD>
-#include <Eigen/QR>
 #include <Eigen/Eigenvalues>
-#include <unsupported/Eigen/IterativeSolvers>
+#include <thread>
+//#include <unsupported/Eigen/IterativeSolvers>
+#include <boost/ptr_container/ptr_deque.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include <algorithm>
 #include <limits>
 #include <map>
