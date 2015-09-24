@@ -1,5 +1,8 @@
 #include "genotypefilehandler.h"
 
+GenotypeFileHandler::GenotypeFileHandler(){}
+GenotypeFileHandler::~GenotypeFileHandler(){}
+
 void GenotypeFileHandler::initialize(Command *commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Interval> &blockInfo){
     m_thread = commander->getThread();
     m_outPrefix = commander->getOutputPrefix();
@@ -41,7 +44,7 @@ void GenotypeFileHandler::initialize(Command *commander, const std::map<std::str
     size_t duplicateCount= 0;
     size_t ignoreSnp=0;
     size_t mafFilteredSnp=0;
-
+    size_t finalNumSnp=0;
     while(std::getline(bimFile,line)){
         line = usefulTools::trim(line);
         if(!line.empty()){
@@ -76,6 +79,7 @@ void GenotypeFileHandler::initialize(Command *commander, const std::map<std::str
                         snpList.at(snpLoc).setFlag(0, true); //Now that it is in the genotype file, it contains the LD info.
                         m_inclusion.back()=snpLoc;
                         duplicateCheck[rs] = true;
+                        finalNumSnp++;
                     }
                     else{
                         ignoreSnp++;
@@ -116,9 +120,10 @@ void GenotypeFileHandler::initialize(Command *commander, const std::map<std::str
                 }
                 double currentMaf = (alleleCount+0.0)/(2.0*m_ldSampleSize*1.0);
                 currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
-                if(mafFilt &&  mafThreshold > currentMaf){
+                if(mafFilt &&  mafThreshold > currentMaf && snp){
                     m_inclusion.back()= -1;
                     mafFilteredSnp++;
+                    finalNumSnp--;
                 }
                 //now the m_inclusion should include all the information we need: The SNP location if they are included and what snps to ignore
             }
@@ -130,9 +135,11 @@ void GenotypeFileHandler::initialize(Command *commander, const std::map<std::str
     bimFile.close();
     m_bedFile.close();
     std::cerr << "Linkage File information: " << std::endl;
-    std::cerr << "Duplicated SNPs: " << duplicateCount << std::endl;
-    std::cerr << "Invalid SNPs:    " << ignoreSnp << std::endl;
-    std::cerr << "Filtered SNPs:   " << mafFilteredSnp << std::endl;
+    std::cerr << "Number of Samples: " << m_ldSampleSize << std::endl;
+    std::cerr << "Duplicated SNPs:   " << duplicateCount << std::endl;
+    std::cerr << "Invalid SNPs:      " << ignoreSnp << std::endl;
+    std::cerr << "Filtered SNPs:     " << mafFilteredSnp << std::endl;
+    std::cerr << "Final SNPs number: " << finalNumSnp << std::endl;
     //Now we need to use the m_inclusion vector and the bim file to get get the intervals
     buildBlocks(bimFileName, blockInfo, commander->getDistance());
     //Now open the bed file to prepare for whatever happen next
@@ -157,8 +164,9 @@ void GenotypeFileHandler::buildBlocks(std::string bimFileName, boost::ptr_vector
     std::string currentChr ="";
     std::string line;
     size_t currentIndex = 0;
-    size_t currentStart = 0;
-    size_t prevLoc = 0;
+    size_t prevIndex = 0;
+    size_t startIndex = 0; //The beginning index of the current block
+    size_t startBp = 0; //The beginning bp of the current block
     bool started = false;
     while(std::getline(bimFile, line)){
         line = usefulTools::trim(line);
@@ -171,34 +179,38 @@ void GenotypeFileHandler::buildBlocks(std::string bimFileName, boost::ptr_vector
                 size_t bp = std::atoi(token[3].c_str());
                 if(!started){
                     currentChr = chr;
-                    currentStart = bp;
+                    startBp = bp;
+                    startIndex = currentIndex;
                     started = true;
                 }
                 else if(chr.compare(currentChr)!= 0){
                     //new chromosome
-                    blockInfo[blockInfo.size()-1].setEnd(prevLoc);
+                    blockInfo[blockInfo.size()-1].setEnd(prevIndex);
                     //blockInfo.push_back(new Interval(currentChr, currentStart, prevLoc));
                     currentChr = chr;
-                    currentStart = bp;
+                    startBp = bp;
+                    startIndex = currentIndex;
                 }
-                else if(bp-currentStart > distance){
+                else if(bp-startBp > distance){
                     //Now we are off, so this should be the interval
-                    blockInfo.push_back(new Interval(currentChr, currentStart, prevLoc));
-                    currentStart = prevLoc;
-                    if(bp-currentStart > distance){
-                        //The new SNP is also <distance> away from the last SNP
-                        blockInfo.push_back(new Interval(currentChr, currentStart, bp));
-                        currentStart = bp;
-                    }
+                    blockInfo.push_back(new Interval(currentChr, startIndex, currentIndex));
+                    startIndex = currentIndex;
+                    startBp = bp;
                 }
-                prevLoc = bp;
+                currentIndex++;
+                prevIndex = currentIndex;
+            }
+            else if(token.size() >=6){
                 currentIndex++;
             }
         }
     }
     bimFile.close();
-    if(prevLoc != blockInfo[blockInfo.size()-1].getEnd()){
-        blockInfo[blockInfo.size()-1].setEnd(prevLoc);
+    if(prevIndex != blockInfo[blockInfo.size()-1].getEnd()){
+        blockInfo[blockInfo.size()-1].setEnd(prevIndex);
+    }
+    for(size_t i = 0; i < blockInfo.size(); ++i){
+        std::cerr << blockInfo[i].getChr() << "\t" << blockInfo[i].getStart() << "\t" << blockInfo[i].getEnd() << std::endl;
     }
 }
 
@@ -280,16 +292,20 @@ void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deq
     size_t range = m_thread;
     if(chromosomeStart)range +=2;
     for(; i< prevResidual+range && i < blockInfo.size(); ++i){
-            if(blockInfo[i].getChr().compare(currentChr)!=0){
+        if(blockInfo[i].getChr().compare(currentChr)!=0){
             i= i-1; //This mean we working on the last block of this chromosome
             chromosomeEnd = true;
             break;
         }
     }
-    endRange = blockInfo[i].getEnd();
+    if(i == blockInfo.size()) exit(-1);
+    //Because we will only exit loop when i >= blockInfo.size() or > prevResidual+range
+    endRange = blockInfo[i-1].getEnd();
+    prevResidual=i;
+    std::cerr << startRange << "\t" << endRange << std::endl;
     //So we will get all the required SNPs within this region
-
     while(m_snpIter < m_inputSnp && m_snpIter <= endRange){
+            //std::cerr << "reading: " << m_snpIter << std::endl;
         bool snp = false;
 		if(m_inclusion[m_snpIter] != -1){//indicate whether if we need this snp
             if(m_snpIter < startRange){
@@ -345,5 +361,6 @@ void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deq
 			indx > 0 ? genotype.back().Setmean(newM) : genotype.back().Setmean(0.0);
 			indx > 1 ? genotype.back().SetstandardDeviation(std::sqrt(newS/(indx - 1.0))) : genotype.back().SetstandardDeviation(0.0);
 		}
+		m_snpIter++;
     }
 }

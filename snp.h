@@ -55,9 +55,9 @@ private:
         std::string m_alt;
         size_t m_bp;
         size_t m_sampleSize;
+        double m_original;
         int m_direction;
         //std::vector<double> m_original;
-        double m_original;
         //std::vector<double> m_heritability;
         double m_heritability;
         //std::vector<double> m_beta;

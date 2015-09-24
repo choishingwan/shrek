@@ -37,7 +37,7 @@ int main(int argc, char *argv[]){
         Region *regionInfo = nullptr;
         regionInfo = new Region();
         regionInfo->generateRegion(commander->getRegion());
-        commander->printRunSummary(std::to_string(regionInfo->GetnumRegion()));
+        commander->printRunSummary(std::to_string(regionInfo->getNumRegion()));
         boost::ptr_vector<Snp> snpList;
         std::map<std::string, size_t> snpIndex;
         Snp::generateSnpList(snpList, commander);
@@ -63,8 +63,6 @@ int main(int argc, char *argv[]){
     catch (std::bad_alloc& ba){
         std::cerr << ba.what() <<std::endl;
     }
-    delete commander;
-    delete regionInfo;
 
 
 /*

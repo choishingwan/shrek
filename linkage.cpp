@@ -1,6 +1,7 @@
 #include "linkage.h"
 
 Linkage::Linkage(size_t thread):m_thread(thread){}
+Linkage::~Linkage(){}
 std::mutex Linkage::mtx;
 
 
@@ -27,7 +28,7 @@ void Linkage::Initialize(boost::ptr_deque<Genotype> &genotype, const size_t &pre
 
 void Linkage::buildLd(bool correction, size_t vStart, size_t vEnd, size_t hEnd, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &ldLoc){
     for(size_t i = vStart; i <= vEnd; ++i){ //As vEnd is inclusive, it is not thread safe, need the mutex it if it is the vEnd level
-        if(vEnd==i) mtx.lock();
+        if(vEnd==i || vStart==i) mtx.lock();
         m_linkage(i,i) = 1.0;
         for(size_t j = i+1; j< hEnd; ++j){
             //Now perform the processing
@@ -40,7 +41,7 @@ void Linkage::buildLd(bool correction, size_t vStart, size_t vEnd, size_t hEnd, 
             m_linkage(j,i) = rSquare;
 
         }
-        if(vEnd==i) mtx.unlock();
+        if(vEnd==i || vStart==i) mtx.unlock();
     }
 }
 
@@ -108,4 +109,8 @@ void Linkage::Construct(boost::ptr_deque<Genotype> &genotype, const size_t &geno
         threadStore[i].join();
     }
     threadStore.clear();
+}
+
+void Linkage::print(){
+    std::cout << m_linkage << std::endl;
 }

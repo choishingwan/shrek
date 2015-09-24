@@ -103,7 +103,7 @@ class Command
         size_t m_thread = 1;
         size_t m_maxBlock = 0;
         size_t m_minBlock = 0;
-        size_t m_distance = 3000000;
+        size_t m_distance = 1000000;
         size_t m_sampleSize = 0;
         double m_prevalence=1.0;
         double m_maf = -1.0;

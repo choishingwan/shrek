@@ -49,6 +49,7 @@ class Linkage
         void Initialize(boost::ptr_deque<Genotype> &genotype, const size_t &prevResiduals, const boost::ptr_vector<Interval> &blockSize);
         void Construct(boost::ptr_deque<Genotype> &genotype, const size_t &genotypeIndex, const size_t& remainedLD, const boost::ptr_vector<Interval> &blockSize, bool correction, std::deque<size_t> &ldLoc);
 	protected:
+	    void print();
 	private:
 	    void buildLd(bool correction, size_t vStart, size_t vEnd, size_t hEnd, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &ldLoc);
         Eigen::MatrixXd m_linkage;

@@ -1,6 +1,7 @@
 #include "command.h"
 
 Command::Command(){}
+Command::~Command(){}
 
 void Command::initialize(int argc, char* argv[]){
     std::cerr << "------------------------------------------------------------------------------"  << std::endl;
@@ -39,6 +40,9 @@ void Command::initialize(int argc, char* argv[]){
     else if(mode.compare("risk_cc")==0){
         m_rcc = true;
         dichotomusRiskProcess(argc, argv);
+    }
+    else{
+        throw std::runtime_error("Unspecified mode");
     }
 }
 
@@ -221,7 +225,7 @@ void Command::quantitativeProcess(int argc, char* argv[]){
                 break;
         //General parameters
             case 'd':
-                m_distance = atoi(optarg)-1;
+                m_distance = atoi(optarg);
                 break;
 			case 'f':
                 m_maf = atof(optarg);
@@ -485,7 +489,7 @@ void Command::continuousRiskProcess(int argc, char* argv[]){
                 break;
         //General parameters
             case 'd':
-                m_distance = atoi(optarg)-1;
+                m_distance = atoi(optarg);
                 break;
 			case 'f':
                 m_maf = atof(optarg);
@@ -598,15 +602,15 @@ void Command::printRunSummary(std::string regionMessage){
 	else if(m_rqt){
         std::cerr	<< "Mode                 : Risk Prediction (Continuous Trait)" << std::endl;
         std::cerr   << "Genotype File Prefix : " << m_genotypeFilePrefix << std::endl;
-        std::cerr   << "Ref Allele           : " << m_refIndex << std::endl;
-        std::cerr   << "Alt Allele           : " << m_altIndex << std::endl;
+        std::cerr   << "Ref Allele           : " << m_ref << std::endl;
+        std::cerr   << "Alt Allele           : " << m_alt << std::endl;
 		if(m_provideSampleSize) std::cerr	<< "Sample Size          : " << m_sampleSize << std::endl;
 	}
 	else if(m_rcc){
         std::cerr	<< "Mode                 : Risk Prediction (Dichotomous Trait)" << std::endl;
         std::cerr   << "Genotype File Prefix : " << m_genotypeFilePrefix << std::endl;
-        std::cerr   << "Ref Allele           : " << m_refIndex << std::endl;
-        std::cerr   << "Alt Allele           : " << m_altIndex << std::endl
+        std::cerr   << "Ref Allele           : " << m_ref << std::endl;
+        std::cerr   << "Alt Allele           : " << m_alt << std::endl
 					<< "Number of Case       : " << m_caseSize << std::endl
 					<< "Number of Control    : " << m_controlSize << std::endl
 					<< "Prevalence           : " << m_prevalence << std::endl << std::endl;
@@ -636,16 +640,16 @@ void Command::printRunSummary(std::string regionMessage){
 
 
 
-void printUsage(){
+void Command::printUsage(){
 
 }
-void printCCUsage(){
+void Command::printCCUsage(){
 
 }
-void printQuantUsage(){
+void Command::printQuantUsage(){
 
 }
-void printRiskUsage(){
+void Command::printRiskUsage(){
 
 }
 

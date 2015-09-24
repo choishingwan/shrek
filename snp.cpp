@@ -18,6 +18,7 @@ Snp::Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, std::vec
 }
 */
 Snp::Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, double original, std::string refAllele, std::string altAllele, int direction):m_chr(chr), m_rs(rs), m_ref(refAllele), m_alt(altAllele), m_bp(bp), m_sampleSize(sampleSize),m_original(original),m_direction(direction){}
+Snp::~Snp(){}
 
 void Snp::computeVarianceExplained(const Command *commander){
     //There are 4 possibilities
@@ -85,7 +86,9 @@ void Snp::computeVarianceExplained(const Command *commander){
             m_heritability=0.0;
         }
     }
-    throw std::runtime_error("Undefined mode");
+    else{
+        throw std::runtime_error("Undefined mode for SNP processing");
+    }
 }
 
 
