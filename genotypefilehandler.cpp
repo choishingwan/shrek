@@ -209,9 +209,13 @@ void GenotypeFileHandler::buildBlocks(std::string bimFileName, boost::ptr_vector
     if(prevIndex != blockInfo[blockInfo.size()-1].getEnd()){
         blockInfo[blockInfo.size()-1].setEnd(prevIndex);
     }
-    for(size_t i = 0; i < blockInfo.size(); ++i){
-        std::cerr << blockInfo[i].getChr() << "\t" << blockInfo[i].getStart() << "\t" << blockInfo[i].getEnd() << std::endl;
-    }
+//
+//    for(size_t i = 0; i < blockInfo.size(); ++i){
+//        std::cerr << blockInfo[i].getChr() << "\t" << blockInfo[i].getStart() << "\t" << blockInfo[i].getEnd() << std::endl;
+//    }
+
+
+
 }
 
 bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream & BIT){
@@ -298,11 +302,12 @@ void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deq
             break;
         }
     }
-    if(i == blockInfo.size()) exit(-1);
+    if(i == blockInfo.size() || (i < blockInfo.size() &&blockInfo[i+1].getChr().compare(currentChr)!=0)){ //The next block is from another chromosome
+        chromosomeEnd=true;
+    }
     //Because we will only exit loop when i >= blockInfo.size() or > prevResidual+range
     endRange = blockInfo[i-1].getEnd();
     prevResidual=i;
-    std::cerr << startRange << "\t" << endRange << std::endl;
     //So we will get all the required SNPs within this region
     while(m_snpIter < m_inputSnp && m_snpIter <= endRange){
             //std::cerr << "reading: " << m_snpIter << std::endl;

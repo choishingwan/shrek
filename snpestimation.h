@@ -43,6 +43,7 @@ class SnpEstimation
 		virtual ~SnpEstimation();
 		/** Initialize the estimation */
 		void Estimate(GenotypeFileHandler *genotypeFileHandler,const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, Region* regionInfo, Command *commander,boost::ptr_vector<Interval> &blockInfo);
+
 	protected:
 	private:
         static inline void loadbar(size_t x, size_t n);
