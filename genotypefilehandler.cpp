@@ -15,8 +15,16 @@ void GenotypeFileHandler::initialize(Command *commander, const std::map<std::str
         if(!line.empty()) m_ldSampleSize++;
     }
     famFile.close();
-    //Check the bim file for SNP information
-    //Need to remove duplicated SNPs, remove SNPs that doesn't pass the MAF filtering and need to check if the bim file is sorted correctly
+    //Check the bed file, and filter all SNPs not passing the MAF filtering
+    std::string bedFileName = m_genotypeFilePrefix+".bed";
+	bool bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_bedFile); //We will try to open the connection to bedFile
+    if(bfile_SNP_major){
+        //This is ok
+    }
+    else{
+        throw std::runtime_error("We currently have no plan of implementing the individual-major mode. Please use the snp-major format");
+    }
+    //We need to know the number of SNPs when transversing the bed file
     std::string bimFileName = outputPrefix+".bim";
     std::ifstream bimFile;
     bimFile.open(bimFileName.c_str());
@@ -25,22 +33,53 @@ void GenotypeFileHandler::initialize(Command *commander, const std::map<std::str
     }
     size_t distance = commander->getDistance();
     size_t prevStart = 0;
-    // Here the interval vector is used this way:
-    // start = index of the first SNP to include
-    // end = index of the last SNP to include
-    // The index should be that of the genotype file (because we cannot be sure that the pvalue file is sorted correctly and we don't need that to be sorted anyway
-    while(std::getline(bimFile, line)){
+    while(std::getline(line, bimFile)){
         line = usefulTools::trim(line);
         if(!line.empty()){
-            std::vector<std::string> token;
-            usefulTools::tokenizer(line, "\t ", &token);
-            if(token.size() >=6){
-                //if the change chromosome, then we need to change prevStart to 0
-                //Start working here
-            }
+            //
         }
     }
     bimFile.close();
+    bool snp=false;
+    size_t indx = 0; //The iterative count
+    size_t alleleCount=0;
+    while ( indx < m_ldSampleSize ){
+    std::bitset<8> b; //Initiate the bit array
+    char ch[1];
+    m_bedFile.read(ch,1); //Read the information
+    if (!m_bedFile){
+        throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
+    }
+    b = ch[0];
+    int c=0;
+    while (c<7 && indx < m_ldSampleSize ){ //Going through the bit flag. Stop when it have read all the samples as the end == NULL
+    //As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
+        ++indx; //so that we only need to modify the indx when adding samples but not in the mean and variance calculation
+        int first = b[c++];
+        int second = b[c++];
+        if(first == 1 && second == 0) first = 0; //We consider the missing value to be reference
+        alleleCount += first+second;
+    }
+                }
+
+                double currentMaf = (alleleCount+0.0)/(2.0*m_ldSampleSize*1.0);
+                currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
+                //remove snps with maf too low
+                if(maf >= 0.0 && maf > currentMaf){
+                    m_inclusion.back()= -1;
+                    //std::cerr << "Snp: " << rs << " not included due to maf filtering" << std::endl;
+                    mafSnp++;
+                }
+                else if(m_inclusion.back() != -1){
+                    if(m_chrProcessCount.find(chr)==m_chrProcessCount.end()) m_chrProcessCount[chr] = 1;
+                    else m_chrProcessCount[chr]++;
+                }
+
+
+    //Check the bim file for SNP information
+    //Need to remove duplicated SNPs, remove SNPs that doesn't pass the MAF filtering and need to check if the bim file is sorted correctly
+
+
 
 
 }

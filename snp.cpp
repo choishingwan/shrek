@@ -1,5 +1,5 @@
 #include "snp.h"
-
+/*
 Snp::Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, std::vector<std::string> &original, std::string refAllele, std::string altAllele, int direction):m_chr(chr), m_rs(rs), m_ref(refAllele), m_alt(altAllele), m_bp(bp), m_sampleSize(sampleSize),m_direction(direction){
     for(size_t i = 0; i < original.size(); ++i){
         if(!usefulTools::isNumeric(original[i])){
@@ -16,6 +16,8 @@ Snp::Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, std::vec
         }
     }
 }
+*/
+Snp::Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, double original, std::string refAllele, std::string altAllele, int direction):m_chr(chr), m_rs(rs), m_ref(refAllele), m_alt(altAllele), m_bp(bp), m_sampleSize(sampleSize),m_original(original),m_direction(direction){}
 
 void Snp::computeVarianceExplained(const Command *commander){
     //There are 4 possibilities
@@ -27,71 +29,60 @@ void Snp::computeVarianceExplained(const Command *commander){
     if(qt || rqt){
         //Sample size should already be obtained for the qt runs
         if(isP){
-            for(size_t i = 0; i < m_original.size();++i){
-                double beta = usefulTools::qnorm(1.0-((m_original[i]+0.0)/2.0));
-                if(m_original[i] >= 1.0) beta = 0.0;
-                else if(m_original[i] ==0.0){
-                    m_remove[i] = true;
-                    beta=0.0;
-                }
-                beta = beta*m_direction;
-                if(rqt) beta = beta/sqrt(m_sampleSize-2.0+beta*beta);
-                else{
-                    beta = beta*beta;
-                    beta = (beta-1.0)/(m_sampleSize-2.0+beta);
-                }
-                m_beta.push_back(beta);
-                m_heritability.push_back(0.0);
+            double beta = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
+            if(m_original >= 1.0) beta = 0.0;
+            else if(m_original ==0.0){
+                beta=0.0;
             }
+            beta = beta*m_direction;
+            if(rqt) beta = beta/sqrt(m_sampleSize-2.0+beta*beta);
+            else{
+                beta = beta*beta;
+                beta = (beta-1.0)/(m_sampleSize-2.0+beta);
+            }
+            m_beta=beta;
+            m_heritability=0.0;
         }
         else{
-            for(size_t i = 0; i < m_original.size();++i){
-                double beta = m_original[i];
-                if(rqt) beta = beta/sqrt(m_sampleSize-2.0+beta*beta);
-                else if(qt){
-                    beta=beta*beta;
-                    beta = (beta-1.0)/(m_sampleSize-2.0+beta);
-                }
-                m_beta.push_back(beta);
-                m_heritability.push_back(0.0);
+            double beta = m_original;
+            if(rqt) beta = beta/sqrt(m_sampleSize-2.0+beta*beta);
+            else if(qt){
+                beta=beta*beta;
+                beta = (beta-1.0)/(m_sampleSize-2.0+beta);
             }
+            m_beta=beta;
+            m_heritability=0.0;
         }
     }
     else if(cc || rcc){
         size_t caseSize=commander->getCaseSize();
         size_t controlSize=commander->getControlSize();
         if(isP){
-            for(size_t i = 0; i < m_original.size();++i){
-                double beta = usefulTools::qnorm(1.0-((m_original[i]+0.0)/2.0));
-                if(m_original[i] >= 1.0) beta = 0.0;
-                else if(m_original[i] ==0.0){
-                    m_remove[i] = true;
-                    beta=0.0;
-                }
-                beta = beta*m_direction;
-                if(rcc) beta = beta/sqrt(caseSize+controlSize-2.0+beta*beta);
-                else{
-                    beta = beta*beta;
-                    beta = (beta-1.0)/(caseSize+controlSize-2.0+beta);
-                }
-                m_beta.push_back(beta);
-                m_heritability.push_back(0.0);
+            double beta = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
+            if(m_original >= 1.0) beta = 0.0;
+            else if(m_original ==0.0){
+                beta=0.0;
             }
+            beta = beta*m_direction;
+            if(rcc) beta = beta/sqrt(caseSize+controlSize-2.0+beta*beta);
+            else{
+                beta = beta*beta;
+                beta = (beta-1.0)/(caseSize+controlSize-2.0+beta);
+            }
+            m_beta=beta;
+            m_heritability=0.0;
         }
         else{
-            for(size_t i = 0; i < m_original.size(); ++i){
-                double beta =m_original[i];
-                if(rcc){
-                    beta = sqrt(beta)*m_direction;
-                    beta = (beta)/(caseSize+controlSize -2.0+beta*beta);
-
-                }
-                else if(cc){
-                   beta = (beta-1.0)/(caseSize+controlSize -2.0+beta);
-                }
-                m_beta.push_back(beta);
-                m_heritability.push_back(0.0);
+            double beta =m_original;
+            if(rcc){
+                beta = sqrt(beta)*m_direction;
+                beta = (beta)/(caseSize+controlSize -2.0+beta*beta);
             }
+            else if(cc){
+                beta = (beta-1.0)/(caseSize+controlSize -2.0+beta);
+            }
+            m_beta=beta;
+            m_heritability=0.0;
         }
     }
     throw std::runtime_error("Undefined mode");
@@ -173,16 +164,19 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command *comman
     if(rcc || rqt)   expectedTokenSize =(expectedTokenSize<refIndex)?refIndex:expectedTokenSize;
     size_t altIndex = commander->getAlt();
     if(rcc || rqt)   expectedTokenSize =(expectedTokenSize<altIndex)?altIndex:expectedTokenSize;
-    size_t largestStatIndex =commander->maxStatIndex();
-    expectedTokenSize = (expectedTokenSize < largestStatIndex) ?largestStatIndex : expectedTokenSize;
-    size_t numIndex = commander->getStatSize();
+    //size_t largestStatIndex =commander->maxStatIndex();
+    //expectedTokenSize = (expectedTokenSize < largestStatIndex) ?largestStatIndex : expectedTokenSize;
+    size_t statIndex = commander->getStat();
+    expectedTokenSize = (expectedTokenSize < statIndex) ?statIndex : expectedTokenSize;
+
+    //size_t numIndex = commander->getStatSize();
     size_t samplesize = commander->getSampleSize();
 
     size_t lineSkipped = 0;
 
     std::map<std::string, bool> duplication;
     size_t duplicateCount=0;
-
+    size_t removeCount = 0;
     while(std::getline(pValue, line)){
         line =usefulTools::trim(line);
         if(!line.empty()){
@@ -215,12 +209,23 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command *comman
                         }
                     }
                     //Now get the statistics
-                    std::vector<std::string> statistics;
-                    for(size_t i = 0; i < numIndex;++i){
-                        statistics.push_back(token[commander->getStatIndex(i)]);
+                    //std::vector<std::string> statistics;
+                    //for(size_t i = 0; i < numIndex;++i){
+                    //    statistics.push_back(token[commander->getStatIndex(i)]);
+                    //}
+                    if(!usefulTools::isNumeric(token[statIndex])){
+                        removeCount++;
                     }
-                    snpList.push_back(new Snp(chr, rsId, bp, sizeOfSample, statistics, refAllele, altAllele,direction));
-                    duplication[rsId] = true;
+                    else{
+                        double statistic = atof(token[statIndex].c_str());
+                        if(statistic == 0.0 && isP){
+                            removeCount++;
+                        }
+                        else{
+                            snpList.push_back(new Snp(chr, rsId, bp, sizeOfSample, statistic, refAllele, altAllele,direction));
+                            duplication[rsId] = true;
+                        }
+                    }
                 }
             }
             else{
@@ -229,13 +234,13 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command *comman
         }
     }
     if(lineSkipped!=0){
-        std::cerr << lineSkipped << " line(s) skipped as they don't contain enough number of fields." << std::endl;
+        std::cerr << lineSkipped << " line(s) skipped." << std::endl;
     }
     pValue.close();
     snpList.sort(Snp::sortSnp);
     std::cerr <<  duplicateCount << " duplicated rsID(s) in the p-value file" << std::endl;
+    std::cerr << removeCount << " Snps with p-value = 0 or non-numeric statistics removed" << std::endl;
     std::cerr << snpList.size() << " Snps remains" << std::endl;
-    if(numIndex != 1) std::cerr << numIndex << " studies processed together" << std::endl;
     if(snpList.size() ==0) throw std::runtime_error("Programme terminated as there are no snp provided");
 }
 

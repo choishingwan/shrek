@@ -77,9 +77,10 @@ class Command
         inline std::string getOutputPrefix() const {return m_outputPrefix; };
         inline std::string getRegion() const{ return m_regionList;};
         inline std::string getGenotype() const{ return m_genotypeFilePrefix; };
-        inline size_t getStatIndex(size_t i) const{return m_stats.at(i);};
-        inline size_t getStatSize() const {return m_stats.size(); };
-        inline size_t maxStatIndex() const { return m_stats.back(); };
+        //inline size_t getStatIndex(size_t i) const{return m_stats.at(i);};
+        //inline size_t getStatSize() const {return m_stats.size(); };
+        //inline size_t maxStatIndex() const { return m_stats.back(); };
+        inline size_t getStat() const {return m_stats; };
 
     protected:
     private:
@@ -126,7 +127,8 @@ class Command
         std::string m_outputPrefix="";
         std::string m_regionList="";
         std::string m_genotypeFilePrefix="";
-        std::vector<size_t> m_stats;
+        //std::vector<size_t> m_stats;
+        size_t m_stats;
 
         void caseControlProcess(int argc, char* argv[]);
         void quantitativeProcess(int argc, char* argv[]);

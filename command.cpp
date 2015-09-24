@@ -104,7 +104,8 @@ void Command::caseControlProcess(int argc, char* argv[]){
 				m_bpIndex=atoi(optarg)-1;
 				break;
             case 's':
-                m_stats = processRange(optarg);
+                //m_stats = processRange(optarg);
+                m_stats = atoi(optarg)-1;
                 break;
         //General parameters
 			case 'o':
@@ -215,7 +216,8 @@ void Command::quantitativeProcess(int argc, char* argv[]){
 				m_bpIndex=atoi(optarg)-1;
 				break;
             case 's':
-                m_stats = processRange(optarg);
+                //m_stats = processRange(optarg);
+                m_stats = atoi(optarg)-1;
                 break;
         //General parameters
             case 'd':
@@ -347,7 +349,8 @@ void Command::dichotomusRiskProcess(int argc, char* argv[]){
 				m_bpIndex=atoi(optarg)-1;
 				break;
             case 's':
-                m_stats = processRange(optarg);
+                //m_stats = processRange(optarg);
+                m_stats = atoi(optarg)-1;
                 break;
         //General parameters
 			case 'o':
@@ -477,7 +480,8 @@ void Command::continuousRiskProcess(int argc, char* argv[]){
 				m_bpIndex=atoi(optarg)-1;
 				break;
             case 's':
-                m_stats = processRange(optarg);
+                //m_stats = processRange(optarg);
+                m_stats = atoi(optarg)-1;
                 break;
         //General parameters
             case 'd':

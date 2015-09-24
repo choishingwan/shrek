@@ -52,10 +52,13 @@ private:
         size_t m_bp;
         size_t m_sampleSize;
         int m_direction;
-        std::vector<double> m_original;
-        std::vector<double> m_heritability;
-        std::vector<double> m_beta;
-        std::vector<bool> m_remove;
+        //std::vector<double> m_original;
+        double m_original;
+        //std::vector<double> m_heritability;
+        double m_heritability;
+        //std::vector<double> m_beta;
+        double m_beta;
+        //std::vector<bool> m_remove;
         std::vector<bool> m_regionFlag;
 
         //Functions
