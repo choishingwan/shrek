@@ -1,10 +1,15 @@
 #include "genotypefilehandler.h"
 
 void GenotypeFileHandler::initialize(Command *commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Interval> &blockInfo){
-    std::string outputPrefix = commander->getOutputPrefix();
+    m_thread = commander->getThread();
+    m_outPrefix = commander->getOutputPrefix();
+    m_genotypeFilePrefix = commander->getLdFilePrefix();
+    bool validate = commander->validate();
+    bool mafFilt = commander->mafFilter();
+    double mafThreshold = commander->getMaf();
     std::string line;
     //Get the number of samples in the ld file
-    std::string famFileName = outputPrefix+".fam";
+    std::string famFileName = m_genotypeFilePrefix+".fam";
     std::ifstream famFile;
     famFile.open(famFileName.c_str());
     if(!famFile.is_open()){
@@ -25,66 +30,175 @@ void GenotypeFileHandler::initialize(Command *commander, const std::map<std::str
         throw std::runtime_error("We currently have no plan of implementing the individual-major mode. Please use the snp-major format");
     }
     //We need to know the number of SNPs when transversing the bed file
-    std::string bimFileName = outputPrefix+".bim";
+    std::string bimFileName = m_genotypeFilePrefix+".bim";
     std::ifstream bimFile;
     bimFile.open(bimFileName.c_str());
     if(!bimFile.is_open()){
         throw std::runtime_error("Cannot open bim file");
     }
-    size_t distance = commander->getDistance();
-    size_t prevStart = 0;
-    while(std::getline(line, bimFile)){
+	std::string prevChr="";
+	std::map<std::string, bool> duplicateCheck,sortCheck;
+    size_t duplicateCount= 0;
+    size_t ignoreSnp=0;
+    size_t mafFilteredSnp=0;
+
+    while(std::getline(bimFile,line)){
         line = usefulTools::trim(line);
         if(!line.empty()){
-            //
+            std::vector<std::string> token;
+            usefulTools::tokenizer(line, "\t ", &token);
+            if(token.size() >=6){
+                std::string chr= token[0];
+                std::string rs = token[1];
+                //if(m_chrCount.find(chr)==m_chrCount.end()) m_chrCount[chr]=1;
+                //else m_chrCount[chr]++;
+                size_t bp = std::atoi(token[3].c_str());
+                m_inputSnp++; //Number of total input Snps
+                int snpLoc =-1;
+                m_inclusion.push_back(-1); //Default is not including the snp
+                //First run check a few things,
+                //1. the bim is sorted
+                //2. indicate which SNPs are required.
+                if(prevChr.empty()){
+                    sortCheck[chr]=true;
+                }
+                else if(prevChr.compare(chr) != 0){
+                    if(sortCheck.find(chr)!=sortCheck.end()){
+                        throw std::runtime_error("The programme require the SNPs to be sorted according to their chromosome.");
+                    }
+                    else sortCheck[chr] = true;
+                }
+
+                if(snpIndex.find(rs)!=snpIndex.end() && duplicateCheck.find(rs)==duplicateCheck.end()){
+                    //This is something that we need
+                    if(!validate || snpList.at(snpLoc).Concordant(chr, bp, rs)){
+                        snpLoc = snpIndex.at(rs);
+                        snpList.at(snpLoc).setFlag(0, true); //Now that it is in the genotype file, it contains the LD info.
+                        m_inclusion.back()=snpLoc;
+                        duplicateCheck[rs] = true;
+                    }
+                    else{
+                        ignoreSnp++;
+                    }
+                }
+                else if(duplicateCheck.find(rs) != duplicateCheck.end()){
+                    duplicateCount++;
+                }
+                //Now perform the MAF check
+                bool snp = false;
+                if(m_inclusion.back() != -1){//indicate whether if we need this snp
+                    snp=true;
+                }
+                size_t indx = 0; //The iterative count
+                size_t alleleCount=0;
+                while ( indx < m_ldSampleSize ){
+                    std::bitset<8> b; //Initiate the bit array
+                    char ch[1];
+                    m_bedFile.read(ch,1); //Read the information
+                    if (!m_bedFile){
+                        throw "Problem with the BED file...has the FAM/BIM file been changed?";
+                    }
+                    b = ch[0];
+                    int c=0;
+                    while (c<7 && indx < m_ldSampleSize ){ //Going through the bit flag. Stop when it have read all the samples as the end == NULL
+				//As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
+                        ++indx; //so that we only need to modify the indx when adding samples but not in the mean and variance calculation
+                        if (snp){
+                            int first = b[c++];
+                            int second = b[c++];
+                            if(first == 1 && second == 0) first = 0; //We consider the missing value to be reference
+                            alleleCount += first+second;
+                        }
+                        else{
+                            c+=2;
+                        }
+                    }
+                }
+                double currentMaf = (alleleCount+0.0)/(2.0*m_ldSampleSize*1.0);
+                currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
+                if(mafFilt &&  mafThreshold > currentMaf){
+                    m_inclusion.back()= -1;
+                    mafFilteredSnp++;
+                }
+                //now the m_inclusion should include all the information we need: The SNP location if they are included and what snps to ignore
+            }
+            else{
+                throw std::runtime_error("Malformed bim file, please check your input");
+            }
         }
     }
     bimFile.close();
-    bool snp=false;
-    size_t indx = 0; //The iterative count
-    size_t alleleCount=0;
-    while ( indx < m_ldSampleSize ){
-    std::bitset<8> b; //Initiate the bit array
-    char ch[1];
-    m_bedFile.read(ch,1); //Read the information
-    if (!m_bedFile){
-        throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
+    m_bedFile.close();
+    std::cerr << "Linkage File information: " << std::endl;
+    std::cerr << "Duplicated SNPs: " << duplicateCount << std::endl;
+    std::cerr << "Invalid SNPs:    " << ignoreSnp << std::endl;
+    std::cerr << "Filtered SNPs:   " << mafFilteredSnp << std::endl;
+    //Now we need to use the m_inclusion vector and the bim file to get get the intervals
+    buildBlocks(bimFileName, blockInfo, commander->getDistance());
+    //Now open the bed file to prepare for whatever happen next
+	bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_bedFile); //We will try to open the connection to bedFile
+    if(bfile_SNP_major){
+        //This is ok
     }
-    b = ch[0];
-    int c=0;
-    while (c<7 && indx < m_ldSampleSize ){ //Going through the bit flag. Stop when it have read all the samples as the end == NULL
-    //As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
-        ++indx; //so that we only need to modify the indx when adding samples but not in the mean and variance calculation
-        int first = b[c++];
-        int second = b[c++];
-        if(first == 1 && second == 0) first = 0; //We consider the missing value to be reference
-        alleleCount += first+second;
+    else{
+        throw std::runtime_error("We currently have no plan of implementing the individual-major mode. Please use the snp-major format");
     }
-                }
-
-                double currentMaf = (alleleCount+0.0)/(2.0*m_ldSampleSize*1.0);
-                currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
-                //remove snps with maf too low
-                if(maf >= 0.0 && maf > currentMaf){
-                    m_inclusion.back()= -1;
-                    //std::cerr << "Snp: " << rs << " not included due to maf filtering" << std::endl;
-                    mafSnp++;
-                }
-                else if(m_inclusion.back() != -1){
-                    if(m_chrProcessCount.find(chr)==m_chrProcessCount.end()) m_chrProcessCount[chr] = 1;
-                    else m_chrProcessCount[chr]++;
-                }
-
-
-    //Check the bim file for SNP information
-    //Need to remove duplicated SNPs, remove SNPs that doesn't pass the MAF filtering and need to check if the bim file is sorted correctly
-
-
-
 
 }
 
-
+void GenotypeFileHandler::buildBlocks(std::string bimFileName, boost::ptr_vector<Interval> &blockInfo, size_t distance){
+    //Should build the block here
+    std::ifstream bimFile;
+    bimFile.open(bimFileName.c_str());
+    if(!bimFile.is_open()){
+        throw std::runtime_error("Cannot open bim file");
+    }
+    std::string currentChr ="";
+    std::string line;
+    size_t currentIndex = 0;
+    size_t currentStart = 0;
+    size_t prevLoc = 0;
+    bool started = false;
+    while(std::getline(bimFile, line)){
+        line = usefulTools::trim(line);
+        if(!line.empty()){
+            std::vector<std::string> token;
+            usefulTools::tokenizer(line, "\t ", &token);
+            //The m_inclusion will be -1 if we don't need the SNP
+            if(token.size() >= 6 && m_inclusion[currentIndex]!=-1){
+                std::string chr= token[0];
+                size_t bp = std::atoi(token[3].c_str());
+                if(!started){
+                    currentChr = chr;
+                    currentStart = bp;
+                    started = true;
+                }
+                else if(chr.compare(currentChr)!= 0){
+                    //new chromosome
+                    blockInfo.push_back(new Interval(currentChr, currentStart, prevLoc));
+                    currentChr = chr;
+                    currentStart = bp;
+                }
+                else if(bp-currentStart > distance){
+                    //Now we are off, so this should be the interval
+                    blockInfo.push_back(new Interval(currentChr, currentStart, prevLoc));
+                    currentStart = prevLoc;
+                    if(bp-currentStart > distance){
+                        //The new SNP is also <distance> away from the last SNP
+                        blockInfo.push_back(new Interval(currentChr, currentStart, bp));
+                        currentStart = bp;
+                    }
+                }
+                prevLoc = bp;
+                currentIndex++;
+            }
+        }
+    }
+    bimFile.close();
+    if(prevLoc != blockInfo[blockInfo.size()-1].getEnd()){
+        blockInfo.push_back(new Interval(currentChr, currentStart, prevLoc));
+    }
+}
 
 bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream & BIT){
 	BIT.open(s.c_str(), std::ios::in | std::ios::binary);

@@ -21,10 +21,8 @@
 *	@author Tim S.H. Mak
 *	@author D. Campbell
 *	@author M.X. Li
-*   @version 0.01
+*   @version 0.02
 */
-
-// TODO (swchoi#1#): Need to find a way to output the perfect SNP pairs// TODO (swchoi#1#): Not sure if we should do it, should we allow people to specific the block size restriction fro each individual chromosome?
 
 
 
@@ -46,6 +44,10 @@ int main(int argc, char *argv[]){
         Snp::generateSnpIndex(snpIndex, snpList, commander, regionInfo);
         boost::ptr_vector<Interval> blockInfo; //We use this to store all block information, should be useful for both risk and not risk stuff
         if(commander->quantitative() || commander->caseControl()){
+            GenotypeFileHandler *genotypeFileHandler = nullptr;
+            genotypeFileHandler = new GenotypeFileHandler();
+            genotypeFileHandler->initialize(commander, snpIndex, snpList, blockInfo);
+            //Now everything is prepared, we can start the SNP heritability estimation
 
         }
         else if(commander->diRisk() || commander->conRisk()){

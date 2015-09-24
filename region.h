@@ -42,9 +42,9 @@ public:
         void generateRegion(std::string regionList);
         void clean();
         size_t getNumRegion() const {return m_names.size();};
-        inline std::string getChr(size_t i, size_t j) const {return m_intervalList.at(i).at(j).Getchr();};
-        inline size_t getStart(size_t i, size_t j) const {return m_intervalList.at(i).at(j).Getstart();};
-        inline size_t getEnd(size_t i, size_t j) const {return m_intervalList.at(i).at(j).Getend();};
+        inline std::string getChr(size_t i, size_t j) const {return m_intervalList.at(i).at(j).getChr();};
+        inline size_t getStart(size_t i, size_t j) const {return m_intervalList.at(i).at(j).getStart();};
+        inline size_t getEnd(size_t i, size_t j) const {return m_intervalList.at(i).at(j).getEnd();};
         inline size_t getIntervalSize(size_t i) const {return m_intervalList.at(i).size();};
         inline std::string getName(size_t i) const {return m_names.at(i);};
         protected:

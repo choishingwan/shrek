@@ -31,7 +31,7 @@ void Snp::computeVarianceExplained(const Command *commander){
         if(isP){
             double beta = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
             if(m_original >= 1.0) beta = 0.0;
-            else if(m_original ==0.0){
+            else if(m_original ==0.0){ //This is unsafe as == of double is always a problem
                 beta=0.0;
             }
             beta = beta*m_direction;
@@ -60,7 +60,7 @@ void Snp::computeVarianceExplained(const Command *commander){
         if(isP){
             double beta = usefulTools::qnorm(1.0-((m_original+0.0)/2.0));
             if(m_original >= 1.0) beta = 0.0;
-            else if(m_original ==0.0){
+            else if(m_original ==0.0){//This is unsafe as == of double is always a problem
                 beta=0.0;
             }
             beta = beta*m_direction;
@@ -218,7 +218,7 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command *comman
                     }
                     else{
                         double statistic = atof(token[statIndex].c_str());
-                        if(statistic == 0.0 && isP){
+                        if(statistic == 0.0 && isP){ //This is unsafe as == of double is always a problem
                             removeCount++;
                         }
                         else{
@@ -253,7 +253,4 @@ bool Snp::sortSnp (const Snp& i, const Snp& j){
 			return i.getBp() < j.getBp();
 	else return (i.getChr().compare(j.getChr()) < 0);
 }
-
-
-
 
