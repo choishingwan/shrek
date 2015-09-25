@@ -2,234 +2,84 @@
 
 //require major revision. There are BUGS here. So we need to make it robust to changes.
 
-Decomposition::Decomposition( std::vector<Snp*> *snpList, Linkage *linkageMatrix, size_t thread, Region *regionInfo):m_snpList(snpList), m_linkage(linkageMatrix), m_thread(thread), m_regionInfo(regionInfo){}
+std::mutex Decomposition::mtx;
+Decomposition::Decomposition(size_t thread):m_thread(thread){}
 
-Decomposition::Decomposition( std::vector<Snp*> *snpList, Linkage *linkageMatrix, size_t thread):m_snpList(snpList), m_linkage(linkageMatrix), m_thread(thread){}
-
-Decomposition::~Decomposition()
-{
-	//dtor
-}
-void Decomposition::Decompose(const size_t &blockSize, std::deque<size_t> &snpLoc, std::deque<Genotype*> &genotype, bool chromosomeStart, bool chromosomeEnd, std::vector<double> &samplePheno, Eigen::MatrixXd &sampleMatrix){
-    if(genotype.size() == 0) throw "No genotype to work on";
-    size_t processSize = snpLoc.size();
-    size_t currentBlockSize = blockSize;
-    if(currentBlockSize > processSize) currentBlockSize = processSize;
-    std::vector<size_t> startLoc;
-    size_t stepSize = currentBlockSize/3;
-    if(stepSize == 0){
-        if(processSize > 2){
-            std::cerr << "Something is wrong. I don't expect step size = 0 when there are more than 2 snp input" << std::endl;
-            throw "Unexpected error";
-        }
-    	Eigen::MatrixXd result;
-        result = m_linkage->solve(0, processSize, &sampleMatrix,Snp::GetmaxSampleSize(),snpLoc[0]);
-        for(size_t j = 0; j < samplePheno.size(); ++j){
-            samplePheno[j] += result.col(j).segment(0,processSize).sum();
-        }
-    }
-    else if(stepSize> 0){
-        for(size_t i = 0; i < processSize; i+= stepSize){
-			if(i+currentBlockSize <= processSize){
-				startLoc.push_back(i);
-			}
-		}
-		if(!startLoc.empty() && processSize - startLoc.back() < stepSize){
-			startLoc.pop_back();
-		}
-		std::vector<pthread_t*> threadList;
-		std::vector<DecompositionThread* > garbageCollection;
-        for(size_t i = 0; i < startLoc.size(); ++i){
-            garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &sampleMatrix,m_linkage, &snpLoc, m_snpList, &samplePheno, chromosomeStart));
-        }
-        if(m_thread >= garbageCollection.size()){
-            //More thread than work
-            for(size_t i = 0; i < garbageCollection.size(); ++i){
-                pthread_t *thread1 = new pthread_t();
-				threadList.push_back(thread1);
-				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::SampleProcesser, garbageCollection[i]);
-				if(threadStatus != 0){
-					throw "Failed to spawn thread with status: "+std::to_string(threadStatus);
-				}
-            }
-			for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter) pthread_join(*threadList[threadIter], NULL);
-			for(size_t i = 0; i < threadList.size(); ++i) delete threadList[i];
-            for(size_t i = 0; i < garbageCollection.size(); ++i) delete garbageCollection[i];
-			garbageCollection.clear();
-            threadList.clear();
-        }
-        else{
-            //More work than thread
-            for(size_t i = 0; i < m_thread; ++i){
-                pthread_t *thread1 = new pthread_t();
-				threadList.push_back(thread1);
-				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::SampleProcesser, garbageCollection[i]);
-				if(threadStatus != 0){
-					throw "Failed to spawn thread with status: "+std::to_string(threadStatus);
-				}
-            }
-			for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter) pthread_join(*threadList[threadIter], NULL);
-			for(size_t i = 0; i < threadList.size(); ++i) delete threadList[i];
-			threadList.clear();
-            for(size_t i= m_thread; i < garbageCollection.size(); ++i){
-                pthread_t *thread1 = new pthread_t();
-				threadList.push_back(thread1);
-				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::SampleProcesser, garbageCollection[i]);
-				if(threadStatus != 0){
-					throw "Failed to spawn thread with status: "+std::to_string(threadStatus);
-				}
-            }
-
-			for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter) pthread_join(*threadList[threadIter], NULL);
-			for(size_t i = 0; i < threadList.size(); ++i) delete threadList[i];
-            for(size_t i = 0; i < garbageCollection.size(); ++i) delete garbageCollection[i];
-			garbageCollection.clear();
-            threadList.clear();
-
-        }
-
+void Decomposition::solve(const std::vector<size_t> boundaries, const size_t index, const Linkage &linkage, const std::deque<size_t> snpLoc, boost::ptr_vector<Snp> &snpList, const bool &chromosomeStart, const Eigen::MatrixXd &betaEstimate){
+    size_t sizeOfWindow = 0;
+    size_t copyStart = boundaries[index+1]; //This is the index
+    size_t copyEnd = copyStart; //This is the bound
+    if(index+3==boundaries.size()){
+        sizeOfWindow =linkage.size()-boundaries[index];
+        copyEnd = linkage.size();
     }
     else{
-        throw "Undefined behaviour! Step size should never be negative as block size is positive";
-	}
-
-
-
+        sizeOfWindow = boundaries[index+3]-boundaries[index]+1;
+        copyEnd = boundaries[index+2];
+    }
+    if(chromosomeStart && index ==0){
+        copyStart = boundaries[index];
+    }
+    Eigen::MatrixXd heritability = Eigen::MatrixXd::Zero(sizeOfWindow, 1);
+    Eigen::MatrixXd effectiveNumber = Eigen::MatrixXd::Zero(sizeOfWindow, 1);
+    Eigen::VectorXd ldScore = Eigen::VectorXd::Zero(sizeOfWindow);
+    linkage.solve(boundaries[index], sizeOfWindow,betaEstimate, heritability,effectiveNumber,ldScore);
+    //Now that we have got the results, we need to write them to the SNP
+    for(size_t i = copyStart; i < copyEnd; ++i){
+        snpList.at(snpLoc[i]).setHeritability(heritability(i-boundaries[index],0));
+        snpList.at(snpLoc[i]).setEffectiveNumber(effectiveNumber(i-boundaries[index],0));
+        snpList.at(snpLoc[i]).setLDScore(ldScore(i-copyStart));
+    }
 }
-ProcessCode Decomposition::Decompose(const size_t &blockSize, std::deque<size_t> &snpLoc, std::deque<Genotype*> &genotype, bool chromosomeStart, bool chromosomeEnd){
-    //First, build the vector for beta
-    if(genotype.size() == 0){
-        //new algorithm should not have any situation where genotype size is 0
-        throw "No genotype to work on";
-    }
-    //processSize by default should be the number of Snps
-    size_t processSize = snpLoc.size();
-    Eigen::VectorXd chiSq = Eigen::VectorXd::Zero(processSize);
-    Eigen::VectorXd betaEstimate = Eigen::VectorXd::Zero(processSize);
-	for(size_t i=0;i < processSize; ++i){
-        if(snpLoc[i] < 0){
-			throw "ERROR! Undefined behaviour. The location index is negative!";
-        }
-        else{
-			betaEstimate(i) = (*m_snpList)[snpLoc[i]]->Getbeta();
-			chiSq(i) = (*m_snpList)[snpLoc[i]]->GetsignedSqrtChiSq();
-        }
-    }
 
-    //Now we can perform decomposition using the beta and Linkage
-	size_t currentBlockSize = blockSize;
-	if(currentBlockSize > processSize){
-        //Just in case if the blockSize is much bigger than the number of Snps
-        currentBlockSize = processSize;
-	}
-    std::vector<size_t> startLoc;
-	size_t stepSize = currentBlockSize/3;
-    //Now we need to obtain the actual work coordinates
-    //For the last two block, their variance should always put into buffer
-    //Other than that, there is no changes.
-    //Also, ignore the single thread situation to reduce the size of the code
-
-
-
-    if(stepSize == 0){
-        //only possible if the blockSize is less than 3 e.g. 2 Snps or 1 Snps
-        //The only time when this is possible is when there is only 2 or 1 Snp(s)
-        //in the input file.
-        //Will still treat it specially.
-        if(processSize > 2){
-            std::cerr << "Something is wrong. I don't expect step size = 0 when there are more than 2 snp input" << std::endl;
-            throw "Unexpected error";
-        }
-        //Eigen::MatrixXd variance = Eigen::MatrixXd::Zero(processSize, processSize);
-        Eigen::VectorXd perSnpEffect;
-		Eigen::VectorXd result;
-		Eigen::VectorXd effectiveNumber;
-		result = m_linkage->solve(0, processSize, &betaEstimate, &chiSq, &perSnpEffect,&effectiveNumber, Snp::GetmaxSampleSize(),snpLoc[0]);
-		//std::cerr << "Single " << processSize << std::endl;
-        for(size_t i = 0; i < processSize; ++i){
-            (*m_snpList).at(snpLoc.at(i))->Setheritability(result(i));
-            (*m_snpList).at(snpLoc.at(i))->SeteffectiveNumber(effectiveNumber(i));
-            //(*m_snpList).at(snpLoc.at(i))->SetsnpEffect(perSnpEffect(i));
-            /*
-            for(size_t j = 0; j < processSize;++j){
-                double covariance = variance(i,j);
-                for(size_t regionIndex = 0; regionIndex < m_regionInfo->GetnumRegion(); ++regionIndex){
-					if((*m_snpList)[snpLoc[i]]->GetFlag(regionIndex)&&
-                        (*m_snpList)[snpLoc[j]]->GetFlag(regionIndex)){
-                        m_regionInfo->Addvariance(covariance, regionIndex);
-					}
-				}
-            }
-            */
-        }
-
-    }
-    else if(stepSize> 0){
-        for(size_t i = 0; i < processSize; i+= stepSize){
-			if(i+currentBlockSize <= processSize){
-				startLoc.push_back(i);
-			}
-		}
-		if(!startLoc.empty() && processSize - startLoc.back() < stepSize){
-			startLoc.pop_back();
-		}
-
-		std::vector<pthread_t*> threadList;
-		std::vector<DecompositionThread* > garbageCollection;
-        for(size_t i = 0; i < startLoc.size(); ++i){
-            garbageCollection.push_back(new DecompositionThread(startLoc[i], currentBlockSize, &betaEstimate,&chiSq,m_linkage, &snpLoc, m_snpList, chromosomeStart, m_regionInfo));
-        }
-        if(m_thread >= garbageCollection.size()){
-            //More thread than work
-            for(size_t i = 0; i < garbageCollection.size(); ++i){
-                pthread_t *thread1 = new pthread_t();
-				threadList.push_back(thread1);
-				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::ThreadProcesser, garbageCollection[i]);
-				if(threadStatus != 0){
-					throw "Failed to spawn thread with status: "+std::to_string(threadStatus);
-				}
-            }
-			for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter) pthread_join(*threadList[threadIter], NULL);
-			for(size_t i = 0; i < threadList.size(); ++i) delete threadList[i];
-            for(size_t i = 0; i < garbageCollection.size(); ++i) delete garbageCollection[i];
-			garbageCollection.clear();
-            threadList.clear();
-        }
-        else{
-            //More work than thread
-            for(size_t i = 0; i < m_thread; ++i){
-                pthread_t *thread1 = new pthread_t();
-				threadList.push_back(thread1);
-				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::ThreadProcesser, garbageCollection[i]);
-				if(threadStatus != 0){
-					throw "Failed to spawn thread with status: "+std::to_string(threadStatus);
-				}
-            }
-			for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter) pthread_join(*threadList[threadIter], NULL);
-			for(size_t i = 0; i < threadList.size(); ++i) delete threadList[i];
-			threadList.clear();
-            for(size_t i= m_thread; i < garbageCollection.size(); ++i){
-                pthread_t *thread1 = new pthread_t();
-				threadList.push_back(thread1);
-				int threadStatus = pthread_create( thread1, NULL, &DecompositionThread::ThreadProcesser, garbageCollection[i]);
-				if(threadStatus != 0){
-					throw "Failed to spawn thread with status: "+std::to_string(threadStatus);
-				}
-            }
-
-			for(size_t threadIter = 0; threadIter < threadList.size(); ++threadIter) pthread_join(*threadList[threadIter], NULL);
-			for(size_t i = 0; i < threadList.size(); ++i) delete threadList[i];
-            for(size_t i = 0; i < garbageCollection.size(); ++i) delete garbageCollection[i];
-			garbageCollection.clear();
-            threadList.clear();
-
-        }
-
-    }
+void Decomposition::run(const Linkage &linkage, const size_t &genotypeIndex, const size_t& remainedLD, const boost::ptr_vector<Interval> &blockInfo, std::deque<size_t> &ldLoc, const std::deque<size_t> &snpLoc, boost::ptr_vector<Snp> &snpList, const bool &chromosomeStart){
+    size_t startRange =  genotypeIndex;
+    size_t endRange=0;
+    size_t i = genotypeIndex;
+    size_t range = m_thread;
+    if(remainedLD==0)range +=2;
     else{
-        throw "Undefined behaviour! Step size should never be negative as block size is positive";
-	}
+        //Something was left behind, and they must be 2 blocks before
+        startRange -= 2;//Two steps is only right if I have remove stuffs
+    }
+    std::string currentChr = blockInfo[startRange].getChr();
+    for(; i< genotypeIndex+range && i < blockInfo.size(); ++i){
+            if(blockInfo[i].getChr().compare(currentChr)!=0){
+            i= i-1; //This mean we working on the last block of this chromosome
+            break;
+        }
+    }
+    endRange = i;
+    std::vector<std::thread> threadStore;
+    //Now every 3 blocks will be one window for decomposition
+    //Launch a group of threads
+    //Need start, end and mid bound
+    //Now get all the boundaries
+    std::vector<size_t> boundaries;
+    size_t lastIndex =0;
+    for(size_t i = startRange; i < endRange; ++i){
+        for(; lastIndex < ldLoc.size(); ++lastIndex){
+            if(ldLoc[lastIndex]==blockInfo[i].getStart()){
+                boundaries.push_back(lastIndex);
+                break;
+            }
+        }
+    }
+    Eigen::MatrixXd betaEstimate = Eigen::MatrixXd::Zero(ldLoc.size(),1);
+    for(size_t i = 0; i < snpLoc.size(); ++i){
+        betaEstimate(i)  = snpList.at(snpLoc[i]).getBeta();
+    }
+    //Now the boundaries should be representative of the location on the ld matrix
+    size_t threadRunCounter =0;
+    while(threadRunCounter < boundaries.size()-2){
+        while(threadStore.size() < m_thread && threadRunCounter < boundaries.size()-2){ //On purposely leave 1 thread out for the main
+            threadStore.push_back(std::thread(&Decomposition::solve, this, std::cref(boundaries), threadRunCounter, std::cref(linkage), std::cref(snpLoc), std::ref(snpList),chromosomeStart, std::cref(betaEstimate)));
+            threadRunCounter++;
+        }
 
-    return completed;
+        for (size_t j = 0; j < threadStore.size(); ++j) {
+            threadStore[j].join();
+        }
+        threadStore.clear();
+    }
 }
-

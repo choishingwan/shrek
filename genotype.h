@@ -45,7 +45,7 @@ class Genotype
          *  \param [out] r, the r output
          *  \param [out] rSq, the rSq output
          */
-        void GetbothR(Genotype* snpB, bool correction, double &r, double &rSq);
+        void GetbothR(const Genotype* snpB, const bool correction, double &r, double &rSq) const;
         /** Setting the maximum number of samples used for LD construction */
         static void SetsampleNum(size_t sampleNum);
         /** Set the mean of the genotype */

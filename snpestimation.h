@@ -42,8 +42,8 @@ class SnpEstimation
 		/** Default destructor */
 		virtual ~SnpEstimation();
 		/** Initialize the estimation */
-		void Estimate(GenotypeFileHandler *genotypeFileHandler,const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, Region* regionInfo, Command *commander,boost::ptr_vector<Interval> &blockInfo);
-
+		void Estimate(GenotypeFileHandler &genotypeFileHandler,const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Region& regionInfo, const Command &commander,boost::ptr_vector<Interval> &blockInfo);
+        void getResult(const Command &commander, const Region &region, const std::map<std::string, size_t> &snpIndex, const boost::ptr_vector<Snp> &snpList);
 	protected:
 	private:
         static inline void loadbar(size_t x, size_t n);

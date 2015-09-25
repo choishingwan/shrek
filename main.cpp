@@ -31,29 +31,25 @@ int main(int argc, char *argv[]){
     //Parsing the parameters
     //Start working one by one
     try{
-        Command *commander = nullptr;
-        commander=new Command();
-        commander->initialize(argc, argv);
-        Region *regionInfo = nullptr;
-        regionInfo = new Region();
-        regionInfo->generateRegion(commander->getRegion());
-        commander->printRunSummary(std::to_string(regionInfo->getNumRegion()));
+        Command commander;
+        commander.initialize(argc, argv);
+        Region regionInfo;
+        regionInfo.generateRegion(commander.getRegion());
+        commander.printRunSummary(std::to_string(regionInfo.getNumRegion()));
         boost::ptr_vector<Snp> snpList;
         std::map<std::string, size_t> snpIndex;
         Snp::generateSnpList(snpList, commander);
         Snp::generateSnpIndex(snpIndex, snpList, commander, regionInfo);
         boost::ptr_vector<Interval> blockInfo; //We use this to store all block information, should be useful for both risk and not risk stuff
-        if(commander->quantitative() || commander->caseControl()){
-            GenotypeFileHandler *genotypeFileHandler = nullptr;
-            genotypeFileHandler = new GenotypeFileHandler();
-            genotypeFileHandler->initialize(commander, snpIndex, snpList, blockInfo);
+        if(commander.quantitative() || commander.caseControl()){
+            GenotypeFileHandler genotypeFileHandler;
+            genotypeFileHandler.initialize(commander, snpIndex, snpList, blockInfo);
             //Now everything is prepared, we can start the SNP heritability estimation
-            SnpEstimation *snpEstimation = nullptr;
-            snpEstimation = new SnpEstimation();
-            snpEstimation->Estimate(genotypeFileHandler, snpIndex, snpList, regionInfo, commander, blockInfo);
-
+            SnpEstimation snpEstimation;
+            snpEstimation.Estimate(genotypeFileHandler, snpIndex, snpList, regionInfo, commander, blockInfo);
+            snpEstimation.getResult(commander, regionInfo, snpIndex,snpList);
         }
-        else if(commander->diRisk() || commander->conRisk()){
+        else if(commander.diRisk() || commander.conRisk()){
 
         }
     }

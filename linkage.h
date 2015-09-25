@@ -10,23 +10,18 @@
 #define LINKAGE_H
 
 class LinkageThread;
+#include <algorithm>
+#include <boost/ptr_container/ptr_deque.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include <deque>
 #include <Eigen/Dense>
 #include <Eigen/Eigenvalues>
-#include <thread>
-#include <mutex>
-//#include <unsupported/Eigen/IterativeSolvers>
-#include <boost/ptr_container/ptr_deque.hpp>
-#include <boost/ptr_container/ptr_vector.hpp>
-#include <algorithm>
 #include <limits>
 #include <map>
-#include <complex>
 #include <math.h>
-#include "configure.h"
+#include <mutex>
+#include <thread>
 #include "genotype.h"
-#include "linkagethread.h"
-#include "processcode.h"
 #include "snp.h"
 
 /** \class Linkage
@@ -46,14 +41,17 @@ class Linkage
 	public:
 		Linkage(size_t thread);
 		virtual ~Linkage();
-        void Initialize(boost::ptr_deque<Genotype> &genotype, const size_t &prevResiduals);
-        void Construct(boost::ptr_deque<Genotype> &genotype, const size_t &genotypeIndex, const size_t& remainedLD, const boost::ptr_vector<Interval> &blockSize, bool correction, std::deque<size_t> &ldLoc);
+        void Initialize(const boost::ptr_deque<Genotype> &genotype, const size_t &prevResiduals);
+        void Construct(const boost::ptr_deque<Genotype> &genotype, const size_t &genotypeIndex, const size_t& remainedLD, const boost::ptr_vector<Interval> &blockSize, const bool correction, const std::deque<size_t> &ldLoc);
 	    void print();
+	    void solve(const size_t loc, const size_t length, const Eigen::MatrixXd &betaEstimate, Eigen::MatrixXd &heritability, Eigen::MatrixXd &effectiveNumber, Eigen::VectorXd &ldScore) const;
+
+	    inline size_t size()const {return m_linkage.rows(); };
 	protected:
 	private:
-	    void buildLd(bool correction, size_t vStart, size_t vEnd, size_t hEnd, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &ldLoc);
+	    void buildLd(const bool correction, const size_t vStart, const size_t vEnd, const size_t hEnd, const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &ldLoc);
         Eigen::MatrixXd m_linkage;
-        size_t m_thread;
+        size_t m_thread=1;
         static std::mutex mtx;
 
 };

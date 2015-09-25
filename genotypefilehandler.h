@@ -41,17 +41,17 @@ public:
         GenotypeFileHandler();
         virtual ~GenotypeFileHandler();
 
-        void initialize(Command *commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Interval> &blockInfo);
-        void getSnps(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &ldLoc, boost::ptr_vector<Snp> &snpList, bool &chromosomeStart, bool &chromosomeEnd, size_t &prevResidual, boost::ptr_vector<Interval> &blockInfo);
+        void initialize(const Command &commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Interval> &blockInfo);
+        void getSnps(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &ldLoc, bool &chromosomeStart, bool &chromosomeEnd, size_t &prevResidual, boost::ptr_vector<Interval> &blockInfo);
         inline size_t getSampleSize() const {return m_ldSampleSize; };
 protected:
 private:
-        std::string m_genotypeFilePrefix;
-        std::string m_outPrefix;
+        std::string m_genotypeFilePrefix="";
+        std::string m_outPrefix="";
         std::ifstream m_bedFile;
         std::vector<int> m_inclusion;
-        size_t m_ldSampleSize;
-        size_t m_inputSnp;
+        size_t m_ldSampleSize=0;
+        size_t m_inputSnp=0;
         size_t m_thread=1;
         size_t m_snpIter=0;
 

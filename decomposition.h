@@ -11,41 +11,26 @@
 
 #include <vector>
 #include <deque>
+#include <thread>
+#include <mutex>
 #include <Eigen/Dense>
-#include <Eigen/Core>
-#include <Eigen/SVD>
-#include <map>
+#include <boost/ptr_container/ptr_deque.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include "snp.h"
 #include "region.h"
 #include "linkage.h"
 #include "genotype.h"
-#include "processcode.h"
-#include "decompositionthread.h"
 
-/** \class Decomposition
- *	\brief Responsible to generate the required input to solve matrix decomposition
- *
- *	This class is responsible for performing the decomposition of the equation
- *	RH=f
- *	Note: The actual solving happened within the linkage class
- */
 class Decomposition
 {
 	public:
-		/**Default constructor */
-		Decomposition( std::vector<Snp*> *snpList, Linkage *linkageMatrix, size_t thread, Region *regionInfo);
-		Decomposition( std::vector<Snp*> *snpList, Linkage *linkageMatrix, size_t thread);
-		/**Default destructor */
-		virtual ~Decomposition();
-        /** The decomposition processor */
-		ProcessCode Decompose(const size_t &blockSize, std::deque<size_t> &snpLoc, std::deque<Genotype*> &genotype, bool chromosomeStart, bool chromosomeEnd);
-		void Decompose(const size_t &blockSize, std::deque<size_t> &snpLoc, std::deque<Genotype*> &genotype, bool chromosomeStart, bool chromosomeEnd, std::vector<double> &samplePheno, Eigen::MatrixXd &sampleMatrix);
+		Decomposition(size_t thread);
+        void run(const Linkage &linkage, const size_t &genotypeIndex, const size_t& remainedLD, const boost::ptr_vector<Interval> &blockInfo, std::deque<size_t> &ldLoc, const std::deque<size_t> &snpLoc, boost::ptr_vector<Snp> &snpList, const bool &chromosomeStart);
+        void solve(const std::vector<size_t> boundaries, const size_t index, const Linkage &linkage, const std::deque<size_t> snpLoc, boost::ptr_vector<Snp> &snpList, const bool &chromosomeStart, const Eigen::MatrixXd &betaEstimate);
 	protected:
 	private:
-        std::vector<Snp*> *m_snpList;
-        Linkage *m_linkage;
-		size_t m_thread;
-		Region *m_regionInfo;
+        size_t m_thread=1;
+        static std::mutex mtx;
 
 };
 

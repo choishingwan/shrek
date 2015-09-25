@@ -3,13 +3,13 @@
 GenotypeFileHandler::GenotypeFileHandler(){}
 GenotypeFileHandler::~GenotypeFileHandler(){}
 
-void GenotypeFileHandler::initialize(Command *commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Interval> &blockInfo){
-    m_thread = commander->getThread();
-    m_outPrefix = commander->getOutputPrefix();
-    m_genotypeFilePrefix = commander->getLdFilePrefix();
-    bool validate = commander->validate();
-    bool mafFilt = commander->mafFilter();
-    double mafThreshold = commander->getMaf();
+void GenotypeFileHandler::initialize(const Command &commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Interval> &blockInfo){
+    m_thread = commander.getThread();
+    m_outPrefix = commander.getOutputPrefix();
+    m_genotypeFilePrefix = commander.getLdFilePrefix();
+    bool validate = commander.validate();
+    bool mafFilt = commander.mafFilter();
+    double mafThreshold = commander.getMaf();
     std::string line;
     //Get the number of samples in the ld file
     std::string famFileName = m_genotypeFilePrefix+".fam";
@@ -100,7 +100,7 @@ void GenotypeFileHandler::initialize(Command *commander, const std::map<std::str
                     char ch[1];
                     m_bedFile.read(ch,1); //Read the information
                     if (!m_bedFile){
-                        throw "Problem with the BED file...has the FAM/BIM file been changed?";
+                        throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
                     }
                     b = ch[0];
                     int c=0;
@@ -134,14 +134,16 @@ void GenotypeFileHandler::initialize(Command *commander, const std::map<std::str
     }
     bimFile.close();
     m_bedFile.close();
+    std::cerr << std::endl;
     std::cerr << "Linkage File information: " << std::endl;
+    std::cerr << "========================================" << std::endl;
     std::cerr << "Number of Samples: " << m_ldSampleSize << std::endl;
     std::cerr << "Duplicated SNPs:   " << duplicateCount << std::endl;
     std::cerr << "Invalid SNPs:      " << ignoreSnp << std::endl;
     std::cerr << "Filtered SNPs:     " << mafFilteredSnp << std::endl;
     std::cerr << "Final SNPs number: " << finalNumSnp << std::endl;
     //Now we need to use the m_inclusion vector and the bim file to get get the intervals
-    buildBlocks(bimFileName, blockInfo, commander->getDistance());
+    buildBlocks(bimFileName, blockInfo, commander.getDistance());
     //Now open the bed file to prepare for whatever happen next
 	bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_bedFile); //We will try to open the connection to bedFile
     if(bfile_SNP_major){
@@ -223,6 +225,7 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 	if(!BIT.is_open()){
         throw "Cannot open the bed file";
 	}
+
 	//std::cerr << "BIT open" << std::endl;
 	// 1) Check for magic number
 	// 2) else check for 0.99 SNP/Ind coding
@@ -276,7 +279,7 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 		BIT.clear();
 		BIT.open(s.c_str(), std::ios::in | std::ios::binary);
 	}
-	else if ( ! v1_bfile ){
+	else if ( !v1_bfile ){
 		if ( b[0] ) bfile_SNP_major = true;
 		else bfile_SNP_major = false;
 		std::cerr << "Binary PED file is v0.99" << std::endl;
@@ -286,7 +289,7 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 	return bfile_SNP_major;
 }
 
-void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &ldLoc, boost::ptr_vector<Snp> &snpList, bool &chromosomeStart, bool &chromosomeEnd, size_t &prevResidual, boost::ptr_vector<Interval> &blockInfo){
+void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &ldLoc, bool &chromosomeStart, bool &chromosomeEnd, size_t &prevResidual, boost::ptr_vector<Interval> &blockInfo){
     //If this is the start of chromosome, we need to process one more bin
     //Otherwise we will process thread bins
     size_t startRange = blockInfo[prevResidual].getStart();

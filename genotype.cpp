@@ -39,7 +39,7 @@ double Genotype::Getr(Genotype* snpB, bool correction){
     return r;
 }
 
-void Genotype::GetbothR(Genotype* snpB, bool correction, double &r, double &rSq){
+void Genotype::GetbothR(const Genotype* snpB, const bool correction, double &r, double &rSq) const {
 	size_t range = (m_requiredBit /(8*m_bitSize))+1;
     r = 0.0;
     size_t i = 0;
