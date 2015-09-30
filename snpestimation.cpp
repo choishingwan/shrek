@@ -122,7 +122,7 @@ void SnpEstimation::getResult(const Command &commander, const Region &region, co
         }
         else{
 			//We want the output in sorted format. So we will have to do extra works just to make sure the result is sorted
-            resOut << "Chr\tLoc\trsID\tOriginal\tBeta\tEstimate\tWithLD\tEffectiveNumber\tldsc" << std::endl;
+            resOut << "Chr\tLoc\trsID\tOriginal\tBeta\tEstimate\tEffectiveNumber\tldsc" << std::endl;
             size_t index;
             std::vector<size_t> resultSnpIndex;
             for(iter = snpIndex.begin(); iter != snpIndex.end(); ++iter){
