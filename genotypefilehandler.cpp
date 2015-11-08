@@ -163,53 +163,109 @@ void GenotypeFileHandler::buildBlocks(std::string bimFileName, boost::ptr_vector
     if(!bimFile.is_open()){
         throw std::runtime_error("Cannot open bim file");
     }
+
+    /**
+     *  Concept of blockInfo:
+     *  Start = the current block start (inclusive)
+     *  End = the current block end (exclusive)
+     *  So for the last block, the block end = size of SNP;
+     */
+    /**
+     *  We only care about SNPs that were included.
+     */
     std::string currentChr ="";
     std::string line;
     size_t currentIndex = 0;
     size_t prevIndex = 0;
     size_t startIndex = 0; //The beginning index of the current block
     size_t startBp = 0; //The beginning bp of the current block
+    size_t prevBp = 0; //The bp location of the previous SNP
     bool started = false;
+
+
     while(std::getline(bimFile, line)){
         line = usefulTools::trim(line);
         if(!line.empty()){
             std::vector<std::string> token;
             usefulTools::tokenizer(line, "\t ", &token);
-            //The m_inclusion will be -1 if we don't need the SNP
             if(token.size() >= 6 && m_inclusion[currentIndex]!=-1){
+                //Only work when this SNP is required
                 std::string chr= token[0];
                 size_t bp = std::atoi(token[3].c_str());
                 if(!started){
+                    //First, so just add everything
                     currentChr = chr;
                     startBp = bp;
                     startIndex = currentIndex;
                     started = true;
                 }
-                else if(chr.compare(currentChr)!= 0){
-                    //new chromosome
-                    blockInfo[blockInfo.size()-1].setEnd(prevIndex);
-                    //blockInfo.push_back(new Interval(currentChr, currentStart, prevLoc));
+                else if(chr.compare(currentChr)!=0){
+                    //This is a new chromosome
+                    //Check if there is any stuff here first
+                    if(blockInfo.empty()){
+                        //We need to use the previous information to build the first block
+                        blockInfo.push_back(new Interval(currentChr, startIndex, prevIndex));
+                    }
+                    else if(blockInfo[blockInfo.size()-1].getChr().compare(currentChr)!= 0){
+                        //That was a very small chromosome, still need to build it
+                        blockInfo.push_back(new Interval(currentChr, startIndex, prevIndex));
+                    }
+                    else{
+                        //We can directly extend the last block from the previous chromosome
+                        blockInfo[blockInfo.size()-1].setEnd(prevIndex);
+                    }
                     currentChr = chr;
-                    startBp = bp;
+                    startBp = bp; //Update the current location of the SNP
                     startIndex = currentIndex;
                 }
                 else if(bp-startBp > distance){
-                    //Now we are off, so this should be the interval
-                    blockInfo.push_back(new Interval(currentChr, startIndex, currentIndex));
-                    startIndex = currentIndex;
-                    startBp = bp;
+                    //They are on the same chromosome and there are two conditions
+                    if(bp-prevBp > distance){
+                        //Way too far away, basically they will immediately form a block together
+                        //In this case, we want to extend the last block instead of building a new block
+                        if(blockInfo.empty() || blockInfo[blockInfo.size()-1].getChr().compare(currentChr)!= 0){
+                            //This is the first block of this chromosome
+                            //We use prevIndex as the end here such that the end of this block != the start of next block, indicating they were too far
+                            blockInfo.push_back(new Interval(currentChr, startIndex, prevIndex));
+                        }
+                        else{
+                            //We will directly extend the previous interval
+                            blockInfo[blockInfo.size()-1].setEnd(prevIndex);
+                        }
+                        startIndex = currentIndex;
+                        startBp = bp;
+
+                    }
+                    else{
+                        //This is the normal situation
+                        //Because they are still continuous, we use currentIndex as the end where the end of this block = the start of next block
+                        blockInfo.push_back(new Interval(currentChr, startIndex, currentIndex));
+                        //So the block should start at the last SNP start and end with the previous SNP
+                        startIndex = currentIndex;
+                        startBp = bp;
+                    }
                 }
                 currentIndex++;
-                prevIndex = currentIndex;
+                prevBp = bp;
+                prevIndex = currentIndex; //Because it is exclusion, so it will be +1 already.
             }
-            else if(token.size() >=6){
-                currentIndex++;
+            else if(token.size()>=6){
+                currentIndex++; //This is the location of the SNP in the file, will increment no matter what happened
             }
         }
+
     }
     bimFile.close();
     if(prevIndex != blockInfo[blockInfo.size()-1].getEnd()){
-        blockInfo[blockInfo.size()-1].setEnd(prevIndex);
+        //It basically means that we have finished the whole file and still have SNPs not assigned to blocks
+        //Only situation where this is possible is when bp - startBp < distance
+        if(blockInfo.empty() || blockInfo[blockInfo.size()-1].getChr().compare(currentChr)!= 0){
+            //the second condition is unlikely, but we will put it there for safety
+            blockInfo.push_back(new Interval(currentChr, startIndex, prevIndex));
+        }
+        else {
+            blockInfo[blockInfo.size()-1].setEnd(prevIndex);
+        }
     }
 //
 //    for(size_t i = 0; i < blockInfo.size(); ++i){
@@ -289,6 +345,9 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 	return bfile_SNP_major;
 }
 
+
+
+
 void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &ldLoc, bool &chromosomeStart, bool &chromosomeEnd, size_t &prevResidual, boost::ptr_vector<Interval> &blockInfo){
     //If this is the start of chromosome, we need to process one more bin
     //Otherwise we will process thread bins
@@ -298,18 +357,33 @@ void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deq
     size_t i = prevResidual;
     size_t range = m_thread;
     if(chromosomeStart)range +=2;
-    for(; i< prevResidual+range && i < blockInfo.size(); ++i){
-        if(blockInfo[i].getChr().compare(currentChr)!=0){
-            i= i-1; //This mean we working on the last block of this chromosome
+
+    size_t loopEnd = prevResidual+range;
+    /**
+     *  Important property here is that in this for loop, i will +1 if it is a normal exit
+     *  but will remain unchanged if it was break;
+     */
+    for(; i < loopEnd && i < blockInfo.size(); ++i){
+        if(blockInfo[i].getChr().compare(currentChr)==0){
+            //We are heading for another chromosome
             chromosomeEnd = true;
             break;
+        }else if(blockInfo[i].getStart() != endRange){
+            //Again, we are working on another independent fragment
+            chromosomeEnd = true; //Not really a new chromosome, but the behaviour of the programme should be the same
+            break;
+        }
+        else{
+            endRange = blockInfo[i].getEnd();
         }
     }
-    if(i == blockInfo.size() || (i < blockInfo.size() &&blockInfo[i+1].getChr().compare(currentChr)!=0)){ //The next block is from another chromosome
+    //i will be +1 because of the nature of for loop
+    if(i == blockInfo.size() || (i < blockInfo.size() && blockInfo[i].getChr().compare(currentChr)!=0)){ //The next block is from another chromosome
         chromosomeEnd=true;
     }
-    //Because we will only exit loop when i >= blockInfo.size() or > prevResidual+range
-    endRange = blockInfo[i-1].getEnd();
+    /**
+     *  As a result of property of for loop, the prevResidual will ALWAYS be pointing to the next block.
+     */
     prevResidual=i;
     //So we will get all the required SNPs within this region
     while(m_snpIter < m_inputSnp && m_snpIter <= endRange){

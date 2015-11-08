@@ -27,19 +27,23 @@ void Command::initialize(int argc, char* argv[]){
 	std::string mode(argv[1]);
     if(mode.compare("quant")==0){
         m_qt=true;
-        quantitativeProcess(argc, argv);
+        if(argc == 2) printQuantUsage();
+        else quantitativeProcess(argc, argv);
     }
     else if(mode.compare("cc")==0){
         m_cc=true;
-        caseControlProcess(argc, argv);
+        if(argc==2) printCCUsage();
+        else caseControlProcess(argc, argv);
     }
     else if(mode.compare("risk-qt")==0){
         m_rqt=true;
-        continuousRiskProcess(argc, argv);
+        if(argc==2) printRiskQtUsage();
+        else continuousRiskProcess(argc, argv);
     }
     else if(mode.compare("risk_cc")==0){
         m_rcc = true;
-        dichotomusRiskProcess(argc, argv);
+        if(argc ==2) printRiskQtUsage();
+        else dichotomusRiskProcess(argc, argv);
     }
     else{
         throw std::runtime_error("Unspecified mode");
@@ -48,8 +52,8 @@ void Command::initialize(int argc, char* argv[]){
 
 void Command::caseControlProcess(int argc, char* argv[]){
 
-    static const char *optString = "a:R:k:p:b:c:r:l:so:f:t:M:m:d:L:vunh?";
-	static const struct option longOpts[]={
+    static const char *optString = "a:R:k:p:b:c:r:l:s:o:f:t:d:L:vunh?";
+    static const struct option longOpts[]={
 	    //Parameters for correction
         {"case",required_argument, NULL,'a'},
         {"control",required_argument, NULL,'R'},
@@ -65,8 +69,6 @@ void Command::caseControlProcess(int argc, char* argv[]){
         {"out",required_argument, NULL,'o'},
         {"maf",required_argument, NULL,'f'},
         {"thread",required_argument, NULL,'t'},
-        {"maxBlock",required_argument, NULL,'M'},
-        {"minBlock",required_argument, NULL,'m'},
         {"distance",required_argument, NULL,'d'},
         {"region",required_argument, NULL,'L'},
         {"validate",no_argument, NULL,'v'},
@@ -122,13 +124,6 @@ void Command::caseControlProcess(int argc, char* argv[]){
 			case 't':
 				m_thread = atoi(optarg);
 				break;
-			case 'M':
-				m_maxBlock = atoi(optarg);
-				m_maxBlockSet =true;
-				break;
-			case 'm':
-				m_minBlock = atoi(optarg);
-				break;
 			case 'd':
 				m_distance = atoi(optarg);
 				break;
@@ -154,11 +149,10 @@ void Command::caseControlProcess(int argc, char* argv[]){
 		}
 		opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
-
-
 }
+
 void Command::quantitativeProcess(int argc, char* argv[]){
-    static const char *optString = "e:N:x:b:p:c:r:l:s:d:f:L:M:m:o:t:nuvh?";
+    static const char *optString = "e:N:x:b:p:c:r:l:s:d:f:L:o:t:nuvh?";
 	static const struct option longOpts[]={
 	    //Qt specific parameter
 		{"extreme",required_argument,NULL,'e'},
@@ -175,8 +169,6 @@ void Command::quantitativeProcess(int argc, char* argv[]){
 		{"distance",required_argument,NULL,'d'},
 		{"maf",required_argument,NULL,'f'},
 		{"region",required_argument,NULL,'L'},
-		{"maxBlock",required_argument,NULL,'M'},
-		{"minBlock",required_argument,NULL,'m'},
 		{"out",required_argument,NULL,'o'},
 		{"thread",required_argument,NULL,'t'},
 		{"correct",no_argument,NULL,'n'},
@@ -234,13 +226,6 @@ void Command::quantitativeProcess(int argc, char* argv[]){
 			case 'L':
 				m_regionList = optarg;
                 break;
-			case 'M':
-				m_maxBlock = atoi(optarg);
-				m_maxBlockSet =true;
-				break;
-			case 'm':
-				m_minBlock = atoi(optarg);
-				break;
 			case 'o':
 				m_outputPrefix = optarg;
 				break;
@@ -270,7 +255,7 @@ void Command::quantitativeProcess(int argc, char* argv[]){
 
 }
 void Command::dichotomusRiskProcess(int argc, char* argv[]){
-    static const char *optString = "E:T:D:g:Aa:R:k:p:b:c:r:l:so:f:t:M:m:d:L:vunh?";
+    static const char *optString = "E:T:D:g:Aa:R:k:p:b:c:r:l:so:f:t:d:L:vunh?";
 	static const struct option longOpts[]={
         //Risk prediction specific parameters
         {"ref", required_argument, NULL, 'E'},
@@ -293,8 +278,6 @@ void Command::dichotomusRiskProcess(int argc, char* argv[]){
         {"out",required_argument, NULL,'o'},
         {"maf",required_argument, NULL,'f'},
         {"thread",required_argument, NULL,'t'},
-        {"maxBlock",required_argument, NULL,'M'},
-        {"minBlock",required_argument, NULL,'m'},
         {"distance",required_argument, NULL,'d'},
         {"region",required_argument, NULL,'L'},
         {"validate",no_argument, NULL,'v'},
@@ -367,13 +350,6 @@ void Command::dichotomusRiskProcess(int argc, char* argv[]){
 			case 't':
 				m_thread = atoi(optarg);
 				break;
-			case 'M':
-				m_maxBlock = atoi(optarg);
-				m_maxBlockSet =true;
-				break;
-			case 'm':
-				m_minBlock = atoi(optarg);
-				break;
 			case 'd':
 				m_distance = atoi(optarg);
 				break;
@@ -391,7 +367,7 @@ void Command::dichotomusRiskProcess(int argc, char* argv[]){
 				break;
 			case 'h':
 			case '?':
- 				printCCUsage();
+ 				printRiskCCUsage();
                 throw 0;
 				break;
 			default:
@@ -403,7 +379,7 @@ void Command::dichotomusRiskProcess(int argc, char* argv[]){
 
 }
 void Command::continuousRiskProcess(int argc, char* argv[]){
-    static const char *optString = "E:T:D:g:AN:x:b:p:c:r:l:s:d:f:L:M:m:o:t:nuvh?";
+    static const char *optString = "E:T:D:g:AN:x:b:p:c:r:l:s:d:f:L:o:t:nuvh?";
 	static const struct option longOpts[]={
         //Risk prediction specific parameters
         {"ref", required_argument, NULL, 'E'},
@@ -426,8 +402,6 @@ void Command::continuousRiskProcess(int argc, char* argv[]){
 		{"distance",required_argument,NULL,'d'},
 		{"maf",required_argument,NULL,'f'},
 		{"region",required_argument,NULL,'L'},
-		{"maxBlock",required_argument,NULL,'M'},
-		{"minBlock",required_argument,NULL,'m'},
 		{"out",required_argument,NULL,'o'},
 		{"thread",required_argument,NULL,'t'},
 		{"correct",no_argument,NULL,'n'},
@@ -498,13 +472,6 @@ void Command::continuousRiskProcess(int argc, char* argv[]){
 			case 'L':
 				m_regionList = optarg;
                 break;
-			case 'M':
-				m_maxBlock = atoi(optarg);
-				m_maxBlockSet =true;
-				break;
-			case 'm':
-				m_minBlock = atoi(optarg);
-				break;
 			case 'o':
 				m_outputPrefix = optarg;
 				break;
@@ -522,7 +489,7 @@ void Command::continuousRiskProcess(int argc, char* argv[]){
 				break;
     		case 'h':
 			case '?':
- 				printQuantUsage();
+ 				printRiskQtUsage();
                 throw 0;
 				break;
 			default:
@@ -619,19 +586,13 @@ void Command::printRunSummary(std::string regionMessage){
     std::cerr	<< "===============================================================" << std::endl
 				<< "Options " << std::endl
 				<< "Number of Thread     : " << m_thread << std::endl;
-	if(m_maxBlock != 0){
-        std::cerr << "Maximum block size   : " << m_maxBlock << std::endl;
-	}
-    if(m_minBlock != 0){
-        std::cerr << "Minimum block size   : " << m_minBlock << std::endl;
-    }
     if(m_ldCorrection){
         std::cerr << "Use LD correction    : True" << std::endl;
     }
     else{
         std::cerr << "Use LD correction    : False" << std::endl;
     }
-    std::cerr	<< "LD distance          : " << m_distance << std::endl;
+    std::cerr	<< "LD distance          : " << m_ distance << std::endl;
 	std::cerr	<< "Number of regions    : " << regionMessage << std::endl;
 
 	std::cerr << std::endl << std::endl;
@@ -649,7 +610,10 @@ void Command::printCCUsage(){
 void Command::printQuantUsage(){
 
 }
-void Command::printRiskUsage(){
+void Command::printRiskCCUsage(){
+
+}
+void Command::printRiskQtUsage(){
 
 }
 

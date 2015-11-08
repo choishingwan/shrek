@@ -54,7 +54,7 @@ private:
         size_t m_inputSnp=0;
         size_t m_thread=1;
         size_t m_snpIter=0;
-
+        size_t m_blockLoc=0;
 
         bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
         void skipSnps(size_t const skipNum);

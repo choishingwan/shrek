@@ -53,14 +53,11 @@ class Command
         inline size_t getRef() const { return m_ref; };
         inline size_t getAlt() const { return m_alt; };
         inline size_t getThread() const { return m_thread;};
-        inline size_t getMaxBlock() const {return m_maxBlock;};
-        inline size_t getMinBlock() const { return m_minBlock;};
         inline size_t getDistance() const {return m_distance;};
         inline size_t getSampleSize() const {return m_sampleSize;};
         inline double getPrevalence() const { return m_prevalence;};
         inline double getMaf() const { return m_maf;};
         inline double getExtreme() const {return m_extremeAdjust;};
-        inline bool maxBlockSet() const{ return m_maxBlockSet;};
         inline bool validate() const { return m_validate;};
         inline bool isPvalue() const {return m_isPvalue;};
         inline bool ldCorrect() const {return m_ldCorrection;};
@@ -101,14 +98,11 @@ class Command
         size_t m_ref = 0;
         size_t m_alt = 0;
         size_t m_thread = 1;
-        size_t m_maxBlock = 0;
-        size_t m_minBlock = 0;
         size_t m_distance = 1000000;
         size_t m_sampleSize = 0;
         double m_prevalence=1.0;
         double m_maf = -1.0;
         double m_extremeAdjust = 1.0;
-        bool m_maxBlockSet=false;
         bool m_validate=false;
         bool m_isPvalue = false;
         bool m_ldCorrection=false;
@@ -140,7 +134,8 @@ class Command
         void printUsage();
         void printCCUsage();
         void printQuantUsage();
-        void printRiskUsage();
+        void printRiskCCUsage();
+        void printRiskQtUsage();
         /** Function to perform general checking to for all parameters */
         bool generalCheck();
 

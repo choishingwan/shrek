@@ -30,9 +30,10 @@ void SnpEstimation::Estimate(GenotypeFileHandler &genotypeFileHandler,const std:
     while(genotypeResidual != blockInfo.size()){ //When we reaches blockInfo.size, it means we have finish all work
         previousLeftOvers=genotype.size();
         startBlockIndex = genotypeResidual;
+        //All getSnps need is an end of reading
         genotypeFileHandler.getSnps(genotype, snpLoc, ldLoc, chromosomeStart, chromosomeEnd, genotypeResidual, blockInfo);
-        /** The interval of blockInfo should be [] not [) **/
-        /** But then the genotypeResidual is a bound, not index **/
+        /** The interval of blockInfo should be [) not [] **/
+        /** The genotypeResidual is ALWAYS pointing to the NEXT BLOCK **/
         //build linkage
         linkageMatrix.Initialize(genotype, previousLeftOvers);
         linkageMatrix.Construct(genotype, startBlockIndex, previousLeftOvers, blockInfo, correction, ldLoc);
@@ -42,6 +43,8 @@ void SnpEstimation::Estimate(GenotypeFileHandler &genotypeFileHandler,const std:
         if(chromosomeEnd){
             chromosomeEnd = false;
             chromosomeStart = true;
+            //When end, it means all things in this chromosome is over, and we should not use the current block
+
             genotype.clear();
             ldLoc.clear();
             snpLoc.clear();
@@ -102,8 +105,9 @@ void SnpEstimation::getResult(const Command &commander, const Region &region, co
     }
     totalSum *= adjustment;
     for(size_t i = 0; i <regionEstimate.size(); ++i){
-        regionEstimate[i] *= adjustment;
+        //can't remember why I do the adjustment^2 and adjustment separately, something to do with our old implementation I guess
         regionEffect[i] = 2.0*(regionEffect[i]*adjustment*adjustment+2.0*adjustment*regionEstimate[i]*sampleSize)/((double)sampleSize*sampleSize);
+        regionEstimate[i] *= adjustment;
     }
 
     std::cout << "Category\tPositive\tNegative\tVariance" << std::endl;

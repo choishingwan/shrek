@@ -30,6 +30,7 @@
 int main(int argc, char *argv[]){
     //Parsing the parameters
     //Start working one by one
+    std::cerr << "HUGE BUG: WILL HAVE PROBLEM WHEN THERE ARE MORE THAN ONE CHROMOSOME"<< std::endl;
     try{
         Command commander;
         commander.initialize(argc, argv);

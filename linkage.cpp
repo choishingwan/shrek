@@ -24,32 +24,35 @@ void Linkage::Initialize(const boost::ptr_deque<Genotype> &genotype, const size_
 		//m_linkageSqrt.topLeftCorner(prevResiduals, prevResiduals) = temp;
 
     }
-//    std::ofstream debug("DEBUG");
-//    debug << m_linkage << std::endl;
-//    debug.close();
 }
 
 void Linkage::buildLd(const bool correction, const size_t vStart, const size_t vEnd, const size_t hEnd, const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &ldLoc){
     //Will work on all SNPs from vStart to hEnd
+    //Not inclusive of hEnd
+    /** ldLoc contains the SNP index on file, therefore corresponds to the number in block e.g. vStart, vEnd, hEnd **/
     size_t genotypeStart = genotype.size();
     size_t genotypeEnd = genotype.size(); //Bound
     size_t bottom = genotype.size(); //Bound
+
     for(size_t i = 0; i < ldLoc.size(); ++i){
         if(ldLoc[i]==vStart) genotypeStart = i;
-        else if(ldLoc[i] == vEnd) bottom = i+1;
+        else if(ldLoc[i] == vEnd) bottom = i;
         if(ldLoc[i]==hEnd){
-            genotypeEnd = i+1;
+            genotypeEnd = i;
             break;
         }
     }
+    /** All the ENDs are exclusive **/
 
 //    Linkage::mtx.lock();
 //    std::cerr << "Block info: " << genotypeStart << "\t" << genotypeEnd << "\t" << bottom << std::endl;
 //    Linkage::mtx.unlock();
 //
     for(size_t i = genotypeStart; i < bottom; ++i){
+        //Transversing vertically
         m_linkage(i,i) = 1.0;
         for(size_t j = i+1; j< genotypeEnd; ++j){
+            //Transversing horizontally
             if(m_linkage(i,j) == 0.0){ //Again, this is problematic because you are finding equal of double
                 double rSquare=0.0;
                 double r =0.0;
@@ -63,38 +66,49 @@ void Linkage::buildLd(const bool correction, const size_t vStart, const size_t v
 
 void Linkage::Construct(const boost::ptr_deque<Genotype> &genotype, const size_t &genotypeIndex, const size_t& remainedLD, const boost::ptr_vector<Interval> &blockInfo, const bool correction, const std::deque<size_t> &ldLoc){
 	if(genotype.empty())    throw std::runtime_error("There is no genotype to work on");
+    /** genotypeIndex = beginning block for this iteration **/
     size_t startRange =  genotypeIndex;
+    /** remainedLD = number of genotypes that were from previous situations**/
     size_t endRange=0;
     size_t range = m_thread;
     if(remainedLD==0)range +=2;
     else{
-        //Something was left behind, and they must be 2 blocks before
+        /**
+         *  If something is left behind, we also need them for LD construction
+         *  As we typically retain the last two block, we backtrack our startRange to two items forward
+         */
         startRange -= 2;//Two steps is only right if I have remove stuffs
     }
     std::string currentChr = blockInfo[startRange].getChr();
+
+
     size_t boundHunter = genotypeIndex;
-    for(; boundHunter< genotypeIndex+range && boundHunter < blockInfo.size(); ++boundHunter){
-            if(blockInfo[boundHunter].getChr().compare(currentChr)!=0){
-            boundHunter= boundHunter-1; //This mean we working on the last block of this chromosome
-            break;
+    for(; boundHunter < genotypeIndex+range && boundHunter < blockInfo.size(); ++boundHunter){
+        if(blockInfo[boundHunter].getChr().compare(currentChr)==0) break;
+        else if(blockInfo[boundHunter].getStart() != blockInfo[endRange].getEnd()) break;
+        else{
+            endRange = boundHunter;
         }
     }
-    endRange = boundHunter;
+    endRange++;
+    //Here, endRange = last block that we need to process +1.
+
     // So now the startRange and endRange will contain the index of the intervals to include in the LD construction
+    // It is inclusive, where we need to work on blocks from [startRange, endRange)
     // Each thread will process one sausage       \------------|
     //                                             \-----------|
 
-    //Change this into threading
+
     std::vector<std::thread> threadStore;
-    //Launch a group of threads
     size_t threadRunCounter = startRange;
     while(threadRunCounter < endRange){
-        while(threadStore.size() < m_thread && threadRunCounter < endRange){ //On purposely leave 1 thread out for the main
+        while(threadStore.size() <= m_thread && threadRunCounter < endRange){
             if(threadRunCounter+2 < endRange){
-                threadStore.push_back(std::thread(&Linkage::buildLd, this, correction, blockInfo[threadRunCounter].getStart(), blockInfo[threadRunCounter].getEnd()-1,blockInfo[threadRunCounter+2].getEnd(), std::cref(genotype), std::cref(ldLoc)));
+                //We on purposely
+                threadStore.push_back(std::thread(&Linkage::buildLd, this, correction, blockInfo[threadRunCounter].getStart(), blockInfo[threadRunCounter].getEnd(),blockInfo[threadRunCounter+2].getEnd(), std::cref(genotype), std::cref(ldLoc)));
             }
             else if(threadRunCounter+1 < endRange){
-                threadStore.push_back(std::thread(&Linkage::buildLd, this, correction, blockInfo[threadRunCounter].getStart(), blockInfo[threadRunCounter].getEnd()-1,blockInfo[threadRunCounter+1].getEnd(), std::cref(genotype), std::cref(ldLoc)));
+                threadStore.push_back(std::thread(&Linkage::buildLd, this, correction, blockInfo[threadRunCounter].getStart(), blockInfo[threadRunCounter].getEnd(),blockInfo[threadRunCounter+1].getEnd(), std::cref(genotype), std::cref(ldLoc)));
             }
             else{
                 threadStore.push_back(std::thread(&Linkage::buildLd, this, correction, blockInfo[threadRunCounter].getStart(), blockInfo[threadRunCounter].getEnd(),blockInfo[threadRunCounter].getEnd(), std::cref(genotype), std::cref(ldLoc)));
@@ -138,7 +152,9 @@ void Linkage::solve(const size_t loc, const size_t length, const Eigen::MatrixXd
         iterCount++;
     }
 
-
+    /** have not decide whether if we should use the original method for sd calculation
+     *  maybe it will be more accurate now consider we have used the dynamic block size?
+     */
     Eigen::MatrixXd vecOfOne = Eigen::MatrixXd::Constant(length,betaEstimate.cols(), 1.0);
     double eNorm = vecOfOne.norm();
     /** Calculate the effective number here **/
@@ -158,6 +174,16 @@ void Linkage::solve(const size_t loc, const size_t length, const Eigen::MatrixXd
         effectiveNumber = effectiveNumber+update;
         iterCount++;
     }
+    /** Old method of variant calculation */
+    /*
+    Eigen::MatrixXd ncpEstimate = (4*m_linkageSqrt.block(loc, loc, length, length)).array()*((*sqrtChiSq).segment(loc, length)*(*sqrtChiSq).segment(loc, length).transpose()).array();
+    Eigen::VectorXd minusF = (Eigen::VectorXd::Constant(length, 1.0)-(*betaEstimate).segment(start, length));
+    for(size_t i = 0; i < length; ++i){
+        minusF(i) = minusF(i)/((double)sampleSize-2.0+((*sqrtChiSq).segment(start, length))(i)*((*sqrtChiSq).segment(start, length))(i));
+    }
+    (*variance).noalias() = (rInverse*minusF.asDiagonal()*(ncpEstimate-2*m_linkage.block(start, start, length, length))*minusF.asDiagonal()*rInverse);
+    */
+
     /** Calculate LDSCore **/
     ldScore =m_linkage.block(loc, loc, length, length).colwise().sum();
 }
