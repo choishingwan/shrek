@@ -63,7 +63,6 @@ void Command::getIndex(const std::vector<std::string> &index, const std::string 
     }
     std::string header;
     std::getline(pfile, header);
-    pfile.close();
     header = usefulTools::trim(header);
     if(header.empty()){
         throw "Empty header line for pvalue file";
@@ -75,11 +74,11 @@ void Command::getIndex(const std::vector<std::string> &index, const std::string 
     }
 
     // Not very efficient here, but should be ok consider the number of possible header
-    // Maybe someone who is interested in optimization can optimize this
-    for(size_t i = 0; i < index.size(); ++i){
-        for(size_t j = 0; j < token.size(); ++j){
-            if(index[i].compare(token[j])==0){
-                indexResult.push_back(j);
+    // Maybe someone who is interested in optimization can optimize this~
+    for(size_t i = 0; i < token.size(); ++i){
+        for(size_t j = 0; j < index.size(); ++j){
+            if(index[j].compare(token[i])==0){
+                indexResult.push_back(i);
                 break;
             }
         }
@@ -221,7 +220,6 @@ void Command::caseControlProcess(int argc, char* argv[]){
                 break;
             case 'D':
                 m_dirIndex = index[i];
-                m_dirGiven =true;
                 break;
         }
     }
@@ -374,10 +372,10 @@ void Command::quantitativeProcess(int argc, char* argv[]){
                 break;
             case 'D':
                 m_dirIndex = index[i];
-                m_dirGiven = true;
                 break;
         }
     }
+    for(size_t i = 0; i < typeFor)
     //Check for duplication
     sort( index.begin(), index.end() );
     index.erase( unique( index.begin(), index.end() ), index.end() );
@@ -386,13 +384,15 @@ void Command::quantitativeProcess(int argc, char* argv[]){
     if(index.size() != typeForIndex.size()){
         throw "Duplicated fields, please check your input";
     }
-    if(!m_isPvalue && !m_dirGiven){ //Test statistic from Qt trait contains the sign
-        m_dirGiven = true;
-        m_dirIndex = m_stats;
-    }
-    //TODO Check input, e.g. sample size should all be integers, if input is p-value, then it should be in the range of 0 and 1
-}
+    std::cerr << "c: " << m_chrIndex << std::endl;
+    std::cerr << "r: " << m_rsIndex << std::endl;
+    std::cerr << "b: " << m_bpIndex << std::endl;
+    std::cerr << "s: " << m_stats << std::endl;
+    std::cerr << "a: " << m_sampleSizeIndex << std::endl;
+    std::cerr << "d: " << m_dirIndex << std::endl;
 
+
+}
 void Command::dichotomusRiskProcess(int argc, char* argv[]){
     static const char *optString = "E:T:D:g:Aa:R:k:p:b:c:r:l:so:f:t:d:L:vunh?";
 	static const struct option longOpts[]={

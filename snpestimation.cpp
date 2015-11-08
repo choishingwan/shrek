@@ -18,7 +18,9 @@ void SnpEstimation::Estimate(GenotypeFileHandler &genotypeFileHandler,const std:
     bool chromosomeEnd = false;
     bool correction = commander.ldCorrect();
     Linkage linkageMatrix(commander.getThread());
-    Decomposition decomposition(commander.getThread());
+    //bool direction = commander.hasDir();
+    bool direction = false;
+    Decomposition decomposition(commander.getThread(), direction);
 
     //Start processing (will need to wrap it with a while loop
     /*

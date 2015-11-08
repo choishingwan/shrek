@@ -69,7 +69,6 @@ class Command
         inline bool extremeAdjust() const {return m_provideExtremeAdjustment;};
         inline bool sampleSizeProvided() const{return m_provideSampleSize;};
         inline bool removeAmbig() const{return m_keep; }; //Default keeping ambiguous SNPs
-        inline bool hasDir() const{return m_dirGiven; };
         inline std::string getPvalueFileName() const{return m_pValueFileName; };
         inline std::string getLdFilePrefix() const{ return m_ldFilePrefix; };
         inline std::string getOutputPrefix() const {return m_outputPrefix; };
@@ -116,7 +115,6 @@ class Command
         bool m_provideExtremeAdjustment = false;
         bool m_provideSampleSize = false;
         bool m_keep = false; //Default not keeping ambiguous SNPs
-        bool m_dirGiven = false;
 
         std::string m_pValueFileName="";
         std::string m_ldFilePrefix="";
@@ -142,7 +140,7 @@ class Command
         bool generalCheck();
 
         std::vector<size_t> processRange(std::string input);
-        void getIndex(const std::vector<std::string> &index, const std::string &pvalueFileName, std::vector<size_t> &indexResult);
+        void getIndex(std::vector<std::string> index, std::string pval);
 };
 
 #endif // COMMAND_H

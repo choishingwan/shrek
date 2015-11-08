@@ -5,7 +5,7 @@
 std::mutex Decomposition::mtx;
 Decomposition::Decomposition(size_t thread, bool dir):m_thread(thread), m_dir(dir){}
 
-void Decomposition::solve(const std::vector<size_t> &boundaries, const size_t index, const Linkage &linkage, const std::deque<size_t> &snpLoc, boost::ptr_vector<Snp> &snpList, const bool &chromosomeStart, const Eigen::MatrixXd &betaEstimate, const Eigen::MatrixXd &sqrtChi, const Eigen::MatrixXd &sampleSize){
+void Decomposition::solve(const std::vector<size_t> &boundaries, const size_t index, const Linkage &linkage, const std::deque<size_t> &snpLoc, boost::ptr_vector<Snp> &snpList, const bool &chromosomeStart, const Eigen::MatrixXd &betaEstimate, const Eigen::MatrixXd &sqrtChi){
     size_t sizeOfWindow = 0;
     size_t copyStart = boundaries[index+1]; //Default we don't need the first part unless it was a new start
     size_t copyEnd = copyStart; //This is the bound
@@ -27,16 +27,11 @@ void Decomposition::solve(const std::vector<size_t> &boundaries, const size_t in
     Eigen::MatrixXd effectiveNumber = Eigen::MatrixXd::Zero(sizeOfWindow, 1);
     Eigen::VectorXd ldScore = Eigen::VectorXd::Zero(sizeOfWindow);
     if(!m_dir) linkage.solve(boundaries[index], sizeOfWindow,betaEstimate, heritability,effectiveNumber,ldScore);
-    else linkage.solve(boundaries[index], sizeOfWindow,betaEstimate, sqrtChi, heritability,effectiveNumber,ldScore, sampleSize); //Here effective number = variance
     //Now that we have got the results, we need to write them to the SNP
     for(size_t i = copyStart; i < copyEnd; ++i){
         snpList.at(snpLoc[i]).setHeritability(heritability(i-boundaries[index],0));
-        if(!m_dir) snpList.at(snpLoc[i]).setEffectiveNumber(effectiveNumber(i-boundaries[index],0));
+        snpList.at(snpLoc[i]).setEffectiveNumber(effectiveNumber(i-boundaries[index],0));
         snpList.at(snpLoc[i]).setLDScore(ldScore(i-boundaries[index]));
-    }
-    if(m_dir){
-        //we need special way to capture the variance
-        //Suddenly remember how complicated this can be, delay it until after thesis.
     }
 }
 
@@ -87,24 +82,22 @@ void Decomposition::run(const Linkage &linkage, const size_t &genotypeIndex, con
         betaEstimate(i)  = snpList.at(snpLoc[i]).getBeta();
     }
     Eigen::MatrixXd sqrtChi = Eigen::MatrixXd::Zero(ldLoc.size(), 1);
-    Eigen::MatrixXd sampleSize = Eigen::MatrixXd::Zero(ldLoc.size(), 1);
     if(m_dir){
         for(size_t i = 0; i < snpLoc.size(); ++i){
-            sqrtChi(i) = (snpList.at(snpLoc[i]).getSqrtChi());
-            sampleSize(i) = (snpList.at(snpLoc[i]).getSampleSize());
+            sqrtChi(i) = sqrt(snpList.at(snpLoc[i]).getBeta())*snpList.at(snpLoc[i]).getDirection();
         }
     }
     //Now the boundaries should be representative of the location on the ld matrix
     /** We need to consider situation where the chromosome only has two or one blocks **/
     if(boundaries.size() -2 < 0){
         //Very small chromosome
-        solve(boundaries, 0, linkage, snpLoc, snpList, chromosomeStart, betaEstimate, sqrtChi, sampleSize);
+        solve(boundaries, 0, linkage, snpLoc, snpList, chromosomeStart, betaEstimate, sqrtChi);
     }
     size_t threadRunCounter =0;
     while(threadRunCounter < boundaries.size()-2){
         while(threadStore.size() < m_thread && threadRunCounter < boundaries.size()-2){ //On purposely leave 1 thread out for the main
             /** Thread counter is basically the index for the boundary vector **/
-            threadStore.push_back(std::thread(&Decomposition::solve, this, std::cref(boundaries), threadRunCounter, std::cref(linkage), std::cref(snpLoc), std::ref(snpList),chromosomeStart, std::cref(betaEstimate), std::cref(sqrtChi), std::cref(sampleSize)));
+            threadStore.push_back(std::thread(&Decomposition::solve, this, std::cref(boundaries), threadRunCounter, std::cref(linkage), std::cref(snpLoc), std::ref(snpList),chromosomeStart, std::cref(betaEstimate), std::cref(sqrtChi)));
             threadRunCounter++;
         }
 

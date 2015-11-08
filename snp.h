@@ -48,11 +48,14 @@ public:
         inline double getHeritability() const{ return m_heritability; };
         inline double getEffectiveNumber() const{ return m_effectiveNumber; };
         inline double getLDScore() const{ return m_ldscore; };
+        inline double getSqrtChi() const{ return m_sqrtChi; };
+        inline double getVariance() const{ return m_variance; };
         inline bool Concordant(std::string chr, size_t bp, std::string rsId) const{  return chr.compare(m_chr) ==0 && bp==m_bp && rsId.compare(m_rs) == 0; }
         inline bool getFlag(size_t i ) const {return m_regionFlag.at(i); };
         inline void setHeritability(double h){ m_heritability = h; };
         inline void setEffectiveNumber(double e){ m_effectiveNumber = e; };
         inline void setLDScore(double s){ m_ldscore = s; };
+        inline void setVariance(double v){ m_variance = v; };
         Snp(const Snp& that) = delete;
         void setFlag(const size_t i, bool flag);
 
@@ -74,6 +77,8 @@ private:
         double m_ldscore=0.0;
         //std::vector<double> m_beta;
         double m_beta=0.0;
+        double m_sqrtChi=0.0;
+        double m_variance = 0.0;
         //std::vector<bool> m_remove;
         std::vector<bool> m_regionFlag;
 

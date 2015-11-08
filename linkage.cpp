@@ -12,16 +12,16 @@ void Linkage::Initialize(const boost::ptr_deque<Genotype> &genotype, const size_
 	//Use previous informations
     if(prevResiduals == 0){
         m_linkage = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
-        //m_linkageSqrt = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
+        m_linkageSqrt = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
     }
     else{
 		Eigen::MatrixXd temp = m_linkage.bottomRightCorner(prevResiduals,prevResiduals);
 		m_linkage= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
 		m_linkage.topLeftCorner(prevResiduals, prevResiduals) = temp;
         //Currently we only need the R2 matrix, so we will ignore the R matrix
-		//temp = m_linkageSqrt.bottomRightCorner(prevResiduals,prevResiduals);
-		//m_linkageSqrt= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
-		//m_linkageSqrt.topLeftCorner(prevResiduals, prevResiduals) = temp;
+		temp = m_linkageSqrt.bottomRightCorner(prevResiduals,prevResiduals);
+        m_linkageSqrt= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
+		m_linkageSqrt.topLeftCorner(prevResiduals, prevResiduals) = temp;
 
     }
 }
@@ -59,6 +59,8 @@ void Linkage::buildLd(const bool correction, const size_t vStart, const size_t v
                 genotype[i].GetbothR(&(genotype[j]),correction, r, rSquare);
                 m_linkage(i,j) = rSquare;
                 m_linkage(j,i) = rSquare;
+                m_linkageSqrt(j,i) = r;
+                m_linkageSqrt(j,i) = r;
             }
         }
     }
@@ -67,6 +69,7 @@ void Linkage::buildLd(const bool correction, const size_t vStart, const size_t v
     //the last block in the matrix will be missing
     if(bottom +1 ==genotype.size()){
         m_linkage(bottom, bottom) = 1.0;
+        m_linkageSqrt(bottom, bottom) = 1.0;
     }
 }
 
@@ -183,15 +186,44 @@ void Linkage::solve(const size_t loc, const size_t length, const Eigen::MatrixXd
         effectiveNumber = effectiveNumber+update;
         iterCount++;
     }
-    /** Old method of variant calculation */
-    /*
-    Eigen::MatrixXd ncpEstimate = (4*m_linkageSqrt.block(loc, loc, length, length)).array()*((*sqrtChiSq).segment(loc, length)*(*sqrtChiSq).segment(loc, length).transpose()).array();
-    Eigen::VectorXd minusF = (Eigen::VectorXd::Constant(length, 1.0)-(*betaEstimate).segment(start, length));
-    for(size_t i = 0; i < length; ++i){
-        minusF(i) = minusF(i)/((double)sampleSize-2.0+((*sqrtChiSq).segment(start, length))(i)*((*sqrtChiSq).segment(start, length))(i));
+
+    /** Calculate LDSCore **/
+    ldScore =m_linkage.block(loc, loc, length, length).colwise().sum();
+}
+
+
+
+void Linkage::solve(const size_t loc, const size_t length, const Eigen::MatrixXd &betaEstimate, const Eigen::MatrixXd &sqrtChi, Eigen::MatrixXd &heritability, Eigen::MatrixXd &variance, Eigen::VectorXd &ldScore,const Eigen::MatrixXd &sampleSize) const {
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(loc, loc, length, length));
+    double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().maxCoeff();
+    Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
+    /** Calculate the h vector here **/
+    heritability= rInverse*betaEstimate.block(loc, 0,length,betaEstimate.cols());
+    Eigen::MatrixXd error =m_linkage.block(loc, loc, length, length)*heritability - betaEstimate.block(loc, 0,length,betaEstimate.cols());
+	double bNorm = betaEstimate.block(loc, 0,length,betaEstimate.cols()).norm();
+    double relative_error = error.norm() / bNorm;
+    double prev_error = relative_error+1;
+    Eigen::MatrixXd update = heritability;
+    //Iterative improvement, arbitrary max iteration
+    size_t maxIter = 300;
+    size_t iterCount = 0;
+    while(relative_error < prev_error && iterCount < maxIter){
+        prev_error = relative_error;
+        update.noalias()=rInverse*(-error);
+        relative_error = 0.0;
+        error.noalias()= m_linkage.block(loc, loc, length, length)*(heritability+update) - betaEstimate.block(loc, 0,length,betaEstimate.cols());
+        relative_error = error.norm() / bNorm;
+        if(relative_error < 1e-300) relative_error = 0;
+        heritability = heritability+update;
+        iterCount++;
     }
-    (*variance).noalias() = (rInverse*minusF.asDiagonal()*(ncpEstimate-2*m_linkage.block(start, start, length, length))*minusF.asDiagonal()*rInverse);
-    */
+    //Use the complex method for variance
+    Eigen::MatrixXd ncpEstimate =(4*m_linkageSqrt.block(loc, loc, length, length)).array()*(sqrtChi.block(loc, 0,length,sqrtChi.cols())*sqrtChi.block(loc, 0,length,sqrtChi.cols()).transpose()).array();
+    Eigen::VectorXd minusF = Eigen::VectorXd::Constant(length, 1.0)-betaEstimate.block(loc, 0,length,betaEstimate.cols());
+    for(size_t i = 0; i < length; ++i){
+        minusF(i) = minusF(i)/((double)(sampleSize.block(loc, 0,length,sampleSize.cols()))(i,0)-2.0+(sqrtChi.block(loc, 0,length,sqrtChi.cols()))(i,0)*(sqrtChi.block(loc, 0,length,sqrtChi.cols()))(i,0));
+    }
+    variance = (rInverse*minusF.asDiagonal()*(ncpEstimate-2*m_linkage.block(loc, loc, length, length))*minusF.asDiagonal()*rInverse);
 
     /** Calculate LDSCore **/
     ldScore =m_linkage.block(loc, loc, length, length).colwise().sum();

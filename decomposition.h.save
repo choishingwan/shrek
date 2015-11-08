@@ -26,11 +26,11 @@ class Decomposition
 	public:
 		Decomposition(size_t thread, bool dir);
         void run(const Linkage &linkage, const size_t &genotypeIndex, const size_t& remainedLD, const boost::ptr_vector<Interval> &blockInfo, std::deque<size_t> &ldLoc, const std::deque<size_t> &snpLoc, boost::ptr_vector<Snp> &snpList, const bool &chromosomeStart);
-        void solve(const std::vector<size_t> &boundaries, const size_t index, const Linkage &linkage, const std::deque<size_t> &snpLoc, boost::ptr_vector<Snp> &snpList, const bool &chromosomeStart, const Eigen::MatrixXd &betaEstimate, const Eigen::MatrixXd &sqrtChi, const Eigen::MatrixXd &sampleSize);
+        void solve(const std::vector<size_t> &boundaries, const size_t index, const Linkage &linkage, const std::deque<size_t> &snpLoc, boost::ptr_vector<Snp> &snpList, const bool &chromosomeStart, const Eigen::MatrixXd &betaEstimate);
 	protected:
 	private:
         size_t m_thread=1;
-        bool m_dir = false;
+        bool m_dir = false
         static std::mutex mtx;
 
 };
