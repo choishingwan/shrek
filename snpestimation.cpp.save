@@ -31,18 +31,16 @@ void SnpEstimation::Estimate(GenotypeFileHandler &genotypeFileHandler,const std:
         previousLeftOvers=genotype.size();
         startBlockIndex = genotypeResidual;
         //All getSnps need is an end of reading
-        //std::cerr << "Start getting SNPs: " << previousLeftOvers << "\t" << genotypeResidual << std::endl;
+        std::cerr << "Start getting SNPs: " << previousLeftOvers << "\t" << genotypeResidual << std::endl;
         genotypeFileHandler.getSnps(genotype, snpLoc, ldLoc, chromosomeStart, chromosomeEnd, genotypeResidual, blockInfo);
-        //std::cerr << "Now got: " << genotype.size() << std::endl;
+        std::cerr << "Now "
         /** The interval of blockInfo should be [) not [] **/
         /** The genotypeResidual is ALWAYS pointing to the NEXT BLOCK **/
         //build linkage
         linkageMatrix.Initialize(genotype, previousLeftOvers);
         linkageMatrix.Construct(genotype, startBlockIndex, previousLeftOvers, blockInfo, correction, ldLoc);
-        //linkageMatrix.print();
-        //exit(-1);
         decomposition.run(linkageMatrix, startBlockIndex, previousLeftOvers, blockInfo, ldLoc, snpLoc, snpList, chromosomeStart);
-        //std::cerr << "Decomposed" << std::endl;
+        std::cerr << "Decomposed" << std::endl;
         //Now we have the LD matrix we will want to decompose it
         //If it is not chromosome end, we remove everything except the last two blocks
         if(chromosomeEnd){

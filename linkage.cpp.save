@@ -44,9 +44,9 @@ void Linkage::buildLd(const bool correction, const size_t vStart, const size_t v
     }
     /** All the ENDs are exclusive **/
 
-    //Linkage::mtx.lock();
-    //std::cerr << "Block info: " << genotypeStart << "\t" << genotypeEnd << "\t" << bottom << "\t" << m_linkage.cols() << "\t" << m_linkage.rows() << "\t" << genotype.size()<< std::endl;
-    //Linkage::mtx.unlock();
+    Linkage::mtx.lock();
+    std::cerr << "Block info: " << genotypeStart << "\t" << genotypeEnd << "\t" << bottom << "\t" << m_linkage.cols() << "\t" << m_linkage.rows() << "\t" << genotype.size()<< std::endl;
+    Linkage::mtx.unlock();
 //
     for(size_t i = genotypeStart; i < bottom; ++i){
         //Transversing vertically
@@ -65,9 +65,11 @@ void Linkage::buildLd(const bool correction, const size_t vStart, const size_t v
 
     //Do extra, the previous loop make sure thread safe and all block will only get "extra", problem is
     //the last block in the matrix will be missing
-    if(bottom +1 ==genotype.size()){
-        m_linkage(bottom, bottom) = 1.0;
-    }
+    Linkage::mtx.lock();
+    std::cerr << "Adding final 1" << std::endl;
+    if(bot)
+    m_linkage(bottom, bottom) = 1.0;
+    Linkage::mtx.unlock();
 }
 
 void Linkage::Construct(const boost::ptr_deque<Genotype> &genotype, const size_t &genotypeIndex, const size_t& remainedLD, const boost::ptr_vector<Interval> &blockInfo, const bool correction, const std::deque<size_t> &ldLoc){

@@ -46,11 +46,14 @@ void Decomposition::run(const Linkage &linkage, const size_t &genotypeIndex, con
     }
 
     size_t i = genotypeIndex;
-
+    bool firstEntry = true;
     std::string currentChr = blockInfo[startRange].getChr();
     for(; i< genotypeIndex+range && i < blockInfo.size(); ++i){
-        if(blockInfo[i].getChr().compare(currentChr)==0) break;
-        else if(blockInfo[i].getStart() != blockInfo[endRange].getEnd()) break;
+        if(blockInfo[i].getChr().compare(currentChr)!=0) break;
+        else if(!firstEntry&&blockInfo[i].getStart() != blockInfo[endRange].getEnd()){
+            firstEntry=false;
+            break;
+        }
         else{
             endRange = i;
         }

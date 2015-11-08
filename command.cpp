@@ -52,7 +52,7 @@ void Command::initialize(int argc, char* argv[]){
 
 void Command::caseControlProcess(int argc, char* argv[]){
 
-    static const char *optString = "a:R:k:p:b:c:r:l:s:o:f:t:d:L:vunh?";
+    static const char *optString = "a:R:k:p:b:c:r:l:s:o:f:t:D:d:L:vunh?";
     static const struct option longOpts[]={
 	    //Parameters for correction
         {"case",required_argument, NULL,'a'},
@@ -70,6 +70,7 @@ void Command::caseControlProcess(int argc, char* argv[]){
         {"maf",required_argument, NULL,'f'},
         {"thread",required_argument, NULL,'t'},
         {"distance",required_argument, NULL,'d'},
+        {"direction",required_argument, NULL,'D'},
         {"region",required_argument, NULL,'L'},
         {"validate",no_argument, NULL,'v'},
         {"pvalue",no_argument, NULL,'u'},
@@ -592,7 +593,7 @@ void Command::printRunSummary(std::string regionMessage){
     else{
         std::cerr << "Use LD correction    : False" << std::endl;
     }
-    std::cerr	<< "LD distance          : " << m_ distance << std::endl;
+    std::cerr	<< "LD distance          : " << m_distance << std::endl;
 	std::cerr	<< "Number of regions    : " << regionMessage << std::endl;
 
 	std::cerr << std::endl << std::endl;

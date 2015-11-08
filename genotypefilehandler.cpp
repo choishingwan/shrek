@@ -363,12 +363,15 @@ void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deq
      *  Important property here is that in this for loop, i will +1 if it is a normal exit
      *  but will remain unchanged if it was break;
      */
+     bool firstEntry = true;
     for(; i < loopEnd && i < blockInfo.size(); ++i){
-        if(blockInfo[i].getChr().compare(currentChr)==0){
+        if(blockInfo[i].getChr().compare(currentChr)!=0){
             //We are heading for another chromosome
             chromosomeEnd = true;
             break;
-        }else if(blockInfo[i].getStart() != endRange){
+        }else if(!firstEntry && blockInfo[i].getStart() != endRange){
+            std::cerr << "Not equal" << std::endl;
+            firstEntry = false;
             //Again, we are working on another independent fragment
             chromosomeEnd = true; //Not really a new chromosome, but the behaviour of the programme should be the same
             break;
