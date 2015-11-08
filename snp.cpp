@@ -37,12 +37,9 @@ void Snp::computeVarianceExplained(const Command &commander){
                 beta=0.0;
             }
             beta = beta*m_direction;
-            if(rqt) beta = beta/sqrt(m_sampleSize-2.0+beta*beta); //we use beta for Qt Traits
+            if(rqt) beta = beta/sqrt(m_sampleSize-2.0+beta*beta);
             else{
                 beta = beta*beta;
-                if(m_direction){
-                    m_sqrtChi = sqrt(beta)*m_direction;
-                }
                 beta = (beta-1.0)/(m_sampleSize-2.0+beta);
             }
             m_beta=beta;
@@ -52,9 +49,6 @@ void Snp::computeVarianceExplained(const Command &commander){
             if(rqt) beta = beta/sqrt(m_sampleSize-2.0+beta*beta);
             else if(qt){
                 beta=beta*beta;
-                if(m_direction){
-                    m_sqrtChi = sqrt(beta)*m_direction;
-                }
                 beta = (beta-1.0)/(m_sampleSize-2.0+beta);
             }
             m_beta=beta;
@@ -73,9 +67,6 @@ void Snp::computeVarianceExplained(const Command &commander){
             if(rcc) beta = beta/sqrt(caseSize+controlSize-2.0+beta*beta);
             else{
                 beta = beta*beta;
-                if(m_direction){
-                    m_sqrtChi = sqrt(beta)*m_direction;
-                }
                 beta = (beta-1.0)/(caseSize+controlSize-2.0+beta);
             }
             m_beta=beta;
@@ -87,9 +78,6 @@ void Snp::computeVarianceExplained(const Command &commander){
                 beta = (beta)/(caseSize+controlSize -2.0+beta*beta);
             }
             else if(cc){
-                if(m_direction){
-                    m_sqrtChi = sqrt(beta)*m_direction;
-                }
                 beta = (beta-1.0)/(caseSize+controlSize -2.0+beta);
             }
             m_beta=beta;
@@ -156,7 +144,6 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
     bool rcc = commander.diRisk();
     bool isP = commander.isPvalue();
     bool sampleProvided = commander.sampleSizeProvided();
-    bool dirGiven = commander.hasDir();
 
 
     size_t expectedTokenSize=0;
@@ -172,7 +159,7 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
 
     //Risk Specific
     size_t dirIndex = commander.getDir();
-    if((isP && (rcc || rqt)) || dirGiven)   expectedTokenSize =(expectedTokenSize<dirIndex)?dirIndex:expectedTokenSize;
+    if(isP && (rcc || rqt))   expectedTokenSize =(expectedTokenSize<dirIndex)?dirIndex:expectedTokenSize;
     size_t refIndex = commander.getRef();
     if(rcc || rqt)   expectedTokenSize =(expectedTokenSize<refIndex)?refIndex:expectedTokenSize;
     size_t altIndex = commander.getAlt();
@@ -208,10 +195,6 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
                     std::string refAllele = "";
                     std::string altAllele = "";
                     int direction = 1;
-                    if(dirGiven){
-                        direction = atoi(token[dirIndex].c_str());
-                        direction=usefulTools::signum(direction);
-                    }
                     if(rcc || rqt){
                         refAllele = token[refIndex];
                         altAllele = token[altIndex];

@@ -45,11 +45,12 @@ class Linkage
         void Construct(const boost::ptr_deque<Genotype> &genotype, const size_t &genotypeIndex, const size_t& remainedLD, const boost::ptr_vector<Interval> &blockSize, const bool correction, const std::deque<size_t> &ldLoc);
 	    void print();
 	    void solve(const size_t loc, const size_t length, const Eigen::MatrixXd &betaEstimate, Eigen::MatrixXd &heritability, Eigen::MatrixXd &effectiveNumber, Eigen::VectorXd &ldScore) const;
-
+        void solve(const size_t loc, const size_t length, const Eigen::MatrixXd &betaEstimate, const Eigen::MatrixXd &sqrtChi, Eigen::MatrixXd &heritability, Eigen::MatrixXd &variance, Eigen::VectorXd &ldScore) const;
 	    inline size_t size()const {return m_linkage.rows(); };
 	protected:
 	private:
 	    void buildLd(const bool correction, const size_t vStart, const size_t vEnd, const size_t hEnd, const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &ldLoc);
+        Eigen::MatrixXd m_linkage;
         Eigen::MatrixXd m_linkage;
         size_t m_thread=1;
         static std::mutex mtx;
