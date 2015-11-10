@@ -76,13 +76,20 @@ void Command::getIndex(const std::vector<std::string> &index, const std::string 
 
     // Not very efficient here, but should be ok consider the number of possible header
     // Maybe someone who is interested in optimization can optimize this
+    bool found = false;
     for(size_t i = 0; i < index.size(); ++i){
         for(size_t j = 0; j < token.size(); ++j){
             if(index[i].compare(token[j])==0){
+                found = true;
                 indexResult.push_back(j);
                 break;
             }
         }
+        if(!found){
+            std::cerr << index[i] << " not found in header" << std::endl;
+        }
+
+        found = false;
     }
 
 }

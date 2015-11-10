@@ -92,11 +92,12 @@ void Snp::computeVarianceExplained(const Command &commander){
 void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Command &commander, const Region &regionList){
     std::vector<size_t> regionIncrementationIndex(regionList.getNumRegion(), 0);
 	size_t duplicate = 0;
-
+    //check if it is risk prediction
+    std::map<std::string, size_t> snpIndexTemp;
 	for(size_t i = 0; i < snpList.size(); ++i){
         //If the snp is new
-        if(snpIndex.find(snpList[i].getRs())== snpIndex.end()){
-            snpIndex[snpList[i].getRs()] =i ;
+        if(snpIndexTemp.find(snpList[i].getRs())== snpIndexTemp.end()){
+            snpIndexTemp[snpList[i].getRs()] =i ;
 
             snpList[i].computeVarianceExplained(commander);
             //The default flag (with LD), is always false at this stage
@@ -124,6 +125,36 @@ void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_v
         }
 
     }
+    if(commander.diRisk() || commander.conRisk()){
+        //Here we will update the SNP Index such that only the SNPs found in the genotype file will be used
+
+        std::string bimFileName = commander.getGenotype()+".bim";
+        std::ifstream bimFile;
+        bimFile.open(bimFileName.c_str());
+        if(!bimFile.is_open()){
+            throw  "Cannot open genotype file, please check";
+        }
+        while(std::getline(bimFile,line)){
+            line = usefulTools::trim(line);
+            if(!line.empty()){
+                std::vector<std::string> token;
+                usefulTools::tokenizer(line, "\t ", &token);
+                if(token.size() >=6){
+                    std::string chr= token[0];
+                    std::string rs = token[1];
+                    if(snpIndexTemp.find(rs)!= snpIndexTemp.end()){
+                        //Add it to the snpIndex
+                        snpIndex[rs] = snpIndexTemp[rs];
+                    }
+                }
+            }
+        }
+        bimFile.close();
+    }
+    else{
+        snpIndex = snpIndexTemp;
+    }
+
 }
 
 void Snp::setFlag(const size_t i, bool flag){

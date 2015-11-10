@@ -30,7 +30,6 @@
 int main(int argc, char *argv[]){
     //Parsing the parameters
     //Start working one by one
-    std::cerr << "HUGE BUG: WILL HAVE PROBLEM WHEN THERE ARE MORE THAN ONE CHROMOSOME"<< std::endl;
     try{
         Command commander;
         commander.initialize(argc, argv);
@@ -40,17 +39,23 @@ int main(int argc, char *argv[]){
         boost::ptr_vector<Snp> snpList;
         std::map<std::string, size_t> snpIndex;
         Snp::generateSnpList(snpList, commander);
+        /**
+         * This function will update the snpIndex accordingly and will not include SNPs that are not presented
+         * in the genotype file.
+         */
         Snp::generateSnpIndex(snpIndex, snpList, commander, regionInfo);
         boost::ptr_vector<Interval> blockInfo; //We use this to store all block information, should be useful for both risk and not risk stuff
+        GenotypeFileHandler genotypeFileHandler;
+        genotypeFileHandler.initialize(commander, snpIndex, snpList, blockInfo);
         if(commander.quantitative() || commander.caseControl()){
-            GenotypeFileHandler genotypeFileHandler;
-            genotypeFileHandler.initialize(commander, snpIndex, snpList, blockInfo);
             //Now everything is prepared, we can start the SNP heritability estimation
             SnpEstimation snpEstimation;
             snpEstimation.Estimate(genotypeFileHandler, snpIndex, snpList, regionInfo, commander, blockInfo);
             snpEstimation.getResult(commander, regionInfo, snpIndex,snpList);
         }
         else if(commander.diRisk() || commander.conRisk()){
+            SnpEstimation snpPrediction;
+            snpPrediction.Predict(genotypeFileHandler, snpIndex, snpList, regionInfo, commander, blockInfo);
 
         }
     }

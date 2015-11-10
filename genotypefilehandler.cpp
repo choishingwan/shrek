@@ -3,6 +3,7 @@
 GenotypeFileHandler::GenotypeFileHandler(){}
 GenotypeFileHandler::~GenotypeFileHandler(){}
 
+
 void GenotypeFileHandler::initialize(const Command &commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Interval> &blockInfo){
     m_thread = commander.getThread();
     m_outPrefix = commander.getOutputPrefix();
@@ -11,6 +12,10 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     bool mafFilt = commander.mafFilter();
     double mafThreshold = commander.getMaf();
     std::string line;
+    if(commander.conRisk || commander.diRisk()){
+        std::string genotypeBim = commander.getGenotype()+".bim";
+        bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_genoFile);
+    }
     //Get the number of samples in the ld file
     std::string famFileName = m_genotypeFilePrefix+".fam";
     std::ifstream famFile;
@@ -347,6 +352,9 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 
 
 
+void GenotypeFileHandler::getSnps(Eigen::MatrixXd &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &ldLoc, bool &chromosomeStart, bool &chromosomeEnd, size_t &prevResidual, boost::ptr_vector<Interval> &blockInfo){
+
+}
 
 void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &ldLoc, bool &chromosomeStart, bool &chromosomeEnd, size_t &prevResidual, boost::ptr_vector<Interval> &blockInfo){
     //If this is the start of chromosome, we need to process one more bin

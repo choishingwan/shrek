@@ -3,12 +3,36 @@
 SnpEstimation::SnpEstimation(){};
 SnpEstimation::~SnpEstimation(){};
 
+void SnpEstimation::Predict(GenotypeFileHandler &genotypeFileHandler,const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Region &regionInfo, const Command &commander,boost::ptr_vector<Interval> &blockInfo){
+    /**
+     *  This is the biggest difference between heritability estimation and risk prediction where the general procedure is slightly different
+     */
+    Genotype::SetsampleNum(genotypeFileHandler.getSampleSize());
+    size_t genotypeResidual = 0, startBlockIndex = 0;
+    size_t previousLeftOvers=0;
+    std::deque<size_t> snpLoc;
+    std::deque<size_t> ldLoc;
+    std::deque<size_t> blockLoc;
+    bool chromosomeStart = true;
+    bool chromosomeEnd = false;
+    bool correction = commander.ldCorrect();
+    Linkage linkageMatrix(commander.getThread());
+    Decomposition decomposition(commander.getThread());
+    Eigen::MatrixXd genotype; //Here we will have a different structure for genotype, because now we have a sample matrix
+    while(genotypeResidual != blockInfo.size()){ //When we reaches blockInfo.size, it means we have finish all work
+        previousLeftOvers=genotype.size();startBlockIndex = genotypeResidual;
+        genotypeFileHandler.getSnps(genotype, snpLoc, ldLoc, chromosomeStart, chromosomeEnd, genotypeResidual, blockInfo);
+
+    }
+
+}
+
 void SnpEstimation::Estimate(GenotypeFileHandler &genotypeFileHandler,const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Region &regionInfo, const Command &commander,boost::ptr_vector<Interval> &blockInfo){
     //Declaration
 
 	Genotype::SetsampleNum(genotypeFileHandler.getSampleSize()); //Cannot forget this, otherwise the programme will crash due to not knowing the sample size
     //TODO: Make this more trivial
-    size_t genotypeResidual = 0, startBlockIndex = 0;; //This is index of the block to read SNPs
+    size_t genotypeResidual = 0, startBlockIndex = 0; //This is index of the block to read SNPs
     size_t previousLeftOvers=0;
     boost::ptr_deque<Genotype> genotype;
     std::deque<size_t> snpLoc; //Store the SNP index (for snpList)

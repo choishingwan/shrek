@@ -3,6 +3,12 @@
 GenotypeFileHandler::GenotypeFileHandler(){}
 GenotypeFileHandler::~GenotypeFileHandler(){}
 
+void GenotypeFileHandler::initializeRisk(const Command &commander){
+    std::string genotypeBim = commander.getGenotype()+".bim";
+    bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_genoFile);
+}
+
+
 void GenotypeFileHandler::initialize(const Command &commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Interval> &blockInfo){
     m_thread = commander.getThread();
     m_outPrefix = commander.getOutputPrefix();
@@ -11,6 +17,7 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     bool mafFilt = commander.mafFilter();
     double mafThreshold = commander.getMaf();
     std::string line;
+    if(commander.)
     //Get the number of samples in the ld file
     std::string famFileName = m_genotypeFilePrefix+".fam";
     std::ifstream famFile;
@@ -365,12 +372,11 @@ void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deq
      */
      bool firstEntry = true;
     for(; i < loopEnd && i < blockInfo.size(); ++i){
-        if(blockInfo[i].getChr().compare(currentChr)==0){
+        if(blockInfo[i].getChr().compare(currentChr)!=0){
             //We are heading for another chromosome
-            std::cerr << "Chromosome End: "  << std::endl;
             chromosomeEnd = true;
             break;
-        }else if(firstEntry && blockInfo[i].getStart() != endRange){
+        }else if(!firstEntry && blockInfo[i].getStart() != endRange){
             std::cerr << "Not equal" << std::endl;
             firstEntry = false;
             //Again, we are working on another independent fragment
@@ -388,7 +394,6 @@ void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deq
     /**
      *  As a result of property of for loop, the prevResidual will ALWAYS be pointing to the next block.
      */
-     std::cerr << "Work on: " << m_snpIter << "\t" << m_inputSnp << "\t" << endRange << "\t" << i << std::endl;
     prevResidual=i;
     //So we will get all the required SNPs within this region
     while(m_snpIter < m_inputSnp && m_snpIter <= endRange){
