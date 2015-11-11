@@ -63,6 +63,7 @@ void Command::getIndex(const std::vector<std::string> &index, const std::string 
     }
     std::string header;
     std::getline(pfile, header);
+    pfile.close();
     header = usefulTools::trim(header);
     if(header.empty()){
         throw "Empty header line for pvalue file";
@@ -74,14 +75,21 @@ void Command::getIndex(const std::vector<std::string> &index, const std::string 
     }
 
     // Not very efficient here, but should be ok consider the number of possible header
-    // Maybe someone who is interested in optimization can optimize this~
-    for(size_t i = 0; i < token.size(); ++i){
-        for(size_t j = 0; j < index.size(); ++j){
-            if(index[j].compare(token[i])==0){
-                indexResult.push_back(i);
+    // Maybe someone who is interested in optimization can optimize this
+    bool found = false;
+    for(size_t i = 0; i < index.size(); ++i){
+        for(size_t j = 0; j < token.size(); ++j){
+            if(index[i].compare(token[j])==0){
+                found = true;
+                indexResult.push_back(j);
                 break;
             }
         }
+        if(!found){
+            std::cerr << index[i] << " not found in header" << std::endl;
+        }
+
+        found = false;
     }
 
 }
@@ -187,7 +195,7 @@ void Command::caseControlProcess(int argc, char* argv[]){
                 m_isPvalue = true;
                 break;
 			case 'n':
-				m_ldCorrection = true;
+				m_ldCorrection = false;
 				break;
 			case 'h':
 			case '?':
@@ -220,6 +228,7 @@ void Command::caseControlProcess(int argc, char* argv[]){
                 break;
             case 'D':
                 m_dirIndex = index[i];
+                m_dirGiven =true;
                 break;
         }
     }
@@ -330,7 +339,7 @@ void Command::quantitativeProcess(int argc, char* argv[]){
 				m_thread = atoi(optarg);
 				break;
 			case 'n':
-				m_ldCorrection = true;
+				m_ldCorrection = false;
 				break;
 			case 'u':
                 m_isPvalue = true;
@@ -372,10 +381,10 @@ void Command::quantitativeProcess(int argc, char* argv[]){
                 break;
             case 'D':
                 m_dirIndex = index[i];
+                m_dirGiven = true;
                 break;
         }
     }
-    for(size_t i = 0; i < typeFor)
     //Check for duplication
     sort( index.begin(), index.end() );
     index.erase( unique( index.begin(), index.end() ), index.end() );
@@ -384,15 +393,13 @@ void Command::quantitativeProcess(int argc, char* argv[]){
     if(index.size() != typeForIndex.size()){
         throw "Duplicated fields, please check your input";
     }
-    std::cerr << "c: " << m_chrIndex << std::endl;
-    std::cerr << "r: " << m_rsIndex << std::endl;
-    std::cerr << "b: " << m_bpIndex << std::endl;
-    std::cerr << "s: " << m_stats << std::endl;
-    std::cerr << "a: " << m_sampleSizeIndex << std::endl;
-    std::cerr << "d: " << m_dirIndex << std::endl;
-
-
+    if(!m_isPvalue && !m_dirGiven){ //Test statistic from Qt trait contains the sign
+        m_dirGiven = true;
+        m_dirIndex = m_stats;
+    }
+    //TODO Check input, e.g. sample size should all be integers, if input is p-value, then it should be in the range of 0 and 1
 }
+
 void Command::dichotomusRiskProcess(int argc, char* argv[]){
     static const char *optString = "E:T:D:g:Aa:R:k:p:b:c:r:l:so:f:t:d:L:vunh?";
 	static const struct option longOpts[]={
@@ -502,7 +509,7 @@ void Command::dichotomusRiskProcess(int argc, char* argv[]){
                 m_isPvalue = true;
                 break;
 			case 'n':
-				m_ldCorrection = true;
+				m_ldCorrection = false;
 				break;
 			case 'h':
 			case '?':
@@ -618,7 +625,7 @@ void Command::continuousRiskProcess(int argc, char* argv[]){
 				m_thread = atoi(optarg);
 				break;
 			case 'n':
-				m_ldCorrection = true;
+				m_ldCorrection = false;
 				break;
 			case 'u':
                 m_isPvalue = true;
@@ -741,12 +748,108 @@ void Command::printRunSummary(std::string regionMessage){
 
 
 void Command::printUsage(){
-
+    //General Usage
+    std::cerr << "General options: " << std::endl;
+    std::cerr << "  -d,--distance    The maximum distance allowed between SNPs at the start of "   << std::endl;
+    std::cerr << "                   window and the end of the window. The larger the value, the " << std::endl;
+    std::cerr << "                   slower the programme runs "                                   << std::endl;
+    std::cerr << "  -f,--maf         The maf threshold for the reference genotype file. SNPs with "<< std::endl;
+    std::cerr << "                   maf less than this value will not be used for the analysis"   << std::endl;
+    std::cerr << "  -u,--pvalue      Indicate whether if the input is p-value or test-statistic "  << std::endl;
+    std::cerr << "                   Cannot handle p-value of 0"                                   << std::endl;
+    std::cerr << "  -n,--correct     Turn off LD correction. The LD correction is used when "      << std::endl;
+    std::cerr << "                   using the genotype file to calculate the LD matrix. The "     << std::endl;
+    std::cerr << "                   LD correction is performed to adjust for number of sample"    << std::endl;
+    std::cerr << "                   used for calculating the LD. "                                << std::endl;
+    std::cerr << "                   We uses Weir & Hill(1980)'s formula to correct for the bias. "<< std::endl;
+    std::cerr << "  -L,--region      The region files. You may provide a bed file in the format:"  << std::endl;
+    std::cerr << "                   <region name>:<fileName>,<region name>:<fileName>,..."        << std::endl;
+    std::cerr << "                   The summary output will provide the per region estimate "     << std::endl;
+    std::cerr << "                   where the region are label by their order of input"           << std::endl;
+    std::cerr << "  -t,--thread      The number of thread use. This will affect not only the speed"<< std::endl;
+    std::cerr << "                   but also the memory requirement of the programme as we will " << std::endl;
+    std::cerr << "                   load more SNPs into the memory at one time if more threads "  << std::endl;
+    std::cerr << "                   are available"                                                << std::endl;
+    std::cerr << "  -v,--validate    Validate the SNPs. If this option is set, the programme will" << std::endl;
+    std::cerr << "                   compare the SNPs information in the p-value file with those " << std::endl;
+    std::cerr << "                   in the genotype file. Will output a warning if the "          << std::endl;
+    std::cerr << "                   information does not match. This validation is still very "   << std::endl;
+    std::cerr << "                   naive so it is important for the user to make sure the "      << std::endl;
+    std::cerr << "                   information matched. "                                        << std::endl;
+    std::cerr << "  -o,--out         The output file prefix. If provided, the programme will "     << std::endl;
+    std::cerr << "                   generate a <output>.sum and <output>.res file where the "     << std::endl;
+    std::cerr << "                   <output>.sum file will provide the run summary and the "      << std::endl;
+    std::cerr << "                   <output>.res file will provide the detail statistics"         << std::endl;
+    std::cerr << "  -h,-?,--help     Display the detail help message (This message)"               << std::endl;
 }
 void Command::printCCUsage(){
 
 }
 void Command::printQuantUsage(){
+
+    std::cerr << "usage: ./shrek quant [options]"                                                  << std::endl;
+    std::cerr << "Required options: "                                                              << std::endl;
+    std::cerr << "  -p,--pfile       The p-value file. The test statistic for each snp must "      << std::endl;
+    std::cerr << "                   be provided. "                                                << std::endl;
+    std::cerr << "  -b,--bfile       The linkage  file prefix. The programme will use this to "    << std::endl;
+    std::cerr << "                   calculate the LD matrix. Will require the fam, bim and bed"   << std::endl;
+    std::cerr << "                   file. Please try to perform quality control beforehand "      << std::endl;
+    std::cerr << "  -s,--stats       The column header of test statistic or p-value in the p-value"<< std::endl;
+    std::cerr << "                   file. It must be provided for the programme to run"           << std::endl;
+    std::cerr << "  -c,--chr         The column header of chromosome in the p-value file"          << std::endl;
+    std::cerr << "  -r,--rs          The column header of rsid in the p-value file"                << std::endl;
+    std::cerr << "  -l,--loc         The column header of rsid coordinate in the p-value file"     << std::endl;
+    std::cerr << "  -x,--sampleIndex The column header of sample size in the p-value file. "       << std::endl;
+    std::cerr << "                   If not provided, one must provide the sample size using the"  << std::endl;
+    std::cerr << "                   -N or --sampleSize option."                                   << std::endl;
+    std::cerr << "  -N,--sampleSize  The number of sample used in the association study. Must be " << std::endl;
+    std::cerr << "                   provided if the sampleIndex was not provided"  
+
+
+
+    {"extreme",required_argument,NULL,'e'},
+        {"sampleSize",required_argument,NULL,'N'},
+        {"sampleIndex",required_argument,NULL,'x'},
+        //File parameters
+
+		{"stats", required_argument, NULL, 's'},
+		{"direction",required_argument,NULL,'D'},
+        //General parameters
+		{"distance",required_argument,NULL,'d'},
+		{"maf",required_argument,NULL,'f'},
+		{"region",required_argument,NULL,'L'},
+		{"out",required_argument,NULL,'o'},
+		{"thread",required_argument,NULL,'t'},
+		{"correct",no_argument,NULL,'n'},
+		{"pvalue",no_argument,NULL,'u'},
+		{"validate",no_argument,NULL,'v'},
+		{"help",no_argument,NULL,'h'},
+    std::cerr << "                                                                               " << std::endl;
+    std::cerr << "Quantitative trait analysis: "                                                   << std::endl;
+    std::cerr << "  -q,--quant       The input is quantitative trait. The number should indicate"  << std::endl;
+    std::cerr << "                   the field where the statistic or p-value located within the " << std::endl;
+    std::cerr << "                   p-value file. "                                               << std::endl;
+    std::cerr << "                   For example, for p-value file with the following format: "    << std::endl;
+    std::cerr << "                   <Chr>    <rsID>    <BP>    <Statistic> "                      << std::endl;
+    std::cerr << "                   you should use --quant 4 "                                    << std::endl;
+    std::cerr << "  -s,--sampleSize  The number of sample used for the analysis. If not provided " << std::endl;
+    std::cerr << "                   the programme will try to obtain it directly from the "       << std::endl;
+    std::cerr << "                   p-value file based on the sample column index information"    << std::endl;
+    std::cerr << "  -e,--extreme     The extreme phenotype adjustment value. Should be: "          << std::endl;
+    std::cerr << "                   Variance after selection / Variance before selection"         << std::endl;
+    std::cerr << "  -x,--sampleIndex The sample column index. Indicating which column contains "   << std::endl;
+    std::cerr << "                   the sample size information "                                 << std::endl;
+    std::cerr << "                                                                               " << std::endl;
+    std::cerr << "Case Control analysis: "                                                         << std::endl;
+    std::cerr << "  -c,--caseControl The input is a case control analysis. The user are required"  << std::endl;
+    std::cerr << "                   to provide the prevalence of the phenotype and also the "     << std::endl;
+    std::cerr << "                   number of case and control used in the study. Similar to "    << std::endl;
+    std::cerr << "                   quant, cc indicate location of the statistic or p-value"      << std::endl;
+    std::cerr << "                   within the p-value file"                                      << std::endl;
+    std::cerr << "  -k,--prevalence  Specify the prevalence of the phenotype"                      << std::endl;
+    std::cerr << "  -a,--case        The number of case used in the study"                         << std::endl;
+    std::cerr << "  -R,--control     The number of control used in the study"                      << std::endl;
+    std::cerr << "                                                                               " << std::endl;
 
 }
 void Command::printRiskCCUsage(){

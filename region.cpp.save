@@ -10,8 +10,8 @@ Region::~Region()
 	//dtor
 }
 
-/**
- * Important to note: BED file is 0 base and the end bound is exclusive
+/** 
+ * Importa
  */
 void Region::generateRegion(std::string regionList){
     boost::ptr_vector<Interval> padRegion; //For the default region

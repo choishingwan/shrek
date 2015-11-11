@@ -12,9 +12,15 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     bool mafFilt = commander.mafFilter();
     double mafThreshold = commander.getMaf();
     std::string line;
-    if(commander.conRisk || commander.diRisk()){
+    if(commander.conRisk() || commander.diRisk()){
         std::string genotypeBim = commander.getGenotype()+".bim";
-        bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_genoFile);
+        bool bfile_SNP_major = openPlinkBinaryFile(genotypeBim, m_genoFile);
+        if(bfile_SNP_major){
+        //This is ok
+        }
+        else{
+            throw std::runtime_error("We currently have no plan of implementing the individual-major mode. Please use the snp-major format");
+        }
     }
     //Get the number of samples in the ld file
     std::string famFileName = m_genotypeFilePrefix+".fam";
@@ -149,6 +155,7 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     std::cerr << "Final SNPs number: " << finalNumSnp << std::endl;
     //Now we need to use the m_inclusion vector and the bim file to get get the intervals
     buildBlocks(bimFileName, blockInfo, commander.getDistance());
+    m_finalSnpNumber =finalNumSnp;
     //Now open the bed file to prepare for whatever happen next
 	bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_bedFile); //We will try to open the connection to bedFile
     if(bfile_SNP_major){

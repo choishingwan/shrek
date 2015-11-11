@@ -195,7 +195,7 @@ void Command::caseControlProcess(int argc, char* argv[]){
                 m_isPvalue = true;
                 break;
 			case 'n':
-				m_ldCorrection = true;
+				m_ldCorrection = false;
 				break;
 			case 'h':
 			case '?':
@@ -339,7 +339,7 @@ void Command::quantitativeProcess(int argc, char* argv[]){
 				m_thread = atoi(optarg);
 				break;
 			case 'n':
-				m_ldCorrection = true;
+				m_ldCorrection = false;
 				break;
 			case 'u':
                 m_isPvalue = true;
@@ -509,7 +509,7 @@ void Command::dichotomusRiskProcess(int argc, char* argv[]){
                 m_isPvalue = true;
                 break;
 			case 'n':
-				m_ldCorrection = true;
+				m_ldCorrection = false;
 				break;
 			case 'h':
 			case '?':
@@ -625,7 +625,7 @@ void Command::continuousRiskProcess(int argc, char* argv[]){
 				m_thread = atoi(optarg);
 				break;
 			case 'n':
-				m_ldCorrection = true;
+				m_ldCorrection = false;
 				break;
 			case 'u':
                 m_isPvalue = true;
@@ -748,14 +748,89 @@ void Command::printRunSummary(std::string regionMessage){
 
 
 void Command::printUsage(){
-
+    //General Usage
+    std::cerr << "General options: " << std::endl;
+    std::cerr << "  -d,--distance    The maximum distance allowed between SNPs at the start of "   << std::endl;
+    std::cerr << "                   window and the end of the window. The larger the value, the " << std::endl;
+    std::cerr << "                   slower the programme runs "                                   << std::endl;
+    std::cerr << "  -f,--maf         The maf threshold for the reference genotype file. SNPs with "<< std::endl;
+    std::cerr << "                   maf less than this value will not be used for the analysis"   << std::endl;
+    std::cerr << "  -u,--pvalue      Indicate whether if the input is p-value or test-statistic "  << std::endl;
+    std::cerr << "                   Cannot handle p-value of 0"                                   << std::endl;
+    std::cerr << "  -n,--correct     Turn off LD correction. The LD correction is used when "      << std::endl;
+    std::cerr << "                   using the genotype file to calculate the LD matrix. The "     << std::endl;
+    std::cerr << "                   LD correction is performed to adjust for number of sample"    << std::endl;
+    std::cerr << "                   used for calculating the LD. "                                << std::endl;
+    std::cerr << "                   We uses Weir & Hill(1980)'s formula to correct for the bias. "<< std::endl;
+    std::cerr << "  -L,--region      The region files. You may provide a bed file in the format:"  << std::endl;
+    std::cerr << "                   <region name>:<fileName>,<region name>:<fileName>,..."        << std::endl;
+    std::cerr << "                   The summary output will provide the per region estimate "     << std::endl;
+    std::cerr << "                   where the region are label by their order of input"           << std::endl;
+    std::cerr << "  -t,--thread      The number of thread use. This will affect not only the speed"<< std::endl;
+    std::cerr << "                   but also the memory requirement of the programme as we will " << std::endl;
+    std::cerr << "                   load more SNPs into the memory at one time if more threads "  << std::endl;
+    std::cerr << "                   are available"                                                << std::endl;
+    std::cerr << "  -v,--validate    Validate the SNPs. If this option is set, the programme will" << std::endl;
+    std::cerr << "                   compare the SNPs information in the p-value file with those " << std::endl;
+    std::cerr << "                   in the genotype file. Will output a warning if the "          << std::endl;
+    std::cerr << "                   information does not match. This validation is still very "   << std::endl;
+    std::cerr << "                   naive so it is important for the user to make sure the "      << std::endl;
+    std::cerr << "                   information matched. "                                        << std::endl;
+    std::cerr << "  -o,--out         The output file prefix. If provided, the programme will "     << std::endl;
+    std::cerr << "                   generate a <output>.sum and <output>.res file where the "     << std::endl;
+    std::cerr << "                   <output>.sum file will provide the run summary and the "      << std::endl;
+    std::cerr << "                   <output>.res file will provide the detail statistics"         << std::endl;
+    std::cerr << "  -h,-?,--help     Display the detail help message (This message)"               << std::endl;
+    std::cerr << "                                                                               " << std::endl;
 }
 void Command::printCCUsage(){
-
+    std::cerr << "Estimation of Heritability from Case Control Study:" << std::endl;
+    std::cerr << "usage: ./shrek cc [options]"                                                     << std::endl;
+    std::cerr << "Required options: "                                                              << std::endl;
+    std::cerr << "  -p,--pfile       The p-value file. The test statistic for each snp must "      << std::endl;
+    std::cerr << "                   be provided. "                                                << std::endl;
+    std::cerr << "  -b,--bfile       The linkage  file prefix. The programme will use this to "    << std::endl;
+    std::cerr << "                   calculate the LD matrix. Will require the fam, bim and bed"   << std::endl;
+    std::cerr << "                   file. Please try to perform quality control beforehand "      << std::endl;
+    std::cerr << "  -s,--stats       The column header of test statistic or p-value in the p-value"<< std::endl;
+    std::cerr << "                   file. It must be provided for the programme to run"           << std::endl;
+    std::cerr << "  -c,--chr         The column header of chromosome in the p-value file"          << std::endl;
+    std::cerr << "  -r,--rs          The column header of rsid in the p-value file"                << std::endl;
+    std::cerr << "  -l,--loc         The column header of rsid coordinate in the p-value file"     << std::endl;
+    std::cerr << "  -k,--prevalence  Specify the prevalence of the phenotype"                      << std::endl;
+    std::cerr << "  -a,--case        The number of case used in the study"                         << std::endl;
+    std::cerr << "  -R,--control     The number of control used in the study"                      << std::endl;
+    std::cerr << "                                                                               " << std::endl;
+    printUsage();
+    exit(0);
 }
 void Command::printQuantUsage(){
 
+    std::cerr << "Estimation of Heritability from Quantitative Trait Study:" << std::endl;
+    std::cerr << "usage: ./shrek quant [options]"                                                  << std::endl;
+    std::cerr << "Required options: "                                                              << std::endl;
+    std::cerr << "  -p,--pfile       The p-value file. The test statistic for each snp must "      << std::endl;
+    std::cerr << "                   be provided. "                                                << std::endl;
+    std::cerr << "  -b,--bfile       The linkage  file prefix. The programme will use this to "    << std::endl;
+    std::cerr << "                   calculate the LD matrix. Will require the fam, bim and bed"   << std::endl;
+    std::cerr << "                   file. Please try to perform quality control beforehand "      << std::endl;
+    std::cerr << "  -s,--stats       The column header of test statistic or p-value in the p-value"<< std::endl;
+    std::cerr << "                   file. It must be provided for the programme to run"           << std::endl;
+    std::cerr << "  -c,--chr         The column header of chromosome in the p-value file"          << std::endl;
+    std::cerr << "  -r,--rs          The column header of rsid in the p-value file"                << std::endl;
+    std::cerr << "  -l,--loc         The column header of rsid coordinate in the p-value file"     << std::endl;
+    std::cerr << "  -x,--sampleIndex The column header of sample size in the p-value file. "       << std::endl;
+    std::cerr << "                   If not provided, one must provide the sample size using the"  << std::endl;
+    std::cerr << "                   -N or --sampleSize option."                                   << std::endl;
+    std::cerr << "  -N,--sampleSize  The number of sample used in the association study. Must be " << std::endl;
+    std::cerr << "                   provided if the sampleIndex was not provided"                 << std::endl;
+    std::cerr << "  -e,--extreme     The extreme phenotype adjustment value. Should be: "          << std::endl;
+    std::cerr << "                   Variance after selection / Variance before selection"         << std::endl;
+    std::cerr << "                                                                               " << std::endl;
+    printUsage();
+    exit(0);
 }
+
 void Command::printRiskCCUsage(){
 
 }

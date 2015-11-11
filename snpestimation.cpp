@@ -20,9 +20,10 @@ void SnpEstimation::Predict(GenotypeFileHandler &genotypeFileHandler,const std::
     Decomposition decomposition(commander.getThread());
     Eigen::MatrixXd genotype; //Here we will have a different structure for genotype, because now we have a sample matrix
     while(genotypeResidual != blockInfo.size()){ //When we reaches blockInfo.size, it means we have finish all work
-        previousLeftOvers=genotype.size();startBlockIndex = genotypeResidual;
+        previousLeftOvers=genotype.size();
+        startBlockIndex = genotypeResidual;
         genotypeFileHandler.getSnps(genotype, snpLoc, ldLoc, chromosomeStart, chromosomeEnd, genotypeResidual, blockInfo);
-
+        std::cerr << "We are going to work here: " <<previousLeftOvers << "\t" << startBlockIndex << "\t" << correction << std::endl;
     }
 
 }
@@ -51,7 +52,25 @@ void SnpEstimation::Estimate(GenotypeFileHandler &genotypeFileHandler,const std:
     3. Decomposition
     */
     //The following
+    std::cerr << std::endl << "Performing heritability estimation:" << std::endl;
+    size_t totalSnpNum = genotypeFileHandler.getSnpNumber();
+    double progress = 0.0;
+    size_t barWidth = 60;
+    size_t doneItems=0;
     while(genotypeResidual != blockInfo.size()){ //When we reaches blockInfo.size, it means we have finish all work
+        progress =(double)(doneItems)/(double)totalSnpNum;
+        //std::cerr << doneItems << std::endl;
+
+        std::cerr << "[";
+        size_t pos=barWidth*progress;
+        for(size_t i = 0; i < barWidth;++i){
+            if(i < pos) std::cerr << "=";
+            else if(i==pos) std::cerr << ">";
+            else std::cerr << " ";
+        }
+        std::cerr << "]" << int(progress*100.0)<< "%\r";
+        std::cerr.flush();
+
         previousLeftOvers=genotype.size();
         startBlockIndex = genotypeResidual;
         //All getSnps need is an end of reading
@@ -73,7 +92,7 @@ void SnpEstimation::Estimate(GenotypeFileHandler &genotypeFileHandler,const std:
             chromosomeEnd = false;
             chromosomeStart = true;
             //When end, it means all things in this chromosome is over, and we should not use the current block
-
+            doneItems+= genotype.size();
             genotype.clear();
             ldLoc.clear();
             snpLoc.clear();
@@ -89,11 +108,21 @@ void SnpEstimation::Estimate(GenotypeFileHandler &genotypeFileHandler,const std:
                     break;
                 }
             }
+            doneItems+=i;
             ldLoc.erase (ldLoc.begin(),ldLoc.begin()+i);
             snpLoc.erase (snpLoc.begin(),snpLoc.begin()+i);
             genotype.erase (genotype.begin(),genotype.begin()+i);
         }
     }
+    progress =1;
+    std::cerr << "[";
+    size_t pos=barWidth*progress;
+    for(size_t i = 0; i < barWidth;++i){
+        if(i < pos) std::cerr << "=";
+        else if(i==pos) std::cerr << ">";
+        else std::cerr << " ";
+    }
+    std::cerr << "]" << int(progress*100.0)<< "%" << std::endl << std::endl;
 
 }
 

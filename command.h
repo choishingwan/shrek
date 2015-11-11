@@ -106,7 +106,7 @@ class Command
         double m_extremeAdjust = 1.0;
         bool m_validate=false;
         bool m_isPvalue = false;
-        bool m_ldCorrection=false;
+        bool m_ldCorrection=true;
         bool m_qt = false;
         bool m_cc = false;
         bool m_rqt = false;

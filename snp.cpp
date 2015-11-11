@@ -94,6 +94,7 @@ void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_v
 	size_t duplicate = 0;
     //check if it is risk prediction
     std::map<std::string, size_t> snpIndexTemp;
+    std::string line;
 	for(size_t i = 0; i < snpList.size(); ++i){
         //If the snp is new
         if(snpIndexTemp.find(snpList[i].getRs())== snpIndexTemp.end()){
