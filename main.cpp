@@ -39,11 +39,12 @@ int main(int argc, char *argv[]){
         boost::ptr_vector<Snp> snpList;
         std::map<std::string, size_t> snpIndex;
         Snp::generateSnpList(snpList, commander);
+        std::vector<int> genoInclusion; //Bad design here, but don't bother re-writing. useless for heritability estimation
         /**
          * This function will update the snpIndex accordingly and will not include SNPs that are not presented
          * in the genotype file.
          */
-        Snp::generateSnpIndex(snpIndex, snpList, commander, regionInfo);
+        Snp::generateSnpIndex(snpIndex, snpList, commander, regionInfo, genoInclusion);
         boost::ptr_vector<Interval> blockInfo; //We use this to store all block information, should be useful for both risk and not risk stuff
         GenotypeFileHandler genotypeFileHandler;
         genotypeFileHandler.initialize(commander, snpIndex, snpList, blockInfo);
@@ -55,7 +56,7 @@ int main(int argc, char *argv[]){
         }
         else if(commander.diRisk() || commander.conRisk()){
             SnpEstimation snpPrediction;
-            snpPrediction.Predict(genotypeFileHandler, snpIndex, snpList, regionInfo, commander, blockInfo);
+            snpPrediction.Predict(genotypeFileHandler, snpIndex, snpList, regionInfo, commander, blockInfo,genoInclusion);
 
         }
     }

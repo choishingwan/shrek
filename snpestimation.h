@@ -43,7 +43,7 @@ class SnpEstimation
 		virtual ~SnpEstimation();
 		/** Initialize the estimation */
 		void Estimate(GenotypeFileHandler &genotypeFileHandler,const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Region& regionInfo, const Command &commander,boost::ptr_vector<Interval> &blockInfo);
-		void Predict(GenotypeFileHandler &genotypeFileHandler,const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Region& regionInfo, const Command &commander,boost::ptr_vector<Interval> &blockInfo);
+		void Predict(GenotypeFileHandler &genotypeFileHandler,const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Region& regionInfo, const Command &commander,boost::ptr_vector<Interval> &blockInfo, const std::vector<int> &genoInclusion);
         void getResult(const Command &commander, const Region &region, const std::map<std::string, size_t> &snpIndex, const boost::ptr_vector<Snp> &snpList);
 	protected:
 	private:

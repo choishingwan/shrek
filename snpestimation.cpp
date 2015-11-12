@@ -3,7 +3,7 @@
 SnpEstimation::SnpEstimation(){};
 SnpEstimation::~SnpEstimation(){};
 
-void SnpEstimation::Predict(GenotypeFileHandler &genotypeFileHandler,const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Region &regionInfo, const Command &commander,boost::ptr_vector<Interval> &blockInfo){
+void SnpEstimation::Predict(GenotypeFileHandler &genotypeFileHandler,const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Region &regionInfo, const Command &commander,boost::ptr_vector<Interval> &blockInfo, const std::vector<int> &genoInclusion){
     /**
      *  This is the biggest difference between heritability estimation and risk prediction where the general procedure is slightly different
      */
@@ -22,7 +22,7 @@ void SnpEstimation::Predict(GenotypeFileHandler &genotypeFileHandler,const std::
     while(genotypeResidual != blockInfo.size()){ //When we reaches blockInfo.size, it means we have finish all work
         previousLeftOvers=genotype.size();
         startBlockIndex = genotypeResidual;
-        genotypeFileHandler.getSnps(genotype, snpLoc, ldLoc, chromosomeStart, chromosomeEnd, genotypeResidual, blockInfo);
+        genotypeFileHandler.getSnps(genotype, snpLoc, ldLoc, chromosomeStart, chromosomeEnd, genotypeResidual, blockInfo,genoInclusion);
         std::cerr << "We are going to work here: " <<previousLeftOvers << "\t" << startBlockIndex << "\t" << correction << std::endl;
     }
 

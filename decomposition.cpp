@@ -89,7 +89,7 @@ void Decomposition::run(const Linkage &linkage, const size_t &genotypeIndex, con
     }
     size_t threadRunCounter =0;
     while(threadRunCounter < boundaries.size()-2){
-        while(threadStore.size() < m_thread && threadRunCounter < boundaries.size()-2){ //On purposely leave 1 thread out for the main
+        while(threadStore.size() <= m_thread && threadRunCounter < boundaries.size()-2){ //On purposely leave 1 thread out for the main
             /** Thread counter is basically the index for the boundary vector **/
             threadStore.push_back(std::thread(&Decomposition::solve, this, std::cref(boundaries), threadRunCounter, std::cref(linkage), std::cref(snpLoc), std::ref(snpList),chromosomeStart, std::cref(betaEstimate)));
             threadRunCounter++;

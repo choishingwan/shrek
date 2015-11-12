@@ -4,7 +4,7 @@ GenotypeFileHandler::GenotypeFileHandler(){}
 GenotypeFileHandler::~GenotypeFileHandler(){}
 
 
-void GenotypeFileHandler::initialize(const Command &commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Interval> &blockInfo){
+void GenotypeFileHandler::initialize(const Command &commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Interval> &blockInfo, std::vector<int> &genoInclusion){
     m_thread = commander.getThread();
     m_outPrefix = commander.getOutputPrefix();
     m_genotypeFilePrefix = commander.getLdFilePrefix();
@@ -14,13 +14,15 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     std::string line;
     if(commander.conRisk() || commander.diRisk()){
         std::string genotypeBim = commander.getGenotype()+".bim";
-        bool bfile_SNP_major = openPlinkBinaryFile(genotypeBim, m_genoFile);
+        std::string genotypeBed = commander.getGenotype()+".bed";
+        bool bfile_SNP_major = openPlinkBinaryFile(genotypeBed, m_genoFile);
         if(bfile_SNP_major){
         //This is ok
         }
         else{
             throw std::runtime_error("We currently have no plan of implementing the individual-major mode. Please use the snp-major format");
         }
+
     }
     //Get the number of samples in the ld file
     std::string famFileName = m_genotypeFilePrefix+".fam";
@@ -54,6 +56,7 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
 	std::map<std::string, bool> duplicateCheck,sortCheck;
     size_t duplicateCount= 0;
     size_t ignoreSnp=0;
+    size_t warnings=0;
     size_t mafFilteredSnp=0;
     size_t finalNumSnp=0;
     while(std::getline(bimFile,line)){
@@ -85,8 +88,9 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
 
                 if(snpIndex.find(rs)!=snpIndex.end() && duplicateCheck.find(rs)==duplicateCheck.end()){
                     //This is something that we need
+                    snpLoc = snpIndex.at(rs);
                     if(!validate || snpList.at(snpLoc).Concordant(chr, bp, rs)){
-                        snpLoc = snpIndex.at(rs);
+                        if(!validate && !snpList.at(snpLoc).Concordant(chr, bp, rs)) warnings++;
                         snpList.at(snpLoc).setFlag(0, true); //Now that it is in the genotype file, it contains the LD info.
                         m_inclusion.back()=snpLoc;
                         duplicateCheck[rs] = true;
@@ -153,6 +157,7 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     std::cerr << "Invalid SNPs:      " << ignoreSnp << std::endl;
     std::cerr << "Filtered SNPs:     " << mafFilteredSnp << std::endl;
     std::cerr << "Final SNPs number: " << finalNumSnp << std::endl;
+    if(warnings!=0) std::cerr << "WARNING: " << warnings << " invalid SNPs included" << std::endl;
     //Now we need to use the m_inclusion vector and the bim file to get get the intervals
     buildBlocks(bimFileName, blockInfo, commander.getDistance());
     m_finalSnpNumber =finalNumSnp;
@@ -164,6 +169,7 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     else{
         throw std::runtime_error("We currently have no plan of implementing the individual-major mode. Please use the snp-major format");
     }
+
 
 }
 
@@ -360,6 +366,96 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 
 
 void GenotypeFileHandler::getSnps(Eigen::MatrixXd &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &ldLoc, bool &chromosomeStart, bool &chromosomeEnd, size_t &prevResidual, boost::ptr_vector<Interval> &blockInfo){
+    size_t startRange = blockInfo[prevResidual].getStart();
+    size_t endRange=0;
+    std::string currentChr = blockInfo[prevResidual].getChr();
+    size_t i = prevResidual;
+    size_t range = m_thread;
+    if(chromosomeStart)range +=2;
+    size_t loopEnd = prevResidual+range;
+    bool firstEntry = true;
+    for(; i < loopEnd && i < blockInfo.size(); ++i){
+        if(blockInfo[i].getChr().compare(currentChr)!=0){
+            //We are heading for another chromosome
+            chromosomeEnd = true;
+            break;
+        }else if(!firstEntry && blockInfo[i].getStart() != endRange){
+            std::cerr << "Not equal" << std::endl;
+            firstEntry = false;
+            //Again, we are working on another independent fragment
+            chromosomeEnd = true; //Not really a new chromosome, but the behaviour of the programme should be the same
+            break;
+        }
+        else{
+            endRange = blockInfo[i].getEnd();
+        }
+    }
+    if(i == blockInfo.size() || (i < blockInfo.size() && blockInfo[i].getChr().compare(currentChr)!=0)){ //The next block is from another chromosome
+        chromosomeEnd=true;
+    }
+    prevResidual=i;
+    /** This whole thing should basically be the same, except we now need to get additional genotypes **/
+    /** We do assume the sort order for both the LD file and the geno file to be the same */
+    //So we will get all the required SNPs within this region
+    //for each required SNPs, we will use m_genoIter to iterate to the location.
+    while(m_snpIter < m_inputSnp && m_snpIter <= endRange){
+        bool snp = false;
+		if(m_inclusion[m_snpIter] != -1){//indicate whether if we need this snp
+            if(m_snpIter < startRange){
+                std::logic_error("Warning, something went wrong with my logic, really sorry");
+            }
+			snp=true;
+		}
+        if(snp){
+            genotype.push_back(new Genotype());
+            snpLoc.push_back(m_inclusion[m_snpIter]); //need better way, such that we know the block problem
+            ldLoc.push_back(m_snpIter);
+		}
+        size_t indx = 0; //The iterative count
+        double oldM=0.0, newM=0.0,oldS=0.0, newS=0.0;
+        size_t alleleCount=0;
+		while ( indx < m_ldSampleSize ){
+			std::bitset<8> b; //Initiate the bit array
+			char ch[1];
+			m_bedFile.read(ch,1); //Read the information
+			if (!m_bedFile){
+				throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
+			}
+			b = ch[0];
+			int c=0;
+			while (c<7 && indx < m_ldSampleSize ){ //Going through the bit flag. Stop when it have read all the samples as the end == NULL
+				//As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
+                ++indx; //so that we only need to modify the indx when adding samples but not in the mean and variance calculation
+				if (snp){
+					int first = b[c++];
+					int second = b[c++];
+					if(first == 1 && second == 0) first = 3; //Missing value should be 3
+					genotype.back().AddsampleGenotype(first+second, indx-1); //0 1 2 or 3 where 3 is missing
+					alleleCount += first+second;
+					double value = first+second+0.0;
+                    if(indx==1){
+                        oldM = newM = value;
+                        oldS = 0.0;
+                    }
+                    else{
+                        newM = oldM + (value-oldM)/(indx);
+                        newS = oldS + (value-oldM)*(value-newM);
+                        oldM = newM;
+                        oldS = newS;
+                    }
+
+				}
+				else{
+					c+=2;
+				}
+			}
+		}
+		if(snp){
+			indx > 0 ? genotype.back().Setmean(newM) : genotype.back().Setmean(0.0);
+			indx > 1 ? genotype.back().SetstandardDeviation(std::sqrt(newS/(indx - 1.0))) : genotype.back().SetstandardDeviation(0.0);
+		}
+		m_snpIter++;
+    }
 
 }
 
@@ -378,7 +474,7 @@ void GenotypeFileHandler::getSnps(boost::ptr_deque<Genotype> &genotype, std::deq
      *  Important property here is that in this for loop, i will +1 if it is a normal exit
      *  but will remain unchanged if it was break;
      */
-     bool firstEntry = true;
+    bool firstEntry = true;
     for(; i < loopEnd && i < blockInfo.size(); ++i){
         if(blockInfo[i].getChr().compare(currentChr)!=0){
             //We are heading for another chromosome

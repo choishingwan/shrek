@@ -89,7 +89,7 @@ void Snp::computeVarianceExplained(const Command &commander){
 }
 
 
-void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Command &commander, const Region &regionList){
+void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Command &commander, const Region &regionList, std::vector<int> &genoInclusion){
     std::vector<size_t> regionIncrementationIndex(regionList.getNumRegion(), 0);
 	size_t duplicate = 0;
     //check if it is risk prediction
@@ -135,6 +135,9 @@ void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_v
         if(!bimFile.is_open()){
             throw  "Cannot open genotype file, please check";
         }
+        size_t warnings = 0;
+        size_t ignoreSnp = 0;
+        size_t finalNumSnp= 0;
         while(std::getline(bimFile,line)){
             line = usefulTools::trim(line);
             if(!line.empty()){
@@ -144,13 +147,32 @@ void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_v
                     std::string chr= token[0];
                     std::string rs = token[1];
                     if(snpIndexTemp.find(rs)!= snpIndexTemp.end()){
+                        if(!commander.validate() && snpList[snpIndexTemp[rs]].Concordant(chr, bp, rs)){
                         //Add it to the snpIndex
-                        snpIndex[rs] = snpIndexTemp[rs];
+                            if(!commander.validate() && ! snpList[snpIndexTemp[rs]].Concordant(chr, bp, rs)) warnings++;
+                            snpIndex[rs] = snpIndexTemp[rs];
+                            genoInclusion.push_back(snpIndex[rs]);
+                            finalNumSnp++;
+                        }
+                        else{
+                            ignoreSnp++;
+                            genoInclusion.push_back(-1);
+                        }
+                    }
+                    else{
+                        ignoreSnp++;
+                        genoInclusion.push_back(-1);
                     }
                 }
             }
         }
         bimFile.close();
+        std::cerr << std::endl;
+        std::cerr << "Genotype File information: " << std::endl;
+        std::cerr << "========================================" << std::endl;
+        std::cerr << "Invalid SNPs:      " << ignoreSnp << std::endl;
+        std::cerr << "Concordant SNPs:   " << finalNumSnp << std::endl;
+        if(warnings!=0) std::cerr << "WARNING: " << warnings << " invalid SNPs included" << std::endl;
     }
     else{
         snpIndex = snpIndexTemp;

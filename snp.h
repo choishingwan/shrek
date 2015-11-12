@@ -32,7 +32,7 @@ public:
         Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, double original, std::string refAllele, std::string altAllele, int direction);
         virtual ~Snp();
         static void generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &commander);
-        static void generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Command &commander, const Region &regionList);
+        static void generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Command &commander, const Region &regionList, std::vector<int> &genoInclusion);
 
 
         inline std::string getChr() const{return m_chr;};
