@@ -146,6 +146,7 @@ void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_v
                 if(token.size() >=6){
                     std::string chr= token[0];
                     std::string rs = token[1];
+                    size_t bp = std::atoi(token[3].c_str());
                     if(snpIndexTemp.find(rs)!= snpIndexTemp.end()){
                         if(!commander.validate() && snpList[snpIndexTemp[rs]].Concordant(chr, bp, rs)){
                         //Add it to the snpIndex

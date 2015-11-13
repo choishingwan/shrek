@@ -138,7 +138,9 @@ void Linkage::print(){
 
 void Linkage::solve(const size_t loc, const size_t length, const Eigen::MatrixXd &betaEstimate, Eigen::MatrixXd &heritability, Eigen::MatrixXd &effectiveNumber, Eigen::VectorXd &ldScore) const {
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(loc, loc, length, length));
-    double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().maxCoeff();
+    //double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().maxCoeff();
+
+    double tolerance = 2.858 * es.eigenvalues(es.eigen)
     Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
     /** Calculate the h vector here **/
     heritability= rInverse*betaEstimate.block(loc, 0,length,betaEstimate.cols());
