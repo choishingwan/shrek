@@ -365,7 +365,7 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 
 
 
-void GenotypeFileHandler::getSnps(Eigen::MatrixXd &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &ldLoc, bool &chromosomeStart, bool &chromosomeEnd, size_t &prevResidual, boost::ptr_vector<Interval> &blockInfo, const std::vector<int> &genoInclusion){
+void GenotypeFileHandler::getSnps(boost::ptr_vector<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &ldLoc, bool &chromosomeStart, bool &chromosomeEnd, size_t &prevResidual, boost::ptr_vector<Interval> &blockInfo, const std::vector<int> &genoInclusion, Eigen::MatrixXd &betaInfo){
     size_t startRange = blockInfo[prevResidual].getStart();
     size_t endRange=0;
     std::string currentChr = blockInfo[prevResidual].getChr();
@@ -398,6 +398,13 @@ void GenotypeFileHandler::getSnps(Eigen::MatrixXd &genotype, std::deque<size_t> 
     /** We do assume the sort order for both the LD file and the geno file to be the same */
     //So we will get all the required SNPs within this region
     //for each required SNPs, we will use m_genoIter to iterate to the location.
+
+
+
+    /** We use m_genoIter to indicate the index of the current genotype **/
+    /** IMPORTANT: genotype is actually for storing the genotypes for LD calculation, not the sample genotype
+     *             the sample genotype should be stored in betaInfo instead
+     */
     while(m_snpIter < m_inputSnp && m_snpIter <= endRange){
         bool snp = false;
 		if(m_inclusion[m_snpIter] != -1){//indicate whether if we need this snp
@@ -407,7 +414,7 @@ void GenotypeFileHandler::getSnps(Eigen::MatrixXd &genotype, std::deque<size_t> 
 			snp=true;
 		}
         if(snp){
-            //genotype.push_back(new Genotype());
+            genotype.push_back(new Genotype());
             snpLoc.push_back(m_inclusion[m_snpIter]); //need better way, such that we know the block problem
             ldLoc.push_back(m_snpIter);
 		}
@@ -430,7 +437,7 @@ void GenotypeFileHandler::getSnps(Eigen::MatrixXd &genotype, std::deque<size_t> 
 					int first = b[c++];
 					int second = b[c++];
 					if(first == 1 && second == 0) first = 3; //Missing value should be 3
-					//genotype.back().AddsampleGenotype(first+second, indx-1); //0 1 2 or 3 where 3 is missing
+					genotype.back().AddsampleGenotype(first+second, indx-1); //0 1 2 or 3 where 3 is missing
 					alleleCount += first+second;
 					double value = first+second+0.0;
                     if(indx==1){
@@ -451,11 +458,13 @@ void GenotypeFileHandler::getSnps(Eigen::MatrixXd &genotype, std::deque<size_t> 
 			}
 		}
 		if(snp){
-			//indx > 0 ? genotype.back().Setmean(newM) : genotype.back().Setmean(0.0);
-			//indx > 1 ? genotype.back().SetstandardDeviation(std::sqrt(newS/(indx - 1.0))) : genotype.back().SetstandardDeviation(0.0);
+			indx > 0 ? genotype.back().Setmean(newM) : genotype.back().Setmean(0.0);
+			indx > 1 ? genotype.back().SetstandardDeviation(std::sqrt(newS/(indx - 1.0))) : genotype.back().SetstandardDeviation(0.0);
 		}
 		m_snpIter++;
     }
+
+
 
 }
 

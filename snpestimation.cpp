@@ -18,11 +18,12 @@ void SnpEstimation::Predict(GenotypeFileHandler &genotypeFileHandler,const std::
     bool correction = commander.ldCorrect();
     Linkage linkageMatrix(commander.getThread());
     Decomposition decomposition(commander.getThread());
-    Eigen::MatrixXd genotype; //Here we will have a different structure for genotype, because now we have a sample matrix
+    boost::ptr_deque<Genotype> genotype;
+    Eigen::MatrixXd betaInfo;
     while(genotypeResidual != blockInfo.size()){ //When we reaches blockInfo.size, it means we have finish all work
         previousLeftOvers=genotype.size();
         startBlockIndex = genotypeResidual;
-        genotypeFileHandler.getSnps(genotype, snpLoc, ldLoc, chromosomeStart, chromosomeEnd, genotypeResidual, blockInfo,genoInclusion);
+        genotypeFileHandler.getSnps(genotype, snpLoc, ldLoc, chromosomeStart, chromosomeEnd, genotypeResidual, blockInfo,genoInclusion, betaInfo);
         std::cerr << "We are going to work here: " <<previousLeftOvers << "\t" << startBlockIndex << "\t" << correction << std::endl;
     }
 

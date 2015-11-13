@@ -6,13 +6,13 @@ You may only work on the programming when you hvae finished your share of 3 page
 - [x] Restructure command class
 - [x] Restructure region class
 - [x] Restructure snp class
-- [ ] Restructure snp estimation class
+- [x] Restructure snp estimation class
 - [ ] Restructure risk estimation class
-- [ ] Restructure genotypefile handling class
+- [x] Restructure genotypefile handling class
 
-- [ ] Remove redundent actions
+- [x] Remove redundent actions
 - [ ] Better throw-catch management
-- [ ] Dynamic Block Size
+- [x] Dynamic Block Size
 - [ ] Safety check for command class
 
 #Documentation
