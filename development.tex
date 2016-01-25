@@ -1,0 +1,44 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{bm}
+\usepackage[colorlinks=true,urlcolor=blue]{hyperref}
+
+\title{Snp HeRitability Estimation Kit (SHREK) Development Log}
+\date{\today}
+\author{Sam Shing Wan, Choi\\ 
+	\texttt{choishingwan@gmail.com}
+	\and
+	Johnny Sheung Him, Kwan\\
+	\texttt{shkwan@hku.hk}
+	\and
+	Henry Chi-Ming, Leung\\
+	\texttt{cmleung2@cs.hku.hk}
+}
+
+
+\begin{document}
+	
+	\maketitle
+	\tableofcontents
+	\section{January 25, 2016}
+	We are going to re-write SHREK starting from today. 
+	There are a number of main goal in this re-work
+	\begin{enumerate}
+		\item The whole parameter parsing 
+		\item Better help messages
+		\item Allow filtering by imputation score (0-1)
+		\item Filtering of SNPs that have different reference/alternative allele with reference
+		\item Use Armadillo instead of EIGEN to improve speed
+		\item Filter \emph{all} SNPs that are in perfect LD
+		\item Implement the advance variance calculation 
+		\item Start documenting the codes
+	\end{enumerate}
+	\subsection{Finished today}
+	\begin{enumerate}
+		\item Finished the error message for different modes
+		\item Finished the parsing for binary trait
+		\item Finished the parsing for quantitative trait
+		\item Disabled risk prediction, should focus on the heritability estimation first
+	\end{enumerate}
+	\emph{I have not perform debugging, there can be error}
+\end{document}

@@ -4,48 +4,54 @@ Command::Command(){}
 Command::~Command(){}
 
 void Command::initialize(int argc, char* argv[]){
-    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
-    std::cerr << "| Snp HeRitability Estimation Kit                                             |" << std::endl;
-    std::cerr << "| version "<<m_version <<"                                                                |" << std::endl;
-    std::cerr << "| (C) 2014 Johnny Kwan, Sam Choi                                              |" << std::endl;
-    std::cerr << "| The University of Hong Kong                                                 |" << std::endl;
-    std::cerr << "| GNU General Public License v2.0                                             |" << std::endl;
-    std::cerr << "------------------------------------------------------------------------------"  << std::endl;
-
-    if(argc==1){
-        std::cerr << "Usage: ./SHREK <command> [options]"                                      << std::endl;
-        std::cerr << "Command:    quant          Quantitative Trait"                                   << std::endl;
-        std::cerr << "            cc             Case control study"                                   << std::endl;
-        std::cerr << "            risk-qt        Risk Prediction on continuous traits"                 << std::endl;
-        std::cerr << "            risk-cc        Risk Prediction on dichotomize traits"                << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "To see the specific parameters of each mode, use: "                              << std::endl;
-        std::cerr << "       ./"<<argv[0]<<" <command> -h"                                             << std::endl;
-        throw std::runtime_error("Unspecified mode");
-    }
-	m_programmeName =argv[0];
+    std::cerr << std::endl;
+    std::cerr << "Program: SHREK (Snp HeRitability Estimation Kit)" << std::endl;
+    std::cerr << "Version: "<< m_version << std::endl<<std::endl;
+    // First check if we have provided any mode information, if not, then we will provide the general
+    // error message
 	std::string mode(argv[1]);
+	// The concept here is that all the data checking and stuff are done within each individual functions
+    // Including the error check
     if(mode.compare("quant")==0){
         m_qt=true;
-        if(argc == 2) printQuantUsage();
-        else quantitativeProcess(argc, argv);
+        quantitativeProcess(argc, argv);
     }
-    else if(mode.compare("cc")==0){
+    else if(mode.compare("binary")==0){
         m_cc=true;
-        if(argc==2) printCCUsage();
-        else caseControlProcess(argc, argv);
+        caseControlProcess(argc, argv);
     }
+    /*
     else if(mode.compare("risk-qt")==0){
         m_rqt=true;
-        if(argc==2) printRiskQtUsage();
-        else continuousRiskProcess(argc, argv);
+        continuousRiskProcess(argc, argv);
     }
-    else if(mode.compare("risk_cc")==0){
+    else if(mode.compare("risk-bin")==0){
         m_rcc = true;
-        if(argc ==2) printRiskQtUsage();
-        else dichotomusRiskProcess(argc, argv);
+        dichotomusRiskProcess(argc, argv);
+    }
+    */
+    else if(mode.compare("help")==0 || mode.compare("--help")==0){
+        //Provide the mode help message (redundant)
+        std::cerr << "Usage: ./SHREK <command> [options]"                                         << std::endl<<std::endl;
+        std::cerr << "Command:    quant     Quantitative Trait"                                   << std::endl;
+        std::cerr << "            binary    Binary Trait"                                         << std::endl;
+        //std::cerr << "            risk-qt   Risk Prediction on continuous traits"                 << std::endl;
+        //std::cerr << "            risk-bin  Risk Prediction on dichotomize traits"                << std::endl;
+        std::cerr << std::endl;
+    }
+    else if(mode.compare("version")==0 || mode.compare("--version")==0){
+        //Get the version information
+        std::cerr << "Version: "<< m_version << std::endl<<std::endl;
     }
     else{
+        std::cerr << std::endl;
+        std::cerr << "unrecognized command: " << mode << std::endl<< std::endl;
+        std::cerr << "Usage: ./SHREK <command> [options]"                                         << std::endl<<std::endl;
+        std::cerr << "Command:    quant     Quantitative Trait"                                   << std::endl;
+        std::cerr << "            binary    Binary Trait"                                         << std::endl;
+        //std::cerr << "            risk-qt   Risk Prediction on continuous traits"                 << std::endl;
+       // std::cerr << "            risk-bin  Risk Prediction on dichotomize traits"                << std::endl;
+        std::cerr << std::endl;
         throw std::runtime_error("Unspecified mode");
     }
 }
@@ -70,10 +76,6 @@ void Command::getIndex(const std::vector<std::string> &index, const std::string 
     }
     std::vector<std::string> token;
     usefulTools::tokenizer(header, "\t ", &token);
-    if(token.size() < index.size()){
-        throw "Not enough field for header, please note that we assume the delimiter as space or tab";
-    }
-
     // Not very efficient here, but should be ok consider the number of possible header
     // Maybe someone who is interested in optimization can optimize this
     bool found = false;
@@ -81,22 +83,19 @@ void Command::getIndex(const std::vector<std::string> &index, const std::string 
         for(size_t j = 0; j < token.size(); ++j){
             if(index[i].compare(token[j])==0){
                 found = true;
-                indexResult.push_back(j);
+                indexResult.push_back(j+1); //Don't use it as index, therefore 0 = uninitialized
                 break;
             }
         }
         if(!found){
             std::cerr << index[i] << " not found in header" << std::endl;
         }
-
         found = false;
     }
-
 }
 
 void Command::caseControlProcess(int argc, char* argv[]){
-
-    static const char *optString = "a:R:k:p:b:c:r:l:s:o:f:t:D:d:L:vunh?";
+    static const char *optString = "a:R:k:p:b:c:r:l:s:o:f:t:S:N:i:I:X:x:d:L:vunh?";
     static const struct option longOpts[]={
 	    //Parameters for correction
         {"case",required_argument, NULL,'a'},
@@ -109,9 +108,14 @@ void Command::caseControlProcess(int argc, char* argv[]){
         {"rs",required_argument, NULL,'r'},
         {"loc",required_argument, NULL,'l'},
         {"stat",required_argument, NULL,'s'},
-        {"direction",required_argument, NULL,'D'},
+        {"sign",required_argument, NULL,'S'},
+        {"nullSign",required_argument, NULL,'N'},
+        {"info", required_argument, NULL, 'i'},
+        {"ref",required_argument, NULL, 'X' }, //these are for the validation, optional
+        {"alt", required_argument, NULL, 'x'}, //these are for the validation, optional
         //General parameters
         {"out",required_argument, NULL,'o'},
+        {"impute", required_argument, NULL, 'I'},
         {"maf",required_argument, NULL,'f'},
         {"thread",required_argument, NULL,'t'},
         {"distance",required_argument, NULL,'d'},
@@ -148,53 +152,69 @@ void Command::caseControlProcess(int argc, char* argv[]){
 			case 'b':
                 m_ldFilePrefix = optarg;
                 break;
-			case 'c':
+			case 'c': //chr
 			    colNamesForIndex.push_back(optarg);
                 typeForIndex.push_back('c');
-                //m_chrIndex = atoi(optarg)-1;
                 break;
-			case 'r':
+			case 'r': //rsid
 			    colNamesForIndex.push_back(optarg);
                 typeForIndex.push_back('r');
-				//m_rsIndex = atoi(optarg)-1;
 				break;
-			case 'l':
+			case 'l': //loc
 			    colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('b');
-				//m_bpIndex=atoi(optarg)-1;
+                typeForIndex.push_back('l');
 				break;
-            case 's':
+			case 'i': //info
+			    colNamesForIndex.push_back(optarg);
+                typeForIndex.push_back('i');
+				break;
+            case 'X': //ref
+                colNamesForIndex.push_back(optarg);
+                typeForIndex.push_back('X');
+                break;
+            case 'x': //alt
+                colNamesForIndex.push_back(optarg);
+                typeForIndex.push_back('x');
+                break;
+
+            case 's': //statistic
 			    colNamesForIndex.push_back(optarg);
                 typeForIndex.push_back('s');
-                //m_stats = atoi(optarg)-1;
                 break;
-            case 'D':
+            case 'S': //sign
                 colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('D');
+                typeForIndex.push_back('S');
+                m_signGiven = true;
         //General parameters
 			case 'o':
 				m_outputPrefix = optarg;
 				break;
-			case 'f':
+			case 'f': //maf threshold
                 m_maf = atof(optarg);
                 m_providedMaf= true;
                 break;
-			case 't':
+			case 'I': //impute threshold
+                m_imputeThreshold = atof(optarg);
+                break;
+			case 'N': //The null value for sign of statistic
+                m_nullSign = atof(optarg);
+                break;
+			case 't': //The number of threads
 				m_thread = atoi(optarg);
 				break;
-			case 'd':
+			case 'd': //The block distance
 				m_distance = atoi(optarg);
 				break;
-			case 'L':
+			case 'L': //The list of regions
 				m_regionList = optarg;
                 break;
-			case 'v':
+			case 'v': //Whether if we should validate the SNPs
 				m_validate = true;
 				break;
-			case 'u':
+			case 'u': //Whether if the input is p-value or summary statistics
                 m_isPvalue = true;
                 break;
-			case 'n':
+			case 'n': //Whether to conduct the LD correction
 				m_ldCorrection = false;
 				break;
 			case 'h':
@@ -207,48 +227,169 @@ void Command::caseControlProcess(int argc, char* argv[]){
 		}
 		opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
+
+    //The problem here is that the sign of the summary statistic can be the same column as the summary statistics
     std::vector<size_t> index;
     getIndex(colNamesForIndex, m_pValueFileName, index);
     if(index.size() != colNamesForIndex.size()){
         throw "Some field(s) not found in header, please check";
     }
+
+    // For all index, most of them should not be a duplicate of each other.
+    std::map<size_t, char> dupCheck;
+    bool duplicated = false;
     for(size_t i = 0; i < typeForIndex.size(); ++i){
         switch(typeForIndex[i]){
             case 'c':
-                m_chrIndex = index[i];
+                if(dupCheck.find(index[i])==dupCheck.end()){
+                    m_chrIndex = index[i];
+                    dupCheck[index[i]] = 'c';
+                }
+                else{
+                    duplicated = true;
+                }
                 break;
-            case 'b':
-                m_bpIndex = index[i];
+            case 'l':
+                if(dupCheck.find(index[i])==dupCheck.end()){
+                    m_bpIndex = index[i];
+                    dupCheck[index[i]] = 'l';
+                }
+                else{
+                    duplicated = true;
+                }
                 break;
             case 'r':
-                m_rsIndex = index[i];
+                if(dupCheck.find(index[i])==dupCheck.end()){
+                    m_rsIndex = index[i];
+                    dupCheck[index[i]] = 'r';
+                }
+                else{
+                    duplicated = true;
+                }
+                break;
+            case 'i':
+                if(dupCheck.find(index[i])==dupCheck.end()){
+                    m_imputeInfo = index[i];
+                    dupCheck[index[i]] = 'i';
+                }
+                else{
+                    duplicated = true;
+                }
+                break;
+            case 'X':
+                if(dupCheck.find(index[i])==dupCheck.end()){
+                    m_ref = index[i];
+                    dupCheck[index[i]] = 'X';
+                }
+                else{
+                    duplicated = true;
+                }
+                break;
+            case 'x':
+                if(dupCheck.find(index[i])==dupCheck.end()){
+                    m_alt = index[i];
+                    dupCheck[index[i]] = 'x';
+                }
+                else{
+                    duplicated = true;
+                }
                 break;
             case 's':
-                m_stats = index[i];
+                if(dupCheck.find(index[i])==dupCheck.end() || dupCheck[index[i]] == 'S'){
+                    m_stats = index[i];
+                    dupCheck[index[i]] = 's';
+                }
+                else{
+                    duplicated = true;
+                }
                 break;
-            case 'D':
-                m_dirIndex = index[i];
-                m_dirGiven =true;
+            case 'S':
+                if(dupCheck.find(index[i])==dupCheck.end() || dupCheck[index[i]] == 's'){
+                    m_signIndex = index[i];
+                    m_signGiven =true;
+                    dupCheck[index[i]] = 'S';
+                }
+                else{
+                    duplicated = true;
+                }
                 break;
         }
     }
-    //Check for duplication
-    sort( index.begin(), index.end() );
-    index.erase( unique( index.begin(), index.end() ), index.end() );
-    sort( typeForIndex.begin(), typeForIndex.end() );
-    typeForIndex.erase( unique( typeForIndex.begin(), typeForIndex.end() ), typeForIndex.end() );
-    if(index.size() != typeForIndex.size()){
+
+    if(duplicated){
         throw "Duplicated fields, please check your input";
     }
+
+    // Now perform sanity check
+    bool error= false;
+    std::string errorLog = "";
+    if(m_caseSize ==0){
+        error = true;
+        errorLog.append("Number of case cannot be 0\n");
+    }
+    if(m_controlSize==0){
+        error = true;
+        errorLog.append("Number of control cannot be 0\n");
+    }
+    if(!m_providedPrevalence){
+        error = true;
+        errorLog.append("The population prevalence is required\n");
+    }
+    else if(m_prevalence <0 || m_prevalence> 1){
+        error =true;
+        errorLog.append("The population prevalence must be between 0 or 1\n");
+    }
+    if(m_pValueFileName.empty()){
+        error = true;
+        errorLog.append("The p-value file is required\n");
+    }
+    if(m_ldFilePrefix.empty()){
+        error = true;
+        errorLog.append("The reference panel is required\n");
+    }
+    if(m_validate){
+        if(m_chrIndex==0){
+            error=true;
+            errorLog.append("Column for chromosome information not provided\n");
+        }
+        if(m_rsIndex==0){
+            error=true;
+            errorLog.append("Column for rs ID not provided\n");
+        }
+        if(m_bpIndex==0){
+            error = true;
+            errorLog.append("Column for SNP coordinate not provided\n");
+        }
+        if(m_stats==0){
+            error = true;
+            errorLog.append("Column for statistics not provided\n");
+        }
+        if(m_imputeInfo!= 0 && (m_imputeThreshold < 0 ||m_imputeThreshold> 1) ){
+            error = true;
+            errorLog.append("Imputation INFO must be between 0 and 1\n");
+        }
+        if(m_providedMaf && (m_maf < 0 || m_maf > 1)){
+            error = true;
+            errorLog.append("MAF must be between 0 and 1\n");
+        }
+    }
+    else if(m_stats==0){
+        error = true;
+        errorLog.append("Summary statistics must be provided\n");
+    }
+    if(error){
+        throw errorLog;
+    }
+
 }
 
 void Command::quantitativeProcess(int argc, char* argv[]){
-    static const char *optString = "e:N:x:b:p:c:r:l:s:d:D:f:L:o:t:nuvh?";
+    static const char *optString = "e:a:A:b:p:c:r:l:s:S:N:i:I:X:x:d:f:L:o:t:nuvh?";
 	static const struct option longOpts[]={
 	    //Qt specific parameter
 		{"extreme",required_argument,NULL,'e'},
-        {"sampleSize",required_argument,NULL,'N'},
-        {"sampleIndex",required_argument,NULL,'x'},
+        {"sampleSize",required_argument,NULL,'a'},
+        {"sampleIndex",required_argument,NULL,'A'},
         //File parameters
 		{"bfile",required_argument,NULL,'b'},
 		{"pfile",required_argument,NULL,'p'},
@@ -256,7 +397,12 @@ void Command::quantitativeProcess(int argc, char* argv[]){
 		{"rs",required_argument,NULL,'r'},
 		{"loc",required_argument,NULL,'l'},
 		{"stats", required_argument, NULL, 's'},
-		{"direction",required_argument,NULL,'D'},
+		{"sign",required_argument,NULL,'S'},
+        {"nullSign",required_argument, NULL,'N'},
+        {"info", required_argument, NULL, 'i'},
+        {"impute", required_argument, NULL, 'I'},
+        {"ref",required_argument, NULL, 'X' }, //these are for the validation, optional
+        {"alt", required_argument, NULL, 'x'}, //these are for the validation, optional
         //General parameters
 		{"distance",required_argument,NULL,'d'},
 		{"maf",required_argument,NULL,'f'},
@@ -282,14 +428,14 @@ void Command::quantitativeProcess(int argc, char* argv[]){
 				m_extremeAdjust = atof(optarg);
 				m_provideExtremeAdjustment = true;
 				break;
-			case 'N':
+			case 'a':
 				m_sampleSize= atoi(optarg);
 				m_provideSampleSize = true;
 				break;
-			case 'x':
+			case 'A':
 				//m_sampleSizeIndex = atoi(optarg)-1;
 			    colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('a');
+                typeForIndex.push_back('A');
 				break;
             //File parameters
 			case 'b':
@@ -301,25 +447,40 @@ void Command::quantitativeProcess(int argc, char* argv[]){
 			case 'c':
 			    colNamesForIndex.push_back(optarg);
                 typeForIndex.push_back('c');
-                //m_chrIndex = atoi(optarg)-1;
                 break;
 			case 'r':
 			    colNamesForIndex.push_back(optarg);
                 typeForIndex.push_back('r');
-				//m_rsIndex = atoi(optarg)-1;
 				break;
 			case 'l':
 			    colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('b');
-				//m_bpIndex=atoi(optarg)-1;
+                typeForIndex.push_back('l');
 				break;
-            case 'D':
+            case 'S':
                 colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('D');
+                typeForIndex.push_back('S');
+                m_signGiven = true;
             case 's':
 			    colNamesForIndex.push_back(optarg);
                 typeForIndex.push_back('s');
-                //m_stats = atoi(optarg)-1;
+                break;
+			case 'i': //info
+			    colNamesForIndex.push_back(optarg);
+                typeForIndex.push_back('i');
+				break;
+            case 'X': //ref
+                colNamesForIndex.push_back(optarg);
+                typeForIndex.push_back('X');
+                break;
+            case 'x': //alt
+                colNamesForIndex.push_back(optarg);
+                typeForIndex.push_back('x');
+                break;
+            case 'N':
+                m_nullSign = atof(optarg);
+                break;
+			case 'I': //impute threshold
+                m_imputeThreshold = atof(optarg);
                 break;
         //General parameters
             case 'd':
@@ -362,44 +523,166 @@ void Command::quantitativeProcess(int argc, char* argv[]){
     if(index.size() != colNamesForIndex.size()){
         throw "Some field(s) not found in header, please check";
     }
+    std::map<size_t, char> dupCheck;
+    bool duplicated = false;
     for(size_t i = 0; i < typeForIndex.size(); ++i){
         switch(typeForIndex[i]){
-            case 'c':
-                m_chrIndex = index[i];
+            case 'A':
+                if(dupCheck.find(index[i])==dupCheck.end()){
+                    m_sampleSizeIndex = index[i];
+                    dupCheck[index[i]] = 'A';
+                }
+                else{
+                    duplicated = true;
+                }
                 break;
-            case 'b':
-                m_bpIndex = index[i];
+            case 'c':
+                if(dupCheck.find(index[i])==dupCheck.end()){
+                    m_chrIndex = index[i];
+                    dupCheck[index[i]] = 'c';
+                }
+                else{
+                    duplicated = true;
+                }
+                break;
+            case 'l':
+                if(dupCheck.find(index[i])==dupCheck.end()){
+                    m_bpIndex = index[i];
+                    dupCheck[index[i]] = 'l';
+                }
+                else{
+                    duplicated = true;
+                }
                 break;
             case 'r':
-                m_rsIndex = index[i];
+                if(dupCheck.find(index[i])==dupCheck.end()){
+                    m_rsIndex = index[i];
+                    dupCheck[index[i]] = 'r';
+                }
+                else{
+                    duplicated = true;
+                }
+                break;
+            case 'i':
+                if(dupCheck.find(index[i])==dupCheck.end()){
+                    m_imputeInfo = index[i];
+                    dupCheck[index[i]] = 'i';
+                }
+                else{
+                    duplicated = true;
+                }
+                break;
+            case 'X':
+                if(dupCheck.find(index[i])==dupCheck.end()){
+                    m_ref = index[i];
+                    dupCheck[index[i]] = 'X';
+                }
+                else{
+                    duplicated = true;
+                }
+                break;
+            case 'x':
+                if(dupCheck.find(index[i])==dupCheck.end()){
+                    m_alt = index[i];
+                    dupCheck[index[i]] = 'x';
+                }
+                else{
+                    duplicated = true;
+                }
                 break;
             case 's':
-                m_stats = index[i];
+                if(dupCheck.find(index[i])==dupCheck.end() || dupCheck[index[i]] == 'S'){
+                    m_stats = index[i];
+                    dupCheck[index[i]] = 's';
+                }
+                else{
+                    duplicated = true;
+                }
                 break;
-            case 'a':
-                m_sampleSizeIndex = index[i];
-                break;
-            case 'D':
-                m_dirIndex = index[i];
-                m_dirGiven = true;
+            case 'S':
+                if(dupCheck.find(index[i])==dupCheck.end() || dupCheck[index[i]] == 's'){
+                    m_signIndex = index[i];
+                    m_signGiven =true;
+                    dupCheck[index[i]] = 'S';
+                }
+                else{
+                    duplicated = true;
+                }
                 break;
         }
     }
-    //Check for duplication
-    sort( index.begin(), index.end() );
-    index.erase( unique( index.begin(), index.end() ), index.end() );
-    sort( typeForIndex.begin(), typeForIndex.end() );
-    typeForIndex.erase( unique( typeForIndex.begin(), typeForIndex.end() ), typeForIndex.end() );
-    if(index.size() != typeForIndex.size()){
+
+    if(duplicated){
         throw "Duplicated fields, please check your input";
     }
-    if(!m_isPvalue && !m_dirGiven){ //Test statistic from Qt trait contains the sign
-        m_dirGiven = true;
-        m_dirIndex = m_stats;
+
+    //Now perform input sanity check;
+    bool error= false;
+    std::string errorLog = "";
+
+    if(m_provideExtremeAdjustment){
+        if(m_extremeAdjust < 0){
+            error = true;
+            errorLog.append("Extreme adjustment must be bigger than 0\n");
+        }
     }
-    //TODO Check input, e.g. sample size should all be integers, if input is p-value, then it should be in the range of 0 and 1
+    if(m_provideSampleSize){
+        if(m_sampleSize==0){
+            error = true;
+            errorLog.append("Sample size must be bigger than 0\n");
+        }
+    }
+    else{
+        if(m_sampleSizeIndex==0){
+            error = true;
+            errorLog.append("Sample size information must be provided\n");
+        }
+    }
+    if(m_pValueFileName.empty()){
+        error = true;
+        errorLog.append("The p-value file is required\n");
+    }
+    if(m_ldFilePrefix.empty()){
+        error = true;
+        errorLog.append("The reference panel is required\n");
+    }
+    if(m_validate){
+        if(m_chrIndex==0){
+            error=true;
+            errorLog.append("Column for chromosome information not provided\n");
+        }
+        if(m_rsIndex==0){
+            error=true;
+            errorLog.append("Column for rs ID not provided\n");
+        }
+        if(m_bpIndex==0){
+            error = true;
+            errorLog.append("Column for SNP coordinate not provided\n");
+        }
+        if(m_stats==0){
+            error = true;
+            errorLog.append("Column for statistics not provided\n");
+        }
+        if(m_imputeInfo!= 0 && (m_imputeThreshold < 0 ||m_imputeThreshold> 1) ){
+            error = true;
+            errorLog.append("Imputation INFO must be between 0 and 1\n");
+        }
+        if(m_providedMaf && (m_maf < 0 || m_maf > 1)){
+            error = true;
+            errorLog.append("MAF must be between 0 and 1\n");
+        }
+    }
+    else if(m_stats==0){
+        error = true;
+        errorLog.append("Summary statistics must be provided\n");
+    }
+    if(error){
+        throw errorLog;
+    }
+
 }
 
+/*
 void Command::dichotomusRiskProcess(int argc, char* argv[]){
     static const char *optString = "E:T:D:g:Aa:R:k:p:b:c:r:l:so:f:t:d:L:vunh?";
 	static const struct option longOpts[]={
@@ -524,6 +807,8 @@ void Command::dichotomusRiskProcess(int argc, char* argv[]){
 
 
 }
+
+
 void Command::continuousRiskProcess(int argc, char* argv[]){
     static const char *optString = "E:T:D:g:AN:x:b:p:c:r:l:s:d:f:L:o:t:nuvh?";
 	static const struct option longOpts[]={
@@ -646,45 +931,7 @@ void Command::continuousRiskProcess(int argc, char* argv[]){
 
 }
 
-std::vector<size_t> Command::processRange(std::string input){
-    std::vector<size_t> index;
-    if(input.empty()){
-        throw std::runtime_error("Invalid index for statistic");
-    }
-    std::string temp = usefulTools::trim(input);
-    std::vector<std::string> token;
-    usefulTools::tokenizer(temp, ",", &token);
-    for(size_t i =0; i < token.size(); ++i){
-        if(usefulTools::trim(token[i]).empty()){
-            throw std::runtime_error("Invalid index for statistic, no number between \",\"");
-        }
-        std::vector<std::string> range;
-        usefulTools::tokenizer(token[i], "-", &range);
-
-        if(range.size() == 1){
-            index.push_back(atoi(range[0].c_str())-1);
-        }
-        else if(range.size() ==2){
-            size_t start = atoi(range[0].c_str())-1;
-            size_t end = atoi(range[1].c_str());
-            for(size_t j = start; j < end; ++j){
-                index.push_back(j);
-            }
-        }
-        else{
-            throw std::runtime_error("Invalid format for statistic index, should be <num>-<num>");
-        }
-    }
-    //check if there are any duplication
-    sort(index.begin(), index.end());
-    size_t before = index.size();
-    index.erase( unique( index.begin(), index.end() ), index.end());
-    size_t after = index.size();
-    if(before != after){
-        throw std::runtime_error("Duplicated index for statistic");
-    }
-    return index;
-}
+*/
 
 
 void Command::printRunSummary(std::string regionMessage){

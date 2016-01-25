@@ -19,6 +19,7 @@
 #include <exception>
 #include <stdexcept>
 #include <algorithm>
+#include <map>
 #include "usefulTools.h"
 
 /**
@@ -27,7 +28,7 @@
  *
  *  This is the class for parameter handling. It will hold all the basic user inputs
  *  and pass them to subsequent functions. It will also perform basic sanity check of
- *  the parameter inputs
+ *  the parameter inputs and contain the help messages
  *
  */
 
@@ -45,13 +46,15 @@ class Command
 
         inline size_t getCaseSize() const{ return m_caseSize; };
         inline size_t getControlSize() const { return m_controlSize;};
-        inline size_t getChr() const { return m_chrIndex; };
-        inline size_t getRs() const { return m_rsIndex;};
-        inline size_t getBp() const { return m_bpIndex;};
-        inline size_t getSampleIndex() const {return m_sampleSizeIndex;};
-        inline size_t getDir() const { return m_dirIndex; };
-        inline size_t getRef() const { return m_ref; };
-        inline size_t getAlt() const { return m_alt; };
+        inline size_t getChr() const { return m_chrIndex-1; };
+        inline size_t getRs() const { return m_rsIndex-1;};
+        inline size_t getBp() const { return m_bpIndex-1;};
+        inline size_t getSampleIndex() const {return m_sampleSizeIndex-1;};
+        inline size_t getSign() const { return m_signIndex-1; };
+        inline size_t getRef() const { return m_ref-1; };
+        inline size_t getAlt() const { return m_alt-1; };
+        inline size_t getImputeInfo() const {return m_imputeInfo-1;}
+
         inline size_t getThread() const { return m_thread;};
         inline size_t getDistance() const {return m_distance;};
         inline size_t getSampleSize() const {return m_sampleSize;};
@@ -68,16 +71,13 @@ class Command
         inline bool mafFilter() const {return m_providedMaf; };
         inline bool extremeAdjust() const {return m_provideExtremeAdjustment;};
         inline bool sampleSizeProvided() const{return m_provideSampleSize;};
-        inline bool removeAmbig() const{return m_keep; }; //Default keeping ambiguous SNPs
-        inline bool hasDir() const{return m_dirGiven; };
+        inline bool removeAmbig() const{return m_keepAmbiguous; }; //Default keeping ambiguous SNPs
+        inline bool hasSign() const{return m_signGiven; };
         inline std::string getPvalueFileName() const{return m_pValueFileName; };
         inline std::string getLdFilePrefix() const{ return m_ldFilePrefix; };
         inline std::string getOutputPrefix() const {return m_outputPrefix; };
         inline std::string getRegion() const{ return m_regionList;};
         inline std::string getGenotype() const{ return m_genotypeFilePrefix; };
-        //inline size_t getStatIndex(size_t i) const{return m_stats.at(i);};
-        //inline size_t getStatSize() const {return m_stats.size(); };
-        //inline size_t maxStatIndex() const { return m_stats.back(); };
         inline size_t getStat() const {return m_stats; };
 
     protected:
@@ -85,17 +85,19 @@ class Command
         /**
                 Meta information
         */
-        double m_version=0.02;
-        std::string m_programmeName; //!< the programme name. Use for the help message only
+        double m_version=0.03;
+        // We will use the predefined programme name (SHREK)
 
         //Other information
+        //Basically avoid any default values for the index
         size_t m_caseSize=0;
         size_t m_controlSize=0;
         size_t m_chrIndex = 0;
-        size_t m_rsIndex = 1;
-        size_t m_bpIndex = 2;
-        size_t m_sampleSizeIndex = 3;
-        size_t m_dirIndex = 7;
+        size_t m_rsIndex = 0;
+        size_t m_bpIndex = 0;
+        size_t m_sampleSizeIndex = 0;
+        size_t m_imputeInfo=0;
+        size_t m_signIndex = 0; // Index for the direction of effect
         size_t m_ref = 0;
         size_t m_alt = 0;
         size_t m_thread = 1;
@@ -104,9 +106,11 @@ class Command
         double m_prevalence=1.0;
         double m_maf = -1.0;
         double m_extremeAdjust = 1.0;
-        bool m_validate=false;
+        double m_imputeThreshold=0.9;
+        double m_nullSign = 0;
+        bool m_validate=true; // Default run the validation check
         bool m_isPvalue = false;
-        bool m_ldCorrection=true;
+        bool m_ldCorrection=true; //Always use the LD correction as the default
         bool m_qt = false;
         bool m_cc = false;
         bool m_rqt = false;
@@ -115,8 +119,8 @@ class Command
         bool m_providedMaf = false;
         bool m_provideExtremeAdjustment = false;
         bool m_provideSampleSize = false;
-        bool m_keep = false; //Default not keeping ambiguous SNPs
-        bool m_dirGiven = false;
+        bool m_keepAmbiguous = false; //Default not keeping ambiguous SNPs
+        bool m_signGiven = false; // Whether if the direction is given
 
         std::string m_pValueFileName="";
         std::string m_ldFilePrefix="";
@@ -128,8 +132,8 @@ class Command
 
         void caseControlProcess(int argc, char* argv[]);
         void quantitativeProcess(int argc, char* argv[]);
-        void continuousRiskProcess(int argc, char* argv[]);
-        void dichotomusRiskProcess(int argc, char* argv[]);
+        //void continuousRiskProcess(int argc, char* argv[]);
+        //void dichotomusRiskProcess(int argc, char* argv[]);
 
 
         /** Function to print the usage information of the programme */
@@ -141,7 +145,7 @@ class Command
         /** Function to perform general checking to for all parameters */
         bool generalCheck();
 
-        std::vector<size_t> processRange(std::string input);
+        //std::vector<size_t> processRange(std::string input);
         void getIndex(const std::vector<std::string> &index, const std::string &pvalueFileName, std::vector<size_t> &indexResult);
 };
 

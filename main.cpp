@@ -31,8 +31,10 @@ int main(int argc, char *argv[]){
     //Parsing the parameters
     //Start working one by one
     try{
-        Command commander;
-        commander.initialize(argc, argv);
+        //We first parse the command line inputs
+        Command commander; //Initialize the class (this will set all the default parameters)
+        commander.initialize(argc, argv); //Parameter parsing
+
         Region regionInfo;
         regionInfo.generateRegion(commander.getRegion());
         commander.printRunSummary(std::to_string(regionInfo.getNumRegion()));
@@ -71,107 +73,5 @@ int main(int argc, char *argv[]){
     }
 
 
-/*
-
-    if(commander->risk()){
-        RiskPrediction *riskPrediction = nullptr;
-        riskPrediction = new RiskPrediction(commander,&snpList);
-        try{
-            riskPrediction->checkGenotype();
-            riskPrediction->run();
-            riskPrediction->result();
-            return EXIT_SUCCESS;
-        }
-        catch(const char *e){
-            std::cerr << e << std::endl;
-            delete commander;
-            regionInfo->clean();
-            delete regionInfo;
-            Snp::cleanSnp(snpList);
-            delete riskPrediction;
-            return EXIT_FAILURE;
-        }
-    }
-    else{
-        try{
-        */
-            /** Generate the Snp Index */
-            /*
-            if(commander->quantitative()){
-                Snp::generateSnpIndex(snpIndex, snpList, regionInfo, commander->isPvalue(), commander->GetextremeAdjust());
-            }
-            else if(commander->caseControl()){
-                Snp::generateSnpIndex(snpIndex, snpList,commander->GetcaseSize(), commander->GetcontrolSize(), commander->Getprevalence(), regionInfo, commander->isPvalue());
-                */
-                /** For case control study, set the liability adjustment */
-                /*
-                Snp::Setadjustment(commander->Getprevalence(), commander->GetcaseSize(), commander->GetcontrolSize());
-            }
-            regionInfo->clean();
-        }
-        catch(const char *e){
-            std::cerr << e << std::endl;
-            delete commander;
-            regionInfo->clean();
-            delete regionInfo;
-            Snp::cleanSnp(snpList);
-            return EXIT_FAILURE;
-        }
-        if(!commander->GetdirectionFile().empty()){
-            try{
-            */
-                /** If there is direction information, use it */
-                /*
-                Snp::addDirection(snpIndex, snpList, commander->GetdirectionFile());
-            }
-            catch(const char *e){
-                std::cerr << e << std::endl;
-                delete commander;
-                delete regionInfo;
-                Snp::cleanSnp(snpList);
-                return EXIT_FAILURE;
-            }
-        }
-        //From now on, we are only allow to iterate through snpList through snpIndex
-        GenotypeFileHandler *genotypeFileHandler = nullptr;
-        genotypeFileHandler = new GenotypeFileHandler(commander->GetldFilePrefix(), commander->Getthread(), commander->GetoutputPrefix());
-        try{
-            genotypeFileHandler->initialize(snpIndex, &snpList, commander->validate(), commander->maxBlockSet(), commander->GetmaxBlock(), commander->GetminBlock(),commander->Getmaf());
-        }
-        catch (const char *e) {
-            std::cerr << "Exception encountered when opening genotype files" << std::endl;
-            std::cerr << e << std::endl;
-            delete commander;
-            delete regionInfo;
-            Snp::cleanSnp(snpList);
-            delete genotypeFileHandler;
-            return EXIT_FAILURE;
-        }
-
-        SnpEstimation *snpEstimation = nullptr;
-        snpEstimation = new SnpEstimation(genotypeFileHandler, &snpIndex, &snpList, commander->Getthread(), commander->Getmaf(), commander->ldCorrect(), regionInfo);
-
-        try{
-            snpEstimation->Estimate();
-        }
-        catch(const char *e){
-            std::cerr << e << std::endl;
-            delete commander;
-            delete snpEstimation;
-            Snp::cleanSnp(snpList);
-            delete regionInfo;
-            return EXIT_FAILURE;
-        }
-
-        snpEstimation->Getresult(commander->GetoutputPrefix());
-        delete snpEstimation;
-        delete genotypeFileHandler;
-    }
-    //Cleaning section
-	Snp::cleanSnp(snpList);
-    delete commander;
-    regionInfo->clean();
-    delete regionInfo;
-    */
     return 0;
 }
