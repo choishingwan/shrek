@@ -37,6 +37,9 @@ class usefulTools{
 	static double dnorm(const double x);
 	/** qnorm from R */
 	static double qnorm(const double p);
+    /* Black magic got from http://stackoverflow.com/a/109025 */
+    /* Replacing pop_count, should not be platform dependent */
+    static int NumberOfSetBits(uint32_t i);
 
     /** Functions for getting the sign of a value input, obtained from  <a href="http://stackoverflow.com/questions/1903954/is-there-a-standard-sign-function-signum-sgn-in-c-c">stackoverflow</a>  */
 	template <typename T> inline constexpr

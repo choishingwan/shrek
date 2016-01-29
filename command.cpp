@@ -1,927 +1,421 @@
 #include "command.h"
 
 Command::Command(){}
+
 Command::~Command(){}
+void Command::usage(){
+    fprintf(stderr, "Usage:   shrek <command> [options]\n\n");
+    fprintf(stderr, "Command: quant        Quantitative Trait\n");
+    fprintf(stderr, "         binary       Binary Trait\n");
+}
 
-void Command::initialize(int argc, char* argv[]){
-    std::cerr << std::endl;
-    std::cerr << "Program: SHREK (Snp HeRitability Estimation Kit)" << std::endl;
-    std::cerr << "Version: "<< m_version << std::endl<<std::endl;
-    // First check if we have provided any mode information, if not, then we will provide the general
-    // error message
-	std::string mode(argv[1]);
-	// The concept here is that all the data checking and stuff are done within each individual functions
-    // Including the error check
-    if(mode.compare("quant")==0){
-        m_qt=true;
-        quantitativeProcess(argc, argv);
-    }
-    else if(mode.compare("binary")==0){
-        m_cc=true;
-        caseControlProcess(argc, argv);
-    }
-    /*
-    else if(mode.compare("risk-qt")==0){
-        m_rqt=true;
-        continuousRiskProcess(argc, argv);
-    }
-    else if(mode.compare("risk-bin")==0){
-        m_rcc = true;
-        dichotomusRiskProcess(argc, argv);
-    }
-    */
-    else if(mode.compare("help")==0 || mode.compare("--help")==0){
-        //Provide the mode help message (redundant)
-        std::cerr << "Usage: ./SHREK <command> [options]"                                         << std::endl<<std::endl;
-        std::cerr << "Command:    quant     Quantitative Trait"                                   << std::endl;
-        std::cerr << "            binary    Binary Trait"                                         << std::endl;
-        //std::cerr << "            risk-qt   Risk Prediction on continuous traits"                 << std::endl;
-        //std::cerr << "            risk-bin  Risk Prediction on dichotomize traits"                << std::endl;
-        std::cerr << std::endl;
-    }
-    else if(mode.compare("version")==0 || mode.compare("--version")==0){
-        //Get the version information
-        std::cerr << "Version: "<< m_version << std::endl<<std::endl;
-    }
+void Command::generalOptions(){
+
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "         -o | --output      Output prefix [stdout]\n");
+    fprintf(stderr, "         -L | --region      Region information, Format: \n");
+    fprintf(stderr, "                            name_1:bed_file_1, name2:bed_file_2,...\n");
+    //Although we prefer true, we will set default to false to give a clear parameter information
+    fprintf(stderr, "         -b | --block       Size of Block [%u]\n", m_sizeOfBlock);
+    fprintf(stderr, "         -e | --correct     Perform LD correction [False]\n");
+    fprintf(stderr, "         -k | --keep        Keep ambiguous SNPs (e.g. G|C in reference panel and C|G in\n");
+    fprintf(stderr, "                            p-value file [False]\n");
+    fprintf(stderr, "         -u | --pvalue      P-values instead of summary statistics are provided [False]\n");
+    fprintf(stderr, "         -t | --thread      Number of thread used [%u]\n", m_nThread);
+    fprintf(stderr, "         -f | --maf         MAF threshold for reference SNPs\n");
+    fprintf(stderr, "         -I | --impute      Imputation info score threshold[%f]\n", m_infoThreshold);
+    fprintf(stderr, "         -h | --help        Print this help\n");
+}
+
+void Command::btUsage(){
+    fprintf(stderr, "Usage:   shrek binary [options] \n\n");
+    fprintf(stderr, "Required Arguments:\n");
+    fprintf(stderr, "         -p | --pfile       P-value file name\n");
+    fprintf(stderr, "         -r | --bFile       Reference Panel file prefix\n"); //Currently we only support plink format
+    fprintf(stderr, "         -K | --prevalence  Population Prevalence of the trait\n");
+    fprintf(stderr, "         -s | --stat        Column name for summary statistic / p-value\n");
+    fprintf(stderr, "         -S | --sign        Column name for direction of effect\n");
+    fprintf(stderr, "                            e.g. OR, Z e.t.c\n");
+    fprintf(stderr, "         -U | --null        Null for direction of effect [0]\n");
+    fprintf(stderr, "                            e.g. -U 1 for OR, 0 for others\n");
+    fprintf(stderr, "         -v | --conIndex    Column containing the number of controls\n");
+    fprintf(stderr, "         -V | --nControl    Number of controls\n");
+    fprintf(stderr, "                            Only functional when -v not provided\n");
+    fprintf(stderr, "         -w | --caseIndex   Column containing the number of cases\n");
+    fprintf(stderr, "         -W | --nCase       Number of cases\n");
+    fprintf(stderr, "                            Only functional when -w not provided\n");
+    fprintf(stderr, "         -c | --chr         Column name for chromosome \n");
+    fprintf(stderr, "         -m | --rs          Column name for rsID \n");
+    fprintf(stderr, "         -l | --loc         Column name for coordinate \n");
+    fprintf(stderr, "         -a | --ref         Column name for reference allele\n");
+    fprintf(stderr, "         -A | --alt         Column name for alternative allele\n");
+    fprintf(stderr, "         -i | --info        Column name for impute info score\n");
+    generalOptions();
+}
+void Command::qtUsage(){
+    fprintf(stderr, "Usage:   shrek quant  [options] \n\n");
+    fprintf(stderr, "Required Arguments:\n");
+    fprintf(stderr, "         -p | --pfile       P-value file name\n");
+    fprintf(stderr, "         -r | --bFile       Reference Panel file prefix\n"); //Currently we only support plink format
+    fprintf(stderr, "         -x | --extreme     Extreme Adjustment, can be calculated as: \n");
+    fprintf(stderr, "                            Variance before selection / Variance after selection\n");
+    fprintf(stderr, "         -n | --sampIndex   Column name for the number of sample\n");
+    fprintf(stderr, "         -N | --nSample     Number of sample in the study\n");
+    fprintf(stderr, "                            Only functional when -n not provided\n");
+    fprintf(stderr, "         -s | --stat        Column name for summary statistic / p-value\n");
+    fprintf(stderr, "         -S | --sign        Column name for direction of effect\n");
+    fprintf(stderr, "                            e.g. OR, Z e.t.c\n");
+    fprintf(stderr, "         -U | --null        Null for direction of effect [0]\n");
+    fprintf(stderr, "                            e.g. -U 1 for OR, 0 for others\n");
+    fprintf(stderr, "         -c | --chr         Column name for chromosome \n");
+    fprintf(stderr, "         -m | --rs          Column name for rsID \n");
+    fprintf(stderr, "         -l | --loc         Column name for coordinate \n");
+    fprintf(stderr, "         -A | --ref         Column name for reference allele\n");
+    fprintf(stderr, "         -a | --alt         Column name for alternative allele\n");
+    fprintf(stderr, "         -i | --info        Column name for impute info score\n");
+    generalOptions();
+}
+
+//This will return whether we should continue our work
+bool Command::parseCommand(int argc, char *argv[]){
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Program: shrek (Tool for SNP heritability estimation)\n");
+    fprintf(stderr, "Version: %f\n\n", m_version);
+    if(argc <= 1) usage();
     else{
-        std::cerr << std::endl;
-        std::cerr << "unrecognized command: " << mode << std::endl<< std::endl;
-        std::cerr << "Usage: ./SHREK <command> [options]"                                         << std::endl<<std::endl;
-        std::cerr << "Command:    quant     Quantitative Trait"                                   << std::endl;
-        std::cerr << "            binary    Binary Trait"                                         << std::endl;
-        //std::cerr << "            risk-qt   Risk Prediction on continuous traits"                 << std::endl;
-       // std::cerr << "            risk-bin  Risk Prediction on dichotomize traits"                << std::endl;
-        std::cerr << std::endl;
-        throw std::runtime_error("Unspecified mode");
+        return processCode(argc, argv);
     }
+    return false;
 }
 
 
-void Command::getIndex(const std::vector<std::string> &index, const std::string &pvalueFileName, std::vector<size_t> &indexResult){
-    //check if we can open the file
-    std::ifstream pfile;
-    if(pvalueFileName.empty()){
-        throw "P-value file name not provided!";
+// Return whether if we can continue onwards
+// True = Can Progress
+// False = Stop programme
+bool Command::processCode(int argc,char *argv[]){
+    //Do both case control and quantitative parsing together consider how extensive their overlaps are
+    std::string mode =argv[1];
+    if(argc==2){
+        if(mode.compare("quant")==0) qtUsage();
+        else if(mode.compare("binary")==0) btUsage();
+        return false;
     }
-    pfile.open(pvalueFileName.c_str());
-    if(!pfile.is_open()){
-        throw "Cannot open pvalue file";
-    }
-    std::string header;
-    std::getline(pfile, header);
-    pfile.close();
-    header = usefulTools::trim(header);
-    if(header.empty()){
-        throw "Empty header line for pvalue file";
-    }
-    std::vector<std::string> token;
-    usefulTools::tokenizer(header, "\t ", &token);
-    // Not very efficient here, but should be ok consider the number of possible header
-    // Maybe someone who is interested in optimization can optimize this
-    bool found = false;
-    for(size_t i = 0; i < index.size(); ++i){
-        for(size_t j = 0; j < token.size(); ++j){
-            if(index[i].compare(token[j])==0){
-                found = true;
-                indexResult.push_back(j+1); //Don't use it as index, therefore 0 = uninitialized
-                break;
-            }
-        }
-        if(!found){
-            std::cerr << index[i] << " not found in header" << std::endl;
-        }
-        found = false;
-    }
-}
-
-void Command::caseControlProcess(int argc, char* argv[]){
-    static const char *optString = "a:R:k:p:b:c:r:l:s:o:f:t:S:N:i:I:X:x:d:L:vunh?";
+    static const char *optString = "o:L:b:ekut:f:I:p:r:K:x:s:S:v:V:w:W:c:m:l:a:A:i:n:N:U:h?";
     static const struct option longOpts[]={
-	    //Parameters for correction
-        {"case",required_argument, NULL,'a'},
-        {"control",required_argument, NULL,'R'},
-        {"prevalence",required_argument, NULL,'k'},
-        //Parameters on file input
-        {"pfile",required_argument, NULL,'p'},
-        {"bfile",required_argument, NULL,'b'},
-        {"chr",required_argument, NULL,'c'},
-        {"rs",required_argument, NULL,'r'},
-        {"loc",required_argument, NULL,'l'},
-        {"stat",required_argument, NULL,'s'},
-        {"sign",required_argument, NULL,'S'},
-        {"nullSign",required_argument, NULL,'N'},
-        {"info", required_argument, NULL, 'i'},
-        {"ref",required_argument, NULL, 'X' }, //these are for the validation, optional
-        {"alt", required_argument, NULL, 'x'}, //these are for the validation, optional
-        //General parameters
-        {"out",required_argument, NULL,'o'},
-        {"impute", required_argument, NULL, 'I'},
-        {"maf",required_argument, NULL,'f'},
-        {"thread",required_argument, NULL,'t'},
-        {"distance",required_argument, NULL,'d'},
-        {"region",required_argument, NULL,'L'},
-        {"validate",no_argument, NULL,'v'},
-        {"pvalue",no_argument, NULL,'u'},
-        {"correct",no_argument, NULL,'n'},
+	    //Qt specific parameter
+		{"output",required_argument,NULL,'o'},
+		{"region",required_argument,NULL,'L'},
+		{"block",required_argument,NULL,'b'},
+		{"correct",no_argument,NULL,'e'},
+		{"keep",no_argument,NULL,'k'},
+		{"pvalue",no_argument,NULL,'u'},
+		{"thread",required_argument,NULL,'t'},
+		{"maf",required_argument,NULL,'f'},
+		{"impute",required_argument,NULL,'I'},
+		{"pfile",required_argument,NULL,'p'},
+		{"bFile",required_argument,NULL,'r'},
+		{"prevalence",required_argument,NULL,'K'},
+		{"extreme",required_argument,NULL,'x'},
+		{"stat",required_argument,NULL,'s'},
+		{"sign",required_argument,NULL,'S'},
+		{"conIndex",required_argument,NULL,'v'},
+		{"nControl",required_argument,NULL,'V'},
+		{"caseIndex",required_argument,NULL,'w'},
+		{"nCase",required_argument,NULL,'W'},
+		{"chr",required_argument,NULL,'c'},
+		{"rs",required_argument,NULL,'m'},
+		{"loc",required_argument,NULL,'l'},
+		{"ref",required_argument,NULL,'A'},
+		{"alt",required_argument,NULL,'a'},
+		{"info",required_argument,NULL,'i'},
+		{"sampIndex",required_argument,NULL,'n'},
+		{"nSample",required_argument,NULL,'N'},
+		{"null",required_argument,NULL,'U'},
 		{"help",no_argument,NULL,'h'},
 		{NULL, 0, 0, 0}
 	};
 
-	std::vector<std::string> colNamesForIndex;
-	std::vector<char> typeForIndex;
-	int longIndex=0;
+    bool error = false;
+    int longIndex=0;
 	int opt = 0;
 	opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
+	std::vector<char> type;
+    std::vector<std::string> columnName;
+    std::map<std::string, char> duplication;
+	//Start reading all the parameters and perform the qc at the same time
     while(opt!=-1){
 		switch(opt){
-		    //CC specific parameters
-			case 'a':
-				m_caseSize= atoi(optarg);
-				break;
-			case 'R':
-				m_controlSize= atoi(optarg);
-				break;
-			case 'k':
-				m_prevalence = atof(optarg);
-				m_providedPrevalence =true;
-				break;
-            //File parameters
-			case 'p':
-				m_pValueFileName = optarg;
-				break;
-			case 'b':
-                m_ldFilePrefix = optarg;
+            case 'o':
+                m_outputPrefix = optarg;
                 break;
-			case 'c': //chr
-			    colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('c');
+            case 'L':
+                m_regionList = optarg;
                 break;
-			case 'r': //rsid
-			    colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('r');
-				break;
-			case 'l': //loc
-			    colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('l');
-				break;
-			case 'i': //info
-			    colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('i');
-				break;
-            case 'X': //ref
-                colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('X');
+            case 'b':
+                m_sizeOfBlock = atoi(optarg);
+                if(m_sizeOfBlock < 1){
+                    error = true;
+                    fprintf(stderr, "Size of block must be greater than 0: %s\n", optarg);
+                }
                 break;
-            case 'x': //alt
-                colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('x');
+            case 'e':
+                m_ldCorrect = true;
                 break;
-
-            case 's': //statistic
-			    colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('s');
+            case 'k':
+                m_keepAmbiguous = true;
                 break;
-            case 'S': //sign
-                colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('S');
-                m_signGiven = true;
-        //General parameters
-			case 'o':
-				m_outputPrefix = optarg;
-				break;
-			case 'f': //maf threshold
-                m_maf = atof(optarg);
-                m_providedMaf= true;
-                break;
-			case 'I': //impute threshold
-                m_imputeThreshold = atof(optarg);
-                break;
-			case 'N': //The null value for sign of statistic
-                m_nullSign = atof(optarg);
-                break;
-			case 't': //The number of threads
-				m_thread = atoi(optarg);
-				break;
-			case 'd': //The block distance
-				m_distance = atoi(optarg);
-				break;
-			case 'L': //The list of regions
-				m_regionList = optarg;
-                break;
-			case 'v': //Whether if we should validate the SNPs
-				m_validate = true;
-				break;
-			case 'u': //Whether if the input is p-value or summary statistics
+            case 'u':
                 m_isPvalue = true;
                 break;
-			case 'n': //Whether to conduct the LD correction
-				m_ldCorrection = false;
-				break;
-			case 'h':
-			case '?':
- 				printCCUsage();
-                throw 0;
-				break;
-			default:
-				throw "Undefined operator, please use --help for more information!";
-		}
-		opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
-    }
-
-    //The problem here is that the sign of the summary statistic can be the same column as the summary statistics
-    std::vector<size_t> index;
-    getIndex(colNamesForIndex, m_pValueFileName, index);
-    if(index.size() != colNamesForIndex.size()){
-        throw "Some field(s) not found in header, please check";
-    }
-
-    // For all index, most of them should not be a duplicate of each other.
-    std::map<size_t, char> dupCheck;
-    bool duplicated = false;
-    for(size_t i = 0; i < typeForIndex.size(); ++i){
-        switch(typeForIndex[i]){
-            case 'c':
-                if(dupCheck.find(index[i])==dupCheck.end()){
-                    m_chrIndex = index[i];
-                    dupCheck[index[i]] = 'c';
-                }
-                else{
-                    duplicated = true;
+            case 't':
+                m_nThread = atoi(optarg);
+                if(m_nThread < 1){
+                    error = true;
+                    fprintf(stderr, "Number of thread must be greater than 0: %s\n", optarg);
                 }
                 break;
-            case 'l':
-                if(dupCheck.find(index[i])==dupCheck.end()){
-                    m_bpIndex = index[i];
-                    dupCheck[index[i]] = 'l';
+            case 'f':
+                m_mafThreshold = atof(optarg);
+                if(m_mafThreshold < 0.0 || m_mafThreshold > 1.0){
+                    error = true;
+                    fprintf(stderr, "MAF threshold must be between 0 and 1: %s\n", optarg);
                 }
-                else{
-                    duplicated = true;
+                break;
+            case 'I':
+                m_infoThreshold = atof(optarg);
+                if(m_infoThreshold < 0.0 || m_infoThreshold > 1.0){
+                    error = true;
+                    fprintf(stderr, "INFO threshold must be between 0 and 1: %s\n", optarg);
+                }
+                break;
+            case 'p':
+                m_pValueFileName = optarg;
+                if(m_pValueFileName.empty() || !usefulTools::fileExists(m_pValueFileName)){
+                    error = true;
+                    fprintf(stderr, "P-value file is required: %s\n", optarg);
                 }
                 break;
             case 'r':
-                if(dupCheck.find(index[i])==dupCheck.end()){
-                    m_rsIndex = index[i];
-                    dupCheck[index[i]] = 'r';
+                m_referenceFilePrefix = optarg;
+                if(m_referenceFilePrefix.empty()){
+                    error = true;
+                    fprintf(stderr, "Reference panel must be provided: %s\n", optarg);
                 }
-                else{
-                    duplicated = true;
+                else if(!usefulTools::fileExists(m_referenceFilePrefix+".bed")){
+                    error = true;
+                    fprintf(stderr, "bed file not found: %s.bed\n", optarg);
+                }
+                else if(!usefulTools::fileExists(m_referenceFilePrefix+".fam")){
+                    error = true;
+                    fprintf(stderr, "fam file not found: %s.fam\n", optarg);
+
+                }
+                else if(!usefulTools::fileExists(m_referenceFilePrefix+".bim")){
+                    error = true;
+                    fprintf(stderr, "bim file not found: %s.bim\n", optarg);
+
                 }
                 break;
-            case 'i':
-                if(dupCheck.find(index[i])==dupCheck.end()){
-                    m_imputeInfo = index[i];
-                    dupCheck[index[i]] = 'i';
+            case 'K':
+                if(mode.compare("quant")==0){
+                    error=true;
+                    fprintf(stderr, "Population prevalence not required for quantitative trait analysis\n");
                 }
-                else{
-                    duplicated = true;
-                }
-                break;
-            case 'X':
-                if(dupCheck.find(index[i])==dupCheck.end()){
-                    m_ref = index[i];
-                    dupCheck[index[i]] = 'X';
-                }
-                else{
-                    duplicated = true;
+                else if(mode.compare("binary")==0){
+                    m_prevalence = atof(optarg);
+                    if(m_prevalence < 0.0 || m_prevalence >1.0){
+                        error = true;
+                        fprintf(stderr, "Population prevalence must be between 0 and 1: %s\n", optarg);
+                    }
                 }
                 break;
             case 'x':
-                if(dupCheck.find(index[i])==dupCheck.end()){
-                    m_alt = index[i];
-                    dupCheck[index[i]] = 'x';
+                if(mode.compare("binary")==0){
+                    error=true;
+                    fprintf(stderr, "Extreme adjustment not applicable for binary trait analysis\n");
                 }
-                else{
-                    duplicated = true;
-                }
-                break;
-            case 's':
-                if(dupCheck.find(index[i])==dupCheck.end() || dupCheck[index[i]] == 'S'){
-                    m_stats = index[i];
-                    dupCheck[index[i]] = 's';
-                }
-                else{
-                    duplicated = true;
+                else if(mode.compare("quant")==0){
+                    m_extremeAdjust = atof(optarg);
+                    if(m_extremeAdjust< 0.0){
+                        error = true;
+                        fprintf(stderr, "Extreme adjustment value must be larger than 0: %f\n", m_extremeAdjust);
+                    }
                 }
                 break;
-            case 'S':
-                if(dupCheck.find(index[i])==dupCheck.end() || dupCheck[index[i]] == 's'){
-                    m_signIndex = index[i];
-                    m_signGiven =true;
-                    dupCheck[index[i]] = 'S';
+            case 'V':
+                if(mode.compare("quant")==0){
+                    error=true;
+                    fprintf(stderr, "Number of controls is only used for binary trait analysis\n");
+                    fprintf(stderr, "Please use -N for quantitative trait analysis\n");
                 }
-                else{
-                    duplicated = true;
+                else if(mode.compare("binary")==0){
+                    m_nControl = atoi(optarg);
+                    if(m_nControl <=0){
+                        error = true;
+                        fprintf(stderr, "Number of controls must be larger than 0: %i", m_nControl);
+                    }
                 }
                 break;
-        }
-    }
-
-    if(duplicated){
-        throw "Duplicated fields, please check your input";
-    }
-
-    // Now perform sanity check
-    bool error= false;
-    std::string errorLog = "";
-    if(m_caseSize ==0){
-        error = true;
-        errorLog.append("Number of case cannot be 0\n");
-    }
-    if(m_controlSize==0){
-        error = true;
-        errorLog.append("Number of control cannot be 0\n");
-    }
-    if(!m_providedPrevalence){
-        error = true;
-        errorLog.append("The population prevalence is required\n");
-    }
-    else if(m_prevalence <0 || m_prevalence> 1){
-        error =true;
-        errorLog.append("The population prevalence must be between 0 or 1\n");
-    }
-    if(m_pValueFileName.empty()){
-        error = true;
-        errorLog.append("The p-value file is required\n");
-    }
-    if(m_ldFilePrefix.empty()){
-        error = true;
-        errorLog.append("The reference panel is required\n");
-    }
-    if(m_validate){
-        if(m_chrIndex==0){
-            error=true;
-            errorLog.append("Column for chromosome information not provided\n");
-        }
-        if(m_rsIndex==0){
-            error=true;
-            errorLog.append("Column for rs ID not provided\n");
-        }
-        if(m_bpIndex==0){
-            error = true;
-            errorLog.append("Column for SNP coordinate not provided\n");
-        }
-        if(m_stats==0){
-            error = true;
-            errorLog.append("Column for statistics not provided\n");
-        }
-        if(m_imputeInfo!= 0 && (m_imputeThreshold < 0 ||m_imputeThreshold> 1) ){
-            error = true;
-            errorLog.append("Imputation INFO must be between 0 and 1\n");
-        }
-        if(m_providedMaf && (m_maf < 0 || m_maf > 1)){
-            error = true;
-            errorLog.append("MAF must be between 0 and 1\n");
-        }
-    }
-    else if(m_stats==0){
-        error = true;
-        errorLog.append("Summary statistics must be provided\n");
-    }
-    if(error){
-        throw errorLog;
-    }
-
-}
-
-void Command::quantitativeProcess(int argc, char* argv[]){
-    static const char *optString = "e:a:A:b:p:c:r:l:s:S:N:i:I:X:x:d:f:L:o:t:nuvh?";
-	static const struct option longOpts[]={
-	    //Qt specific parameter
-		{"extreme",required_argument,NULL,'e'},
-        {"sampleSize",required_argument,NULL,'a'},
-        {"sampleIndex",required_argument,NULL,'A'},
-        //File parameters
-		{"bfile",required_argument,NULL,'b'},
-		{"pfile",required_argument,NULL,'p'},
-		{"chr",required_argument,NULL,'c'},
-		{"rs",required_argument,NULL,'r'},
-		{"loc",required_argument,NULL,'l'},
-		{"stats", required_argument, NULL, 's'},
-		{"sign",required_argument,NULL,'S'},
-        {"nullSign",required_argument, NULL,'N'},
-        {"info", required_argument, NULL, 'i'},
-        {"impute", required_argument, NULL, 'I'},
-        {"ref",required_argument, NULL, 'X' }, //these are for the validation, optional
-        {"alt", required_argument, NULL, 'x'}, //these are for the validation, optional
-        //General parameters
-		{"distance",required_argument,NULL,'d'},
-		{"maf",required_argument,NULL,'f'},
-		{"region",required_argument,NULL,'L'},
-		{"out",required_argument,NULL,'o'},
-		{"thread",required_argument,NULL,'t'},
-		{"correct",no_argument,NULL,'n'},
-		{"pvalue",no_argument,NULL,'u'},
-		{"validate",no_argument,NULL,'v'},
-		{"help",no_argument,NULL,'h'},
-		{NULL, 0, 0, 0}
-	};
-
-	std::vector<std::string> colNamesForIndex;
-	std::vector<char> typeForIndex;
-	int longIndex=0;
-	int opt = 0;
-	opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
-    while(opt!=-1){
-		switch(opt){
-		    //Qt specific parameter
-			case 'e':
-				m_extremeAdjust = atof(optarg);
-				m_provideExtremeAdjustment = true;
-				break;
-			case 'a':
-				m_sampleSize= atoi(optarg);
-				m_provideSampleSize = true;
-				break;
-			case 'A':
-				//m_sampleSizeIndex = atoi(optarg)-1;
-			    colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('A');
-				break;
-            //File parameters
-			case 'b':
-                m_ldFilePrefix = optarg;
-                break;
-			case 'p':
-				m_pValueFileName = optarg;
-				break;
-			case 'c':
-			    colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('c');
-                break;
-			case 'r':
-			    colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('r');
-				break;
-			case 'l':
-			    colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('l');
-				break;
-            case 'S':
-                colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('S');
-                m_signGiven = true;
-            case 's':
-			    colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('s');
-                break;
-			case 'i': //info
-			    colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('i');
-				break;
-            case 'X': //ref
-                colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('X');
-                break;
-            case 'x': //alt
-                colNamesForIndex.push_back(optarg);
-                typeForIndex.push_back('x');
+            case 'W':
+                if(mode.compare("quant")==0){
+                    error=true;
+                    fprintf(stderr, "Number of cases is only used for binary trait analysis\n");
+                    fprintf(stderr, "Please use -N for quantitative trait analysis\n");
+                }
+                else if(mode.compare("binary")==0){
+                    m_nCase = atoi(optarg);
+                    if(m_nCase <=0){
+                        error = true;
+                        fprintf(stderr, "Number of cases must be larger than 0: %i\n", m_nCase);
+                    }
+                }
                 break;
             case 'N':
-                m_nullSign = atof(optarg);
-                break;
-			case 'I': //impute threshold
-                m_imputeThreshold = atof(optarg);
-                break;
-        //General parameters
-            case 'd':
-                m_distance = atoi(optarg);
-                break;
-			case 'f':
-                m_maf = atof(optarg);
-                m_providedMaf= true;
-                break;
-			case 'L':
-				m_regionList = optarg;
-                break;
-			case 'o':
-				m_outputPrefix = optarg;
-				break;
-			case 't':
-				m_thread = atoi(optarg);
-				break;
-			case 'n':
-				m_ldCorrection = false;
-				break;
-			case 'u':
-                m_isPvalue = true;
-                break;
-			case 'v':
-				m_validate = true;
-				break;
-    		case 'h':
-			case '?':
- 				printQuantUsage();
-                throw 0;
-				break;
-			default:
-				throw "Undefined operator, please use --help for more information!";
-		}
-		opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
-    }
-    std::vector<size_t> index;
-    getIndex(colNamesForIndex, m_pValueFileName, index);
-    if(index.size() != colNamesForIndex.size()){
-        throw "Some field(s) not found in header, please check";
-    }
-    std::map<size_t, char> dupCheck;
-    bool duplicated = false;
-    for(size_t i = 0; i < typeForIndex.size(); ++i){
-        switch(typeForIndex[i]){
-            case 'A':
-                if(dupCheck.find(index[i])==dupCheck.end()){
-                    m_sampleSizeIndex = index[i];
-                    dupCheck[index[i]] = 'A';
+                if(mode.compare("binary")==0){
+                    error=true;
+                    fprintf(stderr, "Number of samples is only used for quantitative trait analysis\n");
+                    fprintf(stderr, "Please use -V and -W for binary trait analysis\n");
                 }
-                else{
-                    duplicated = true;
+                else if(mode.compare("quant")==0){
+                    m_nSample = atoi(optarg);
+                    if(m_nSample <=0){
+                        error = true;
+                        fprintf(stderr, "Number of samples must be larger than 0: %i\n", m_nSample);
+                    }
                 }
                 break;
-            case 'c':
-                if(dupCheck.find(index[i])==dupCheck.end()){
-                    m_chrIndex = index[i];
-                    dupCheck[index[i]] = 'c';
-                }
-                else{
-                    duplicated = true;
-                }
+            case 'U':
+                m_signNull = atof(optarg);
                 break;
-            case 'l':
-                if(dupCheck.find(index[i])==dupCheck.end()){
-                    m_bpIndex = index[i];
-                    dupCheck[index[i]] = 'l';
-                }
-                else{
-                    duplicated = true;
-                }
-                break;
-            case 'r':
-                if(dupCheck.find(index[i])==dupCheck.end()){
-                    m_rsIndex = index[i];
-                    dupCheck[index[i]] = 'r';
-                }
-                else{
-                    duplicated = true;
-                }
-                break;
-            case 'i':
-                if(dupCheck.find(index[i])==dupCheck.end()){
-                    m_imputeInfo = index[i];
-                    dupCheck[index[i]] = 'i';
-                }
-                else{
-                    duplicated = true;
-                }
-                break;
-            case 'X':
-                if(dupCheck.find(index[i])==dupCheck.end()){
-                    m_ref = index[i];
-                    dupCheck[index[i]] = 'X';
-                }
-                else{
-                    duplicated = true;
-                }
-                break;
-            case 'x':
-                if(dupCheck.find(index[i])==dupCheck.end()){
-                    m_alt = index[i];
-                    dupCheck[index[i]] = 'x';
-                }
-                else{
-                    duplicated = true;
-                }
-                break;
+            //Problem for the index based input is that they can be provided BEFORE the p-value file is provided
+            //Therefore we must do the QC post hoc
             case 's':
-                if(dupCheck.find(index[i])==dupCheck.end() || dupCheck[index[i]] == 'S'){
-                    m_stats = index[i];
-                    dupCheck[index[i]] = 's';
+                if(duplication.find(optarg)==duplication.end() || duplication[optarg]=='S'){
+                    //This is ok, because Sign and statistic can be on the same column
+                    duplication[optarg] = 's';
+                    type.push_back('s');
+                    columnName.push_back(optarg);
                 }
                 else{
-                    duplicated = true;
+                    error = true;
+                    fprintf(stderr, "Duplicated column name found, please check your input: %s\n", optarg);
                 }
                 break;
             case 'S':
-                if(dupCheck.find(index[i])==dupCheck.end() || dupCheck[index[i]] == 's'){
-                    m_signIndex = index[i];
-                    m_signGiven =true;
-                    dupCheck[index[i]] = 'S';
+                if(duplication.find(optarg)==duplication.end() || duplication[optarg]=='s'){
+                    duplication[optarg] = 'S';
+                    type.push_back('S');
+                    columnName.push_back(optarg);
                 }
                 else{
-                    duplicated = true;
+                    error = true;
+                    fprintf(stderr, "Duplicated column name found, please check your input: %s\n", optarg);
                 }
                 break;
-        }
-    }
-
-    if(duplicated){
-        throw "Duplicated fields, please check your input";
-    }
-
-    //Now perform input sanity check;
-    bool error= false;
-    std::string errorLog = "";
-
-    if(m_provideExtremeAdjustment){
-        if(m_extremeAdjust < 0){
-            error = true;
-            errorLog.append("Extreme adjustment must be bigger than 0\n");
-        }
-    }
-    if(m_provideSampleSize){
-        if(m_sampleSize==0){
-            error = true;
-            errorLog.append("Sample size must be bigger than 0\n");
-        }
-    }
-    else{
-        if(m_sampleSizeIndex==0){
-            error = true;
-            errorLog.append("Sample size information must be provided\n");
-        }
-    }
-    if(m_pValueFileName.empty()){
-        error = true;
-        errorLog.append("The p-value file is required\n");
-    }
-    if(m_ldFilePrefix.empty()){
-        error = true;
-        errorLog.append("The reference panel is required\n");
-    }
-    if(m_validate){
-        if(m_chrIndex==0){
-            error=true;
-            errorLog.append("Column for chromosome information not provided\n");
-        }
-        if(m_rsIndex==0){
-            error=true;
-            errorLog.append("Column for rs ID not provided\n");
-        }
-        if(m_bpIndex==0){
-            error = true;
-            errorLog.append("Column for SNP coordinate not provided\n");
-        }
-        if(m_stats==0){
-            error = true;
-            errorLog.append("Column for statistics not provided\n");
-        }
-        if(m_imputeInfo!= 0 && (m_imputeThreshold < 0 ||m_imputeThreshold> 1) ){
-            error = true;
-            errorLog.append("Imputation INFO must be between 0 and 1\n");
-        }
-        if(m_providedMaf && (m_maf < 0 || m_maf > 1)){
-            error = true;
-            errorLog.append("MAF must be between 0 and 1\n");
-        }
-    }
-    else if(m_stats==0){
-        error = true;
-        errorLog.append("Summary statistics must be provided\n");
-    }
-    if(error){
-        throw errorLog;
-    }
-
-}
-
-/*
-void Command::dichotomusRiskProcess(int argc, char* argv[]){
-    static const char *optString = "E:T:D:g:Aa:R:k:p:b:c:r:l:so:f:t:d:L:vunh?";
-	static const struct option longOpts[]={
-        //Risk prediction specific parameters
-        {"ref", required_argument, NULL, 'E'},
-        {"alt", required_argument, NULL, 'T'},
-        {"dir", required_argument, NULL, 'D'},
-        {"geno", required_argument, NULL, 'g'},
-        {"ambiguous", required_argument, NULL, 'A'},
-	    //CC specific parameters
-        {"case",required_argument, NULL,'a'},
-        {"control",required_argument, NULL,'R'},
-        {"prevalence",required_argument, NULL,'k'},
-        //Parameters on file input
-        {"pfile",required_argument, NULL,'p'},
-        {"bfile",required_argument, NULL,'b'},
-        {"chr",required_argument, NULL,'c'},
-        {"rs",required_argument, NULL,'r'},
-        {"loc",required_argument, NULL,'l'},
-        {"stat",required_argument, NULL,'s'},
-        //General parameters
-        {"out",required_argument, NULL,'o'},
-        {"maf",required_argument, NULL,'f'},
-        {"thread",required_argument, NULL,'t'},
-        {"distance",required_argument, NULL,'d'},
-        {"region",required_argument, NULL,'L'},
-        {"validate",no_argument, NULL,'v'},
-        {"pvalue",no_argument, NULL,'u'},
-        {"correct",no_argument, NULL,'n'},
-		{"help",no_argument,NULL,'h'},
-		{NULL, 0, 0, 0}
-	};
-	int longIndex=0;
-	int opt = 0;
-	opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
-    while(opt!=-1){
-		switch(opt){
-		    //risk prediction specific parameters
-            case 'E':
-                m_ref = atoi(optarg)-1;
+            case 'v':
+                if(duplication.find(optarg)==duplication.end()){
+                    duplication[optarg]='v';
+                    type.push_back('v');
+                    columnName.push_back(optarg);
+                }
+                else{
+                    error = true;
+                    fprintf(stderr, "Duplicated column name found, please check your input: %s\n", optarg);
+                }
                 break;
-            case 'T':
-                m_alt = atoi(optarg)-1;
+            case 'w':
+                if(duplication.find(optarg)==duplication.end()){
+                    duplication[optarg]='w';
+                    type.push_back('w');
+                    columnName.push_back(optarg);
+                }
+                else{
+                    error = true;
+                    fprintf(stderr, "Duplicated column name found, please check your input: %s\n", optarg);
+                }
                 break;
-            case 'D':
-                m_dirIndex = atoi(optarg)-1;
+            case 'c':
+                if(duplication.find(optarg)==duplication.end()){
+                    duplication[optarg]='c';
+                    type.push_back('c');
+                    columnName.push_back(optarg);
+                }
+                else{
+                    error = true;
+                    fprintf(stderr, "Duplicated column name found, please check your input: %s\n", optarg);
+                }
                 break;
-            case 'G':
-                m_genotypeFilePrefix = optarg;
+            case 'm':
+                if(duplication.find(optarg)==duplication.end()){
+                    duplication[optarg]='m';
+                    type.push_back('m');
+                    columnName.push_back(optarg);
+                }
+                else{
+                    error = true;
+                    fprintf(stderr, "Duplicated column name found, please check your input: %s\n", optarg);
+                }
+                break;
+            case 'l':
+                if(duplication.find(optarg)==duplication.end()){
+                    duplication[optarg]='l';
+                    type.push_back('l');
+                    columnName.push_back(optarg);
+                }
+                else{
+                    error = true;
+                    fprintf(stderr, "Duplicated column name found, please check your input: %s\n", optarg);
+                }
+                break;
+            case 'a':
+                if(duplication.find(optarg)==duplication.end()){
+                    duplication[optarg]='a';
+                    type.push_back('a');
+                    columnName.push_back(optarg);
+                }
+                else{
+                    error = true;
+                    fprintf(stderr, "Duplicated column name found, please check your input: %s\n", optarg);
+                }
                 break;
             case 'A':
-                m_keep = true;
+                if(duplication.find(optarg)==duplication.end()){
+                    duplication[optarg]='A';
+                    type.push_back('A');
+                    columnName.push_back(optarg);
+                }
+                else{
+                    error = true;
+                    fprintf(stderr, "Duplicated column name found, please check your input: %s\n", optarg);
+                }
                 break;
-
-		    //CC specific parameters
-			case 'a':
-				m_caseSize= atoi(optarg);
-				break;
-			case 'R':
-				m_controlSize= atoi(optarg);
-				break;
-			case 'k':
-				m_prevalence = atof(optarg);
-				m_providedPrevalence =true;
-				break;
-            //File parameters
-			case 'p':
-				m_pValueFileName = optarg;
-				break;
-			case 'b':
-                m_ldFilePrefix = optarg;
+            case 'i':
+                if(duplication.find(optarg)==duplication.end()){
+                    duplication[optarg]='i';
+                    type.push_back('i');
+                    columnName.push_back(optarg);
+                }
+                else{
+                    error = true;
+                    fprintf(stderr, "Duplicated column name found, please check your input: %s\n", optarg);
+                }
                 break;
-			case 'c':
-                m_chrIndex = atoi(optarg)-1;
+            case 'n':
+                if(duplication.find(optarg)==duplication.end()){
+                    duplication[optarg]='n';
+                    type.push_back('n');
+                    columnName.push_back(optarg);
+                }
+                else{
+                    error = true;
+                    fprintf(stderr, "Duplicated column name found, please check your input: %s\n", optarg);
+                }
                 break;
-			case 'r':
-				m_rsIndex = atoi(optarg)-1;
-				break;
-			case 'l':
-				m_bpIndex=atoi(optarg)-1;
-				break;
-            case 's':
-                //m_stats = processRange(optarg);
-                m_stats = atoi(optarg)-1;
-                break;
-        //General parameters
-			case 'o':
-				m_outputPrefix = optarg;
-				break;
-			case 'f':
-                m_maf = atof(optarg);
-                m_providedMaf= true;
-                break;
-			case 't':
-				m_thread = atoi(optarg);
-				break;
-			case 'd':
-				m_distance = atoi(optarg);
-				break;
-			case 'L':
-				m_regionList = optarg;
-                break;
-			case 'v':
-				m_validate = true;
-				break;
-			case 'u':
-                m_isPvalue = true;
-                break;
-			case 'n':
-				m_ldCorrection = false;
-				break;
-			case 'h':
-			case '?':
- 				printRiskCCUsage();
-                throw 0;
-				break;
-			default:
-				throw "Undefined operator, please use --help for more information!";
-		}
-		opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
-    }
-
-
-}
-
-
-void Command::continuousRiskProcess(int argc, char* argv[]){
-    static const char *optString = "E:T:D:g:AN:x:b:p:c:r:l:s:d:f:L:o:t:nuvh?";
-	static const struct option longOpts[]={
-        //Risk prediction specific parameters
-        {"ref", required_argument, NULL, 'E'},
-        {"alt", required_argument, NULL, 'T'},
-        {"dir", required_argument, NULL, 'D'},
-        {"geno", required_argument, NULL, 'g'},
-        {"ambiguous", required_argument, NULL, 'A'},
-
-	    //Qt specific parameter
-        {"sampleSize",required_argument,NULL,'N'},
-        {"sampleIndex",required_argument,NULL,'x'},
-        //File parameters
-		{"bfile",required_argument,NULL,'b'},
-		{"pfile",required_argument,NULL,'p'},
-		{"chr",required_argument,NULL,'c'},
-		{"rs",required_argument,NULL,'r'},
-		{"loc",required_argument,NULL,'l'},
-		{"stats", required_argument, NULL, 's'},
-        //General parameters
-		{"distance",required_argument,NULL,'d'},
-		{"maf",required_argument,NULL,'f'},
-		{"region",required_argument,NULL,'L'},
-		{"out",required_argument,NULL,'o'},
-		{"thread",required_argument,NULL,'t'},
-		{"correct",no_argument,NULL,'n'},
-		{"pvalue",no_argument,NULL,'u'},
-		{"validate",no_argument,NULL,'v'},
-		{"help",no_argument,NULL,'h'},
-		{NULL, 0, 0, 0}
-	};
-
-	int longIndex=0;
-	int opt = 0;
-	opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
-    while(opt!=-1){
-		switch(opt){
-		    //risk prediction specific parameters
-            case 'E':
-                m_ref = atoi(optarg)-1;
-                break;
-            case 'T':
-                m_alt = atoi(optarg)-1;
-                break;
-            case 'D':
-                m_dirIndex = atoi(optarg)-1;
-                break;
-            case 'G':
-                m_genotypeFilePrefix = optarg;
-                break;
-            case 'A':
-                m_keep = true;
-                break;
-
-		    //Qt specific parameter
-			case 'N':
-				m_sampleSize= atoi(optarg);
-				m_provideSampleSize = true;
-				break;
-			case 'x':
-				m_sampleSizeIndex = atoi(optarg)-1;
-				break;
-            //File parameters
-			case 'b':
-                m_ldFilePrefix = optarg;
-                break;
-			case 'p':
-				m_pValueFileName = optarg;
-				break;
-			case 'c':
-                m_chrIndex = atoi(optarg)-1;
-                break;
-			case 'r':
-				m_rsIndex = atoi(optarg)-1;
-				break;
-			case 'l':
-				m_bpIndex=atoi(optarg)-1;
-				break;
-            case 's':
-                //m_stats = processRange(optarg);
-                m_stats = atoi(optarg)-1;
-                break;
-        //General parameters
-            case 'd':
-                m_distance = atoi(optarg);
-                break;
-			case 'f':
-                m_maf = atof(optarg);
-                m_providedMaf= true;
-                break;
-			case 'L':
-				m_regionList = optarg;
-                break;
-			case 'o':
-				m_outputPrefix = optarg;
-				break;
-			case 't':
-				m_thread = atoi(optarg);
-				break;
-			case 'n':
-				m_ldCorrection = false;
-				break;
-			case 'u':
-                m_isPvalue = true;
-                break;
-			case 'v':
-				m_validate = true;
-				break;
     		case 'h':
 			case '?':
- 				printRiskQtUsage();
-                throw 0;
+			    if(mode.compare("quant")==0) qtUsage();
+                else if(mode.compare("binary")==0) btUsage();
+                return false; //This is not an error, just tell the programme to end
 				break;
 			default:
 				throw "Undefined operator, please use --help for more information!";
@@ -929,160 +423,149 @@ void Command::continuousRiskProcess(int argc, char* argv[]){
 		opt=getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
 
-}
-
-*/
-
-
-void Command::printRunSummary(std::string regionMessage){
-    std::cerr 	<< "SHREK\tCoding by Sam CHOI\tMethod by Johnny KWAN" <<std::endl
-        << "===============================================================" << std::endl
-		<< "Performing analysis using the following parameters: " << std::endl
-		<< "===============================================================" << std::endl
-		<< "Essential Input  " <<std::endl;
-		std::cerr	<< "Linkage File Prefix  : " << m_ldFilePrefix << std::endl;
-	    std::cerr 	<< "P-Value File         : " << m_pValueFileName << std::endl;
-	    std::cerr   << "Input is P-Value     : ";
-    if(m_isPvalue) std::cerr << "True" << std::endl;
-    else std::cerr << "False" << std::endl;
-    if(!m_outputPrefix.empty()){
-        std::cerr   << "Output File          : " << m_outputPrefix << std::endl;
-    }
-    if(m_cc){
-		std::cerr	<< "Mode                 : Case Control " << std::endl
-					<< "Number of Case       : " << m_caseSize << std::endl
-					<< "Number of Control    : " << m_controlSize << std::endl
-					<< "Prevalence           : " << m_prevalence << std::endl << std::endl;
-	}
-	else if(m_qt){
-		std::cerr	<< "Mode                 : Quantitative Trait" << std::endl;
-		if(m_provideSampleSize) std::cerr	<< "Sample Size          : " << m_sampleSize << std::endl;
-		if(m_provideExtremeAdjustment) std::cerr <<   "Extreme Adjustment   : " << m_extremeAdjust << std::endl << std::endl;
-	}
-	else if(m_rqt){
-        std::cerr	<< "Mode                 : Risk Prediction (Continuous Trait)" << std::endl;
-        std::cerr   << "Genotype File Prefix : " << m_genotypeFilePrefix << std::endl;
-        std::cerr   << "Ref Allele           : " << m_ref << std::endl;
-        std::cerr   << "Alt Allele           : " << m_alt << std::endl;
-		if(m_provideSampleSize) std::cerr	<< "Sample Size          : " << m_sampleSize << std::endl;
-	}
-	else if(m_rcc){
-        std::cerr	<< "Mode                 : Risk Prediction (Dichotomous Trait)" << std::endl;
-        std::cerr   << "Genotype File Prefix : " << m_genotypeFilePrefix << std::endl;
-        std::cerr   << "Ref Allele           : " << m_ref << std::endl;
-        std::cerr   << "Alt Allele           : " << m_alt << std::endl
-					<< "Number of Case       : " << m_caseSize << std::endl
-					<< "Number of Control    : " << m_controlSize << std::endl
-					<< "Prevalence           : " << m_prevalence << std::endl << std::endl;
-		if(m_provideSampleSize) std::cerr	<< "Sample Size          : " << m_sampleSize << std::endl;
-	}
-    std::cerr	<< "===============================================================" << std::endl
-				<< "Options " << std::endl
-				<< "Number of Thread     : " << m_thread << std::endl;
-    if(m_ldCorrection){
-        std::cerr << "Use LD correction    : True" << std::endl;
+    // now all the basic QC has been completed
+    // The only QC left is to make sure all the columns are here
+    std::ifstream pvalueFile;
+    pvalueFile.open(m_pValueFileName.c_str());
+    if(!pvalueFile.is_open()){
+        error = false;
+        fprintf(stderr, "Cannot open p-value file %s\n", m_pValueFileName.c_str());
     }
     else{
-        std::cerr << "Use LD correction    : False" << std::endl;
+        std::string line;
+        std::getline(pvalueFile, line);
+        pvalueFile.close();
+        std::vector<std::string> token;
+        usefulTools::tokenizer(line, "\t ", &token); //Assume the header is separated by tab  or space
+        // Therefore the name of the headers cannot contain space
+
+        //Now obtain the index of the corresponding columns
+        bool identified = false;
+        for(size_t i = 0; i < columnName.size(); ++i){
+            for(size_t j = 0; j < token.size(); ++j){
+                if(columnName[i].compare(token[j])==0){
+                    (j+1 > m_maxIndex)? m_maxIndex=j+1: m_maxIndex=m_maxIndex; //Again, reserve 0 (we are going to use it as bound anyway)
+                    identified = true;
+                    switch(type[i]){
+                        case 's':
+                            m_summaryStatisticIndex = j+1;
+                            break;
+                        case 'S':
+                            m_signIndex = j+1;
+                            break;
+                        case 'v':
+                            m_controlIndex=j+1;
+                            break;
+                        case 'w':
+                            m_caseIndex=j+1;
+                            break;
+                        case 'c':
+                            m_chrIndex = j+1;
+                            break;
+                        case 'm':
+                            m_rsIndex = j+1;
+                            break;
+                        case 'l':
+                            m_bpIndex = j+1;
+                            break;
+                        case 'a':
+                            m_altIndex=j+1;
+                            break;
+                        case 'A':
+                            m_refIndex=j+1;
+                            break;
+                        case 'i':
+                            m_imputeInfoIndex=j+1;
+                            break;
+                        case 'n':
+                            m_nSampleIndex=j+1;
+                            break;
+                        default:
+                            assert(false && "Undefined type of parameter");
+                    }
+                    break;
+                }
+            }
+            if(!identified){
+                error = true;
+                fprintf(stderr, "Cannot find column: %s\n", columnName[i].c_str());
+            }
+            identified = false;
+
+        }
     }
-    std::cerr	<< "LD distance          : " << m_distance << std::endl;
-	std::cerr	<< "Number of regions    : " << regionMessage << std::endl;
+    // Check whether if all the required inputs are provided
+    if(m_pValueFileName.empty()){
+        error = true;
+        fprintf(stderr, "P-value file is required\n");
+    }
+    if(m_referenceFilePrefix.empty()){
+        error = true;
+        fprintf(stderr, "Reference panel must be provided\n");
+    }
+    if(m_chrIndex==0){
+        error = true;
+        fprintf(stderr, "Column of chromosome must be provided\n");
+    }
+    if(m_rsIndex==0){
+        error = true;
+        fprintf(stderr, "Column of rsID must be provided\n");
+    }
+    if(m_bpIndex==0){
+        error = true;
+        fprintf(stderr, "Column of coordinates must be provided\n");
+    }
+    if(m_refIndex==0 || m_altIndex==0){
+        fprintf(stderr, "WARNING: Column for reference/alternative allele not provided.  SNPs validation can\n");
+        fprintf(stderr, "         only performed based on coordinates which can introduce errors\n");
+    }
+    if(m_imputeInfoIndex==0){
+        fprintf(stderr, "WARNING: Column for impute info not provided. Will not perform filtering\n");
+    }
+    if(m_summaryStatisticIndex==0){
+        error = true;
+        fprintf(stderr, "Column name for summary statistic / p-value must be provided\n");
+    }
+    if(m_signIndex==0){
+        fprintf(stderr, "WARNING: Column for sign not provided. Variance estimation might not be accurate\n");
+    }
+    if(m_caseControl){
+        if(m_nCase < 1 && m_caseIndex==0){
+            error = true;
+            fprintf(stderr, "Number of cases must be provided\n");
+        }
+        else if(m_caseIndex != 0 && m_nCase >= 1){
+                m_nCase = 0;
+            fprintf(stderr, "Input number of cases not used as column for case number is provided\n");
+        }
+        if(m_nControl < 1 && m_controlIndex==0){
+            error = true;
+            fprintf(stderr, "Number of controls must be provided\n");
+        }
+        else if(m_controlIndex != 0 && m_nControl >= 1){
+            m_nControl = 0;
+            fprintf(stderr, "Input number of controls not used as column for control number is provided\n");
+        }
+        else if(m_prevalence < 0){
+            error = true;
+            fprintf(stderr, "Population prevalence must be provided\n");
+        }
+    }
+    else if(m_qt){
+        if(m_nSampleIndex == 0 && m_nSample < 1){
+            error = true;
+            fprintf(stderr, "Sample size must be provided\n");
+        }
+        else if(m_nSampleIndex != 0 && m_nSample >= 1){
+            m_nSample = 0;
+            fprintf(stderr, "Input sample size not used as column for sample size is provided\n");
+        }
 
-	std::cerr << std::endl << std::endl;
+    }
 
+    // If there is no error then everything is ok
+    if(error){
+        throw "Problem with parameter input(s)";
+    }
+    return !error;
 }
-
-
-
-void Command::printUsage(){
-    //General Usage
-    std::cerr << "General options: " << std::endl;
-    std::cerr << "  -d,--distance    The maximum distance allowed between SNPs at the start of "   << std::endl;
-    std::cerr << "                   window and the end of the window. The larger the value, the " << std::endl;
-    std::cerr << "                   slower the programme runs "                                   << std::endl;
-    std::cerr << "  -f,--maf         The maf threshold for the reference genotype file. SNPs with "<< std::endl;
-    std::cerr << "                   maf less than this value will not be used for the analysis"   << std::endl;
-    std::cerr << "  -u,--pvalue      Indicate whether if the input is p-value or test-statistic "  << std::endl;
-    std::cerr << "                   Cannot handle p-value of 0"                                   << std::endl;
-    std::cerr << "  -n,--correct     Turn off LD correction. The LD correction is used when "      << std::endl;
-    std::cerr << "                   using the genotype file to calculate the LD matrix. The "     << std::endl;
-    std::cerr << "                   LD correction is performed to adjust for number of sample"    << std::endl;
-    std::cerr << "                   used for calculating the LD. "                                << std::endl;
-    std::cerr << "                   We uses Weir & Hill(1980)'s formula to correct for the bias. "<< std::endl;
-    std::cerr << "  -L,--region      The region files. You may provide a bed file in the format:"  << std::endl;
-    std::cerr << "                   <region name>:<fileName>,<region name>:<fileName>,..."        << std::endl;
-    std::cerr << "                   The summary output will provide the per region estimate "     << std::endl;
-    std::cerr << "                   where the region are label by their order of input"           << std::endl;
-    std::cerr << "  -t,--thread      The number of thread use. This will affect not only the speed"<< std::endl;
-    std::cerr << "                   but also the memory requirement of the programme as we will " << std::endl;
-    std::cerr << "                   load more SNPs into the memory at one time if more threads "  << std::endl;
-    std::cerr << "                   are available"                                                << std::endl;
-    std::cerr << "  -v,--validate    Validate the SNPs. If this option is set, the programme will" << std::endl;
-    std::cerr << "                   compare the SNPs information in the p-value file with those " << std::endl;
-    std::cerr << "                   in the genotype file. Will output a warning if the "          << std::endl;
-    std::cerr << "                   information does not match. This validation is still very "   << std::endl;
-    std::cerr << "                   naive so it is important for the user to make sure the "      << std::endl;
-    std::cerr << "                   information matched. "                                        << std::endl;
-    std::cerr << "  -o,--out         The output file prefix. If provided, the programme will "     << std::endl;
-    std::cerr << "                   generate a <output>.sum and <output>.res file where the "     << std::endl;
-    std::cerr << "                   <output>.sum file will provide the run summary and the "      << std::endl;
-    std::cerr << "                   <output>.res file will provide the detail statistics"         << std::endl;
-    std::cerr << "  -h,-?,--help     Display the detail help message (This message)"               << std::endl;
-    std::cerr << "                                                                               " << std::endl;
-}
-void Command::printCCUsage(){
-    std::cerr << "Estimation of Heritability from Case Control Study:" << std::endl;
-    std::cerr << "usage: ./shrek cc [options]"                                                     << std::endl;
-    std::cerr << "Required options: "                                                              << std::endl;
-    std::cerr << "  -p,--pfile       The p-value file. The test statistic for each snp must "      << std::endl;
-    std::cerr << "                   be provided. "                                                << std::endl;
-    std::cerr << "  -b,--bfile       The linkage  file prefix. The programme will use this to "    << std::endl;
-    std::cerr << "                   calculate the LD matrix. Will require the fam, bim and bed"   << std::endl;
-    std::cerr << "                   file. Please try to perform quality control beforehand "      << std::endl;
-    std::cerr << "  -s,--stats       The column header of test statistic or p-value in the p-value"<< std::endl;
-    std::cerr << "                   file. It must be provided for the programme to run"           << std::endl;
-    std::cerr << "  -c,--chr         The column header of chromosome in the p-value file"          << std::endl;
-    std::cerr << "  -r,--rs          The column header of rsid in the p-value file"                << std::endl;
-    std::cerr << "  -l,--loc         The column header of rsid coordinate in the p-value file"     << std::endl;
-    std::cerr << "  -k,--prevalence  Specify the prevalence of the phenotype"                      << std::endl;
-    std::cerr << "  -a,--case        The number of case used in the study"                         << std::endl;
-    std::cerr << "  -R,--control     The number of control used in the study"                      << std::endl;
-    std::cerr << "                                                                               " << std::endl;
-    printUsage();
-    exit(0);
-}
-void Command::printQuantUsage(){
-
-    std::cerr << "Estimation of Heritability from Quantitative Trait Study:" << std::endl;
-    std::cerr << "usage: ./shrek quant [options]"                                                  << std::endl;
-    std::cerr << "Required options: "                                                              << std::endl;
-    std::cerr << "  -p,--pfile       The p-value file. The test statistic for each snp must "      << std::endl;
-    std::cerr << "                   be provided. "                                                << std::endl;
-    std::cerr << "  -b,--bfile       The linkage  file prefix. The programme will use this to "    << std::endl;
-    std::cerr << "                   calculate the LD matrix. Will require the fam, bim and bed"   << std::endl;
-    std::cerr << "                   file. Please try to perform quality control beforehand "      << std::endl;
-    std::cerr << "  -s,--stats       The column header of test statistic or p-value in the p-value"<< std::endl;
-    std::cerr << "                   file. It must be provided for the programme to run"           << std::endl;
-    std::cerr << "  -c,--chr         The column header of chromosome in the p-value file"          << std::endl;
-    std::cerr << "  -r,--rs          The column header of rsid in the p-value file"                << std::endl;
-    std::cerr << "  -l,--loc         The column header of rsid coordinate in the p-value file"     << std::endl;
-    std::cerr << "  -x,--sampleIndex The column header of sample size in the p-value file. "       << std::endl;
-    std::cerr << "                   If not provided, one must provide the sample size using the"  << std::endl;
-    std::cerr << "                   -N or --sampleSize option."                                   << std::endl;
-    std::cerr << "  -N,--sampleSize  The number of sample used in the association study. Must be " << std::endl;
-    std::cerr << "                   provided if the sampleIndex was not provided"                 << std::endl;
-    std::cerr << "  -e,--extreme     The extreme phenotype adjustment value. Should be: "          << std::endl;
-    std::cerr << "                   Variance after selection / Variance before selection"         << std::endl;
-    std::cerr << "                                                                               " << std::endl;
-    printUsage();
-    exit(0);
-}
-
-void Command::printRiskCCUsage(){
-
-}
-void Command::printRiskQtUsage(){
-
-}
-
-

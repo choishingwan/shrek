@@ -1,90 +1,86 @@
-// This file is part of SHREK, Snp HeRitability Estimate Kit
-//
-// Copyright (C) 2014-2015 Sam S.W. Choi <choishingwan@gmail.com>
-//
-// This Source Code Form is subject to the terms of the GNU General
-// Public License v. 2.0. If a copy of the GPL was not distributed
-// with this file, You can obtain one at
-// https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html.
 #ifndef SNP_H
 #define SNP_H
 
 #include <string>
-#include <vector>
-#include <iostream>
-#include <fstream>
-#include <cmath>
-#include <algorithm>
-#include <memory>
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <fstream>
+#include <stdio.h>
+#include <errno.h>
+#include <math.h>
+#include <algorithm>
 #include <map>
 #include "usefulTools.h"
 #include "region.h"
 #include "command.h"
 
-/**
- * \class Snp
- * \brief Store Snp information and perform some basic logistic of these information
- */
 class Snp
 {
-public:
-        Snp(std::string chr, std::string rs, size_t bp, size_t sampleSize, double original, std::string refAllele, std::string altAllele, int direction);
+    public:
+        /** Default constructor */
+        Snp(std::string chr, std::string rsId, size_t loc, size_t nSample, size_t nCase, size_t nControl, std::string refAllele, std::string altAllele, double statistic, double info, int sign);
+        /** Default destructor */
         virtual ~Snp();
+
+        // Static functions
         static void generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &commander);
-        static void generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, const Command &commander, const Region &regionList, std::vector<int> &genoInclusion);
+        static void generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> const &regionList);
 
+        //Getters
+        std::string getChr() const {return m_chr; };
+        std::string getRs() const{ return m_rsId; };
+        size_t getLoc() const{return m_loc;};
+        int getNSample() const{return m_nSample;};
+        int getNCase() const{return m_nCase;};
+        int getNControl() const{return m_nControl;};
+        std::string getRef() const{return m_ref;};
+        std::string getAlt() const{return m_alt;};
+        double getStat() const{return m_statistic;};
+        double getHeritability() const{return m_heritability;};
+        double getLDSC() const {return m_ldScore;};
+        double getEffective() const{return m_effectiveNumber;};
+        double getInfo() const{return m_infoScore; };
+        int getSign() const{return m_sign;};
 
-        inline std::string getChr() const{return m_chr;};
-        inline std::string getRs() const{return m_rs; };
-        inline std::string getRef() const{return m_ref; };
-        inline std::string getAlt() const{return m_alt; };
-        inline size_t getBp() const{return m_bp;};
-        inline size_t getSampleSize() const{return m_sampleSize;};
-        inline static size_t getMaxSample() {return Snp::MAX_SAMPLE_SIZE; };
-        inline int getDirection() const{return m_direction;};
-        inline double getBeta() const{ return m_beta; };
-        inline double getOriginal() const{ return m_original; };
-        inline double getHeritability() const{ return m_heritability; };
-        inline double getEffectiveNumber() const{ return m_effectiveNumber; };
-        inline double getLDScore() const{ return m_ldscore; };
-        inline double getSqrtChi() const{ return m_sqrtChi; };
-        inline double getVariance() const{ return m_variance; };
-        inline bool Concordant(std::string chr, size_t bp, std::string rsId) const{  return chr.compare(m_chr) ==0 && bp==m_bp && rsId.compare(m_rs) == 0; }
-        inline bool getFlag(size_t i ) const {return m_regionFlag.at(i); };
-        inline void setHeritability(double h){ m_heritability = h; };
-        inline void setEffectiveNumber(double e){ m_effectiveNumber = e; };
-        inline void setLDScore(double s){ m_ldscore = s; };
-        inline void setVariance(double v){ m_variance = v; };
-        Snp(const Snp& that) = delete;
+        //Setters
         void setFlag(const size_t i, bool flag);
-
-protected:
-private:
+        void setStatus(char status);
+        //Checking
+        // This programme will return whether if the result is concordant and will flip accordingly
+        // It will flip the SNP even if it is ambiguous, but will let the caller know through ambig
+        bool concordant(const std::string chr, const size_t loc, const std::string rs, std::string refAllele, std::string altAllele, bool &ambig);
+        //Uncertain
+        Snp(const Snp& that) = delete; //I honestly can't remember what is this for, I guess this is to disable copying
+    protected:
+    private:
+        //Properties of SNP that we want to know
         std::string m_chr="";
-        std::string m_rs="";
+        std::string m_rsId ="";
+        size_t m_loc=0;
+        int m_nSample=0;
+        int m_nCase=0;
+        int m_nControl=0;
         std::string m_ref="";
         std::string m_alt="";
-        size_t m_bp=0;
-        size_t m_sampleSize=0;
-        static size_t MAX_SAMPLE_SIZE;
-        double m_original=0.0;
-        int m_direction=1;
-        //std::vector<double> m_original;
-        //std::vector<double> m_heritability;
-        double m_heritability=0.0;
-        double m_effectiveNumber=0.0;
-        double m_ldscore=0.0;
-        //std::vector<double> m_beta;
-        double m_beta=0.0;
-        double m_sqrtChi=0.0;
-        double m_variance = 0.0;
-        //std::vector<bool> m_remove;
+        double m_statistic=0.0; // This is the original input (Inform of summary statistic)
+        double m_heritability = 0.0; // This is the result
+        double m_ldScore = 0.0;
+        double m_effectiveNumber =0.0; // This is for the calculation of heuristic variance
+        double m_infoScore = 0.0;
+        int m_sign  = 0; //When sign = 0, it means there is no sign given
+        // The status flag, indicates whether if it is:
+        // include (I)
+        // not found in the reference (r)
+        // invalid when compared to reference (v)
+        // remove due to perfect LD (L)
+        // Need to write these in the manual
+        char m_status='r';
+
+
         std::vector<bool> m_regionFlag;
 
-        //Functions
         static bool sortSnp(const Snp& i, const Snp& j);
-        void computeVarianceExplained(const Command &commander);
+        void computeSummaryStatistc();
+        void flip(); // Flip the sign of the SNP, and also the reference and alternative
 
 };
 

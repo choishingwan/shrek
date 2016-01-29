@@ -20,6 +20,23 @@
 	
 	\maketitle
 	\tableofcontents
+	
+	\section{Assumption in implementation}
+	To make life easier, I made a number of assumption when I implement the programme and they are listed as follow
+	\begin{enumerate}
+		\item The intervals within each individual bed files are non-overlapping
+		\item SNPs filtered out when reading the p-value file will not be included in the output no matter what (avoid storing unnecessary information)
+		\item We will remove \emph{all} SNPs that are in perfect LD with each-other
+		\begin{enumerate}
+			\item Realistically, we can not remove \emph{all} SNPs that are in perfect LD with each-other without first computing the LD matrix for the whole genome. 
+			However, that will incur a large speed penalty to the algorithm.
+			To compromise, we remove SNPs that are in perfect LD with each-other \emph{within the same window}.
+			Take into consideration of the calculation of variance, we will need to plan forward and consider SNPs within 4 windows. 
+			That's definitely overkill but that avoid problem of crazy perfect LD interactions (to be honest, I would consider those as error, yet it is easier for me to just remove them)
+		\end{enumerate}
+		\item We do not consider a SNP ambiguous unless we need to perform flipping
+	\end{enumerate}
+	
 	\section{January 25, 2016}
 	We are going to re-write SHREK starting from today. 
 	There are a number of main goal in this re-work
@@ -41,4 +58,54 @@
 		\item Disabled risk prediction, should focus on the heritability estimation first
 	\end{enumerate}
 	\emph{I have not perform debugging, there can be error}
+	\section {January 26, 2016}
+	Continue on where I left yesterday
+	Assumptions we made in the programme
+	\begin{enumerate}
+		\item p-value file has header
+		\item the numbers return from Command class are index (0 based)
+	\end{enumerate}
+	I really want to write a more compacted code.
+	Will try to restructure the command class
+	\subsection{Finished today}
+	\begin{enumerate}
+		\item Finished refining the usage messages
+		\item Finished the basic parameter parsing (Still haven't finish the index based parameter though)
+	\end{enumerate}
+	\section{January 27, 2016}
+	\subsection{Aim}
+	We want to at least finish the region parsing and SNP class update today
+	\subsection{Finished today}
+	\begin{enumerate}
+		\item Completed the update of the Command class (compiled without problem)
+		\item Completed the update of the Region class (compiled without problem)
+		\item Completed the update of the Snp class (compiled without problem)
+	\end{enumerate}
+	I also \emph{haven't} test run the programme, so there might be additional syntax / logic error that are not picked up at the current stage.
+	
+	\section{January 28, 2016}
+	\subsection{Finished today}
+	\begin{enumerate}
+		\item Finished the checking of reference panel
+		\item Found a different algorithm for popcount, which should be platform independent
+		\item Installed armadillo and OpenBLAS
+		\begin{enumerate}
+			\item I have to add the OpenBLAS to the PATH and LD\_LIBRARY\_PATH for armadillo to detect it
+		\end{enumerate}
+		\item Updated the makefile accordingly
+		\begin{enumerate}
+			\item However, I have not updated the decomposition class, therefore there will be problem when we try to compile the programme
+		\end{enumerate}
+		\item Updated the $r^2$ calculation function such that it is using the correct sample size
+		\begin{enumerate}
+			\item The sample size when calculating the $r^2$ is defined as the number of samples containing \emph{both} SNPs
+			\item Because of how complicated the genotype class is, I really don't want to modify it
+			\item The main bottleneck for the computation is in the decomposition anyway, so it should be fine
+		\end{enumerate}
+		
+	\end{enumerate}
+	
+	\section{January 29, 2016}
+	Need to at least finish the getSNP function.
+	Must be careful with it as this is not only complicated, but also extremely important for the whole programme.
 \end{document}
