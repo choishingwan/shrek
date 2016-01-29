@@ -31,9 +31,10 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
     // The completed flag should be the return from GenotypeFileHandler. When all the SNPs
     // from the reference panel were used, then the completed flag should change to true
     bool completed = false;
+    std::deque<size_t> boundary; //The boundary is used to indicate the blocks
     while(!completed){
         // Get the required genotypes
-        genotypeFileHandler.getSnps(genotype, snpLoc, finalizeBuff, completed);
+        genotypeFileHandler.getSnps(snpIndex, snpList, genotype, snpLoc, finalizeBuff, completed, boundary);
 
     }
 }

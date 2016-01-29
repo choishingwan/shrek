@@ -22,7 +22,7 @@ class GenotypeFileHandler
         /** Default destructor */
         virtual ~GenotypeFileHandler();
         void initialize(const Command &commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList);
-        void getSNP(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed);
+        void getSNP(const std::map<std::string, size_t> &snpIndex, boost::ptr_deque<Snp> &snpList,  boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary);
     protected:
     private:
         std::string m_genotypeFilePrefix="";
@@ -38,9 +38,12 @@ class GenotypeFileHandler
         size_t m_nInvalid=0; // SNPs that have different information as the p-value file
         size_t m_nAmbig=0; // Number of SNPs that are ambiguous
         size_t m_nSnp=0;
-
+        bool m_keepAmbiguous = false;
+        bool m_include = false;
         bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
-
+        std::string m_prevChr = "";
+        size_t m_prevLoc = 0;
+        std::map<std::string, bool> m_duplicateCheck;
 };
 
 #endif // GENOTYPEFILEHANDLER_H

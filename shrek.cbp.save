@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="shrek" />
+		<Option makefile="makefile" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/shrek" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/shrek" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-fexceptions" />
+		</Compiler>
+		<Unit filename="command.cpp" />
+		<Unit filename="command.h" />
+		<Unit filename="configure.h" />
+		<Unit filename="decomposition.cpp" />
+		<Unit filename="decomposition.h" />
+		<Unit filename="genotype.cpp" />
+		<Unit filename="genotype.h" />
+		<Unit filename="genotypefilehandler.cpp" />
+		<Unit filename="genotypefilehandler.h" />
+		<Unit filename="linkage.cpp" />
+		<Unit filename="linkage.h" />
+		<Unit filename="main.cpp" />
+		<Unit filename="processcode.h" />
+		<Unit filename="region.cpp" />
+		<Unit filename="region.h" />
+		<Unit filename="snp.cpp" />
+		<Unit filename="snp.h" />
+		<Unit filename="snpestimation.cpp" />
+		<Unit filename="snpestimation.h" />
+		<Unit filename="snpindex.cpp" />
+		<Unit filename="snpindex.h" />
+		<Unit filename="usefulTools.cpp" />
+		<Unit filename="usefulTools.h" />
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
