@@ -21,7 +21,7 @@
 	\maketitle
 	\tableofcontents
 	
-	\section{Assumption in implementation}
+	\section*{Assumption in implementation}
 	To make life easier, I made a number of assumption when I implement the programme and they are listed as follow
 	\begin{enumerate}
 		\item The intervals within each individual bed files are non-overlapping
@@ -37,7 +37,7 @@
 		\item We do not consider a SNP ambiguous unless we need to perform flipping
 	\end{enumerate}
 	
-	\section{January 25, 2016}
+	\section*{January 25, 2016}
 	We are going to re-write SHREK starting from today. 
 	There are a number of main goal in this re-work
 	\begin{enumerate}
@@ -58,7 +58,7 @@
 		\item Disabled risk prediction, should focus on the heritability estimation first
 	\end{enumerate}
 	\emph{I have not perform debugging, there can be error}
-	\section {January 26, 2016}
+	\section*{January 26, 2016}
 	Continue on where I left yesterday
 	Assumptions we made in the programme
 	\begin{enumerate}
@@ -72,7 +72,7 @@
 		\item Finished refining the usage messages
 		\item Finished the basic parameter parsing (Still haven't finish the index based parameter though)
 	\end{enumerate}
-	\section{January 27, 2016}
+	\section*{January 27, 2016}
 	\subsection{Aim}
 	We want to at least finish the region parsing and SNP class update today
 	\subsection{Finished today}
@@ -83,7 +83,7 @@
 	\end{enumerate}
 	I also \emph{haven't} test run the programme, so there might be additional syntax / logic error that are not picked up at the current stage.
 	
-	\section{January 28, 2016}
+	\section*{January 28, 2016}
 	\subsection{Finished today}
 	\begin{enumerate}
 		\item Finished the checking of reference panel
@@ -105,10 +105,23 @@
 		
 	\end{enumerate}
 	
-	\section{January 29, 2016}
+	\section*{January 29, 2016}
 	Need to at least finish the getSNP function.
 	Must be careful with it as this is not only complicated, but also extremely important for the whole programme.
 	
 	I spent whole day in annotating the document of the class to make sure I don't overlook any problem.
 	
+	\section*{February 1, 2016}
+	Start to implement the getSNP function. 
+	A number of point to note
+	\begin{enumerate}
+		\item First get all the SNPs that passed all filtering (e.g. MAF)
+		\item Then for each window, calculate the LD
+		\item When encountered with perfect LD, we retain the \emph{first} SNP
+		\begin{enumerate}
+			\item The summary statistics will be the mean of all SNPs in perfect LD
+			\item All SNPs except the first are \emph{removed} 
+			\item So they will not appear in subsequent analysis
+		\end{enumerate}
+	\end{enumerate}
 \end{document}

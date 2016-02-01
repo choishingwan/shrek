@@ -121,22 +121,7 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
 }
 
 
-void GenotypeFileHandler::getSNP(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary){
-
-    // Very complicated need to write carefully
-    // Something we know
-    // When we reached the end of the chromosome or when the distance between the two SNPs are too large
-    // we will set finalizeBuff to true such that other function will start cleaning up
-    /** The content of the boundary is important so it is worth the time to document it
-     *  The boundary should contain the boundaries of the block. The start of the first
-     *  block will always be 0, therefore the first entry of the boundary will be the
-     *  start of the second block, which is not included in the first block. So let the
-     *  start of the second block be x, then the first block will be [0,x) and second
-     *  block will be [x,y). Also, the distance of SNP[x] - SNP[0] >= defined distance
-     */
-    // If the boundary size is 0, then we need a lot of blocks (3), otherwise, we only
-    // need to read one additional block
-    size_t nBlock = (boundary.size()==0)? 3:1;
+void GenotypeFileHandler::initializeSNP(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList){
     std::string line;
     bool read = false;
     // We need to first find the next usable SNP
@@ -222,11 +207,13 @@ void GenotypeFileHandler::getSNP(const std::map<std::string, size_t> &snpIndex, 
                             m_prevLoc = atoi(token[3].c_str());
                             // Also buff the genotypes just so we don't waste the run time
                             m_buffGenotype = new Genotype(*tempGenotype);
+                            delete tempGenotype; // clean up after use
                             // Add in the SD and mean information
                             validSamples > 0 ? m_buffGenotype->Setmean(newM) : m_buffGenotype->Setmean(0.0);
                             validSamples > 1 ? m_buffGenotype->SetstandardDeviation(std::sqrt(newS/(validSamples - 1.0))) : m_buffGenotype->SetstandardDeviation(0.0);
                         }
-                        break;
+                        m_snpLoc = location;
+                        return ;
                     }
                 }
                 else{
@@ -260,26 +247,43 @@ void GenotypeFileHandler::getSNP(const std::map<std::string, size_t> &snpIndex, 
         }
         else throw "Malformed bim file, does not contain all necessary information";
     }
+}
+
+
+void GenotypeFileHandler::getBlock(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary){
+
+}
+
+void GenotypeFileHandler::getSNP(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary){
+
+    // Very complicated need to write carefully
+    // Something we know
+    // When we reached the end of the chromosome or when the distance between the two SNPs are too large
+    // we will set finalizeBuff to true such that other function will start cleaning up
+    /** The content of the boundary is important so it is worth the time to document it
+     *  The boundary should contain the boundaries of the block. The start of the first
+     *  block will always be 0. Let the start of the second block be x, then the first
+     *  block will be [0,x) and second block will be [x,y). Also, the distance of
+     *  SNP[x] - SNP[0] >= defined distance
+     */
+    // If the boundary size is 0, then we need a lot of blocks (3), otherwise, we only
+    // need to read one additional block
+    size_t nBlock = (boundary.size()==0)? 3:1;
+    if(m_prevChr.empty()){
+        //To make things clearer in this complicated function, we will break it down to small pieces
+        initializeSNP(snpIndex, snpList);
+    }
 
     /** From this point onward, we assume prevChr, prevLoc and bufferGenotype contains the last SNP entry **/
-
-
-    /** Two situation here
-     *  1. boundary.size()==0  : Continue to read the files until you find the first SNP that is usable (considering also the MAF)
-     *  2. boundary.size()!=0  : Continue to read the files until we find the first SNP that is usable (considering also the MAF)
-     *                           Important thing is, if this usable SNP is too far or on a new chromosome, then set finalizeBuff=true
-     */
-
-    // Now we start the SNP reading part
-
-/*
     for(size_t i = 0; i < nBlock; ++i){
-        getBlock(snpIndex, snpList, genotype, snpLoc, finalizeBuff,completed, boundary);
+        // Get get block here
+        // When trying to get the blocks, we will try to get all the SNPs within region of the SNP in the bufferGenotype,
+        // we will also read one extra SNP (e.g. first SNP off the bufferGenotype) and put it into the buffer.
         if(finalizeBuff){
             return; //Done with this
         }
     }
-*/
+
 }
 
 

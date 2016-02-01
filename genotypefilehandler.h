@@ -23,6 +23,7 @@ class GenotypeFileHandler
         /** Default destructor */
         virtual ~GenotypeFileHandler();
         void initialize(const Command &commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList);
+
         void getSNP(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList,  boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary);
 
     protected:
@@ -49,9 +50,14 @@ class GenotypeFileHandler
 
         // These are indicating the last USED SNP
         std::string m_prevChr = "";
-        size_t m_prevLoc = 0;
+        size_t m_prevLoc = 0, m_snpLoc=0;
         Genotype *m_buffGenotype=nullptr;
 
+        // Crazy functions
+        // This function is responsible for obtaining the first ever SNP that can be used for the analysis,
+        // taking into consideration of the MAF and validation of SNP
+        void initializeSNP(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList);
+        void getBlock(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary);
 };
 
 #endif // GENOTYPEFILEHANDLER_H
