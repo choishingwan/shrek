@@ -9,7 +9,7 @@
 #include "snp.h"
 #include "genotypefilehandler.h"
 #include "snpestimation.h"
-#include "riskprediction.h"
+//#include "riskprediction.h"
 
 /** @mainpage SHREK: Snp HeRitability Estimate Kit
 *   @par Description:
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]){
             //Now perform the SNP heritability estimation
             SnpEstimation snpEstimation(commander);
             //The estimate command will basically perform all the analysis except the printing of the results
-            SnpEstimation.estimate(genotypeFileHandler, snpIndex, snpList, regionList);
+            snpEstimation.estimate(genotypeFileHandler, snpIndex, snpList, regionList);
         }
         else{
             fprintf(stderr, "We currently only support SNP heritability estimation in quantitative traits or binary traits\n");

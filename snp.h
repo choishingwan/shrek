@@ -69,9 +69,10 @@ class Snp
         int m_sign  = 0; //When sign = 0, it means there is no sign given
         // The status flag, indicates whether if it is:
         // include (I)
-        // not found in the reference (r)
-        // invalid when compared to reference (v)
+        // not found in the reference (R)
+        // invalid when compared to reference (V)
         // remove due to perfect LD (L)
+        // remove due to MAF (F)
         // Need to write these in the manual
         char m_status='r';
 

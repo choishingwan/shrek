@@ -13,6 +13,7 @@
 #include <string.h>
 #include <iostream>
 #include <deque>
+#include "usefulTools.h"
 
 /** \class Genotype
  *  \brief Responsible for storing the genotype information and calculate the LD

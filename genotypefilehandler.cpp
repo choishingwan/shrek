@@ -89,7 +89,6 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     m_thread = commander.getNThread();
     m_genotypeFilePrefix = commander.getReferenceFilePrefix();
     m_mafThreshold = commander.getMAF();
-    bool keepAmbiguous = commander.keepAmbiguous();
     // First, we need to know the number of samples such that we can read the plink binary file correctly
     std::string famFileName = m_genotypeFilePrefix+".fam";
     std::ifstream famFile;
@@ -122,20 +121,12 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
 }
 
 
+void GenotypeFileHandler::getSNP(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary){
 
-void GenotypeFileHandler::getSNP(const std::map<std::string, size_t> &snpIndex, boost::ptr_deque<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary){
-    // The inclusion should be done on the fly
     // Very complicated need to write carefully
     // Something we know
-    // When boundary is empty, we will get more SNPs for more block (required for the removal of perfect LD)
-    // When the boundary is not empty, we only need to read SNPs until the first SNP
-    // that is Xbp away from the last
-    // We can replace submatrix, which will come in handy when we perform the perfect LD removal
     // When we reached the end of the chromosome or when the distance between the two SNPs are too large
     // we will set finalizeBuff to true such that other function will start cleaning up
-    // An important thing to note is that the bim will run one line ahead of bed
-    // So we need something to store the chr, rs, loc beforehand
-    // maybe we can first perform the QC anyway
     /** The content of the boundary is important so it is worth the time to document it
      *  The boundary should contain the boundaries of the block. The start of the first
      *  block will always be 0, therefore the first entry of the boundary will be the
@@ -143,113 +134,152 @@ void GenotypeFileHandler::getSNP(const std::map<std::string, size_t> &snpIndex, 
      *  start of the second block be x, then the first block will be [0,x) and second
      *  block will be [x,y). Also, the distance of SNP[x] - SNP[0] >= defined distance
      */
-    // If the boundary size is 0, then we need a lot of blocks (6) whereas when the boundary
-    // size isn't 0, then we only need to read one more
-    size_t nBlock = (boundary.size()==0)? 6:1;
+    // If the boundary size is 0, then we need a lot of blocks (3), otherwise, we only
+    // need to read one additional block
+    size_t nBlock = (boundary.size()==0)? 3:1;
     std::string line;
-    // Now deal with the previous bim line
-    if(m_prevChr!=""){
-        // This is new, so we should at least read one line of the bimFile first
-        std::getline(m_bimFile, line);
-        line = usefulTools::trim(line);
+    bool read = false;
+    // We need to first find the next usable SNP
+    /** ALWAYS END WITH THE NEXT USABLE SNP FOR THIS TO WORK **/
+    while(m_prevChr.empty()){ //Continue to read the file until we find the first Usable SNP
+        if(std::getline(m_bimFile, line)) line = usefulTools::trim(line);
+        else throw "No valid SNPs from the bim file!";
         while(line.empty()){
-            //Read until we find the first line with content
+            // Read until we find the first line with content
+            // This is actually too nice for the user...
+            // Who will self modify the plink file to have multiple empty line
+            // in the start of the file?
             if(std::getline(m_bimFile, line)) line = usefulTools::trim(line);
-            else throw "The whole bim file is empty!";
+            else throw "No valid SNPs from the bim file!";
         }
         std::vector<std::string> token;
         usefulTools::tokenizer(line, "\t ", &token);
-        if(token.size() >=6){
-            m_prevChr = token[0];
-            m_prevLoc = atoi(token[3].c_str());
+        if(token.size() >=6){ // Now make sure the number of column is big enough for it to contain all required information
             std::string rs = token[1];
-            if(m_duplicateCheck.find(rs)!=m_duplicateCheck) m_nDuplicated++;
+            if(m_duplicateCheck.find(rs)!=m_duplicateCheck.end()) m_nDuplicated++; // Don't want it if it is duplicated (impossible here actually)
             else if(snpIndex.find(rs) != snpIndex.end()){
                 //This is something we have, so we check if we need it
-                size_t location = snpIndex[rs];
+                size_t location = snpIndex.at(rs);
                 bool ambig = false;
-                std::string refAllele = token[4];
-                std::string altAllele = token[5];
-                if(snpList.at(location).concordant(m_prevChr, m_prevLoc, rs, refAllele, altAllele, ambig )){
-                    if(!m_keepAmbiguous && ambig) m_nAmbig ++;
+                if(snpList.at(location).concordant(token[0], atoi(token[3].c_str()), rs, token[4], token[5], ambig )){
+                    if(!m_keepAmbiguous && ambig) m_nAmbig ++; // We don't want to keep ambiguous SNPs and this is an ambiguous SNP
                     else{
+
                         //This is found in the reference file, so it is in the base set
-                        snpList.at(location).setFlag(0, true);
-                        duplicateCheck[rs] = true;
-                        snpList.at(location).setStatus('I');
-                        m_nSnp++;
-                        m_include = true; //This indicate that we need this SNP
+                        // Now check if we want to keep it based on MAF
+                        read = true;
+                        Genotype *tempGenotype = new Genotype();
+                        size_t indx = 0; //The sample index
+                        double oldM=0.0, newM=0.0,oldS=0.0, newS=0.0; // For the calculation of sd and mean
+                        size_t alleleCount=0;  // For the calculation of MAF
+                        size_t validSamples = 0; // In case there is missingness, this will allow a more accurate calculation of MAF
+                        while(indx < m_nRefSample){ // For all possible samples
+                            std::bitset<8> b; //Initiate the bit array with maximum size of 8 bit
+                            char ch[1];
+                            m_bedFile.read(ch,1); //Read the information
+                            if (!m_bedFile) throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
+                            b = ch[0];
+                            int c=0;
+                            while (c<7 && indx < m_nRefSample ){
+                                //Going through the bit flag. Stop when it have read all the samples as the end == NULL
+                                //As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
+                                ++indx; //Each sample is represented by 2 bit
+                                int first = b[c++]; // Use c, then plus 1 to it
+                                int second = b[c++];
+                                double value = 0.0;
+                                if(first == 1 && second == 0) first = 3; //Missing value should be 3
+                                else{
+                                    value = first+second+0.0;
+                                    alleleCount+= first+second;
+                                    validSamples++; //Not missing
+                                    if(indx==1){
+                                        oldM = newM = value;
+                                        oldS = 0.0;
+                                    }
+                                    else{
+                                        newM = oldM + (value-oldM)/(validSamples); //Use valid sample instead
+                                        newS = oldS + (value-oldM)*(value-newM);
+                                        oldM = newM;
+                                        oldS = newS;
+                                    }
+                                }
+                                tempGenotype->AddsampleGenotype(first+second, indx-1); //0 1 2 or 3 where 3 is missing
+                            }
+                        }
+
+                        double currentMaf = (alleleCount+0.0)/(2.0*validSamples*1.0);
+                        currentMaf = (currentMaf > 0.5)? 1.0-currentMaf : currentMaf; // Possible problem of direction??
+                        if(m_mafThreshold > currentMaf){ // Does not pass the p-value threshold
+                            m_nFilter++;
+                            snpList.at(location).setStatus('F'); // Filtered
+                        }
+                        else{ //This is truly the first SNP that will be included in the analysis
+                            snpList.at(location).setFlag(0, true);
+                            m_duplicateCheck[rs] = true;
+                            snpList.at(location).setStatus('I');
+                            m_nSnp++;
+                            m_prevChr = token[0]; // This is the first SNP we ever use
+                            m_prevLoc = atoi(token[3].c_str());
+                            // Also buff the genotypes just so we don't waste the run time
+                            m_buffGenotype = new Genotype(*tempGenotype);
+                            // Add in the SD and mean information
+                            validSamples > 0 ? m_buffGenotype->Setmean(newM) : m_buffGenotype->Setmean(0.0);
+                            validSamples > 1 ? m_buffGenotype->SetstandardDeviation(std::sqrt(newS/(validSamples - 1.0))) : m_buffGenotype->SetstandardDeviation(0.0);
+                        }
+                        break;
                     }
                 }
                 else{
-                    snpList.at(location).setStatus('v');
+                    snpList.at(location).setStatus('V'); //This SNP is invalid (discordant)
                     m_nInvalid++;
                 }
             }
+            // If we can reach here, it means that the last SNP we've got is useless
+            // so we need to read the bed file to advance it too
+            if(!read){
+                size_t indx = 0; //The sample index
+                while(indx < m_nRefSample){
+                    std::bitset<8> b; //Initiate the bit array
+                    char ch[1];
+                    m_bedFile.read(ch,1); //Read the information
+                    if (!m_bedFile){
+                        throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
+                    }
+                    b = ch[0];
+                    int c=0;
+                    while (c<7 && indx < m_nRefSample ){
+                        //Going through the bit flag. Stop when it have read all the samples as the end == NULL
+                        //As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
+                        ++indx; //Each sample is represented by 2 bit
+                        c+=2; // That's why we increase c by 2
+                    }
+                }
+                read =false;
+            }
+            // Now we continue to read the samples
         }
         else throw "Malformed bim file, does not contain all necessary information";
     }
 
-    // From this point onward, we should remember that the bim file is ahead of the
-    // bed file, so we should only refer to the m_prevChr, m_prevLoc
-    // and at the end of the while function, we should read the next line of bim file
+    /** From this point onward, we assume prevChr, prevLoc and bufferGenotype contains the last SNP entry **/
+
+
+    /** Two situation here
+     *  1. boundary.size()==0  : Continue to read the files until you find the first SNP that is usable (considering also the MAF)
+     *  2. boundary.size()!=0  : Continue to read the files until we find the first SNP that is usable (considering also the MAF)
+     *                           Important thing is, if this usable SNP is too far or on a new chromosome, then set finalizeBuff=true
+     */
 
     // Now we start the SNP reading part
 
-    while(nBlock>0){
-
-
-
-        m_include =false; //This is the default, only set it to true when we need it
-
-        //When no more things are left to read
-        if(!std::getline(m_bimFile, line)) break;
-        else{
-            //When there is still something to read
-            line = usefulTools::trim(line);
-            bool ending = false;
-            while(line.empty()){
-                if(std::getline(m_bimFile, line)) line = usefulTools::trim(line);
-                else{
-                    ending =true;
-                    break; //This is the end. Only come in because the end few lines are all empty
-                }
-            }
-            if(ending) break; //All things are finished
-            else{
-                std::vector<std::string> token;
-                usefulTools::tokenizer(line, "\t ", &token);
-                if(token.size() >=6){
-                    m_prevChr = token[0];
-                    m_prevLoc = atoi(token[3].c_str());
-                    std::string rs = token[1];
-                    if(m_duplicateCheck.find(rs)!=m_duplicateCheck) m_nDuplicated++;
-                    else if(snpIndex.find(rs) != snpIndex.end()){
-                        //This is something we have, so we check if we need it
-                        size_t location = snpIndex[rs];
-                        bool ambig = false;
-                        std::string refAllele = token[4];
-                        std::string altAllele = token[5];
-                        if(snpList.at(location).concordant(m_prevChr, m_prevLoc, rs, refAllele, altAllele, ambig )){
-                            if(!m_keepAmbiguous && ambig) m_nAmbig ++;
-                            else{
-                                //This is found in the reference file, so it is in the base set
-                                snpList.at(location).setFlag(0, true);
-                                duplicateCheck[rs] = true;
-                                snpList.at(location).setStatus('I');
-                                m_nSnp++;
-                                m_include = true; //This indicate that we need this SNP
-                            }
-                        }
-                        else{
-                            snpList.at(location).setStatus('v');
-                            m_nInvalid++;
-                        }
-                    }
-                }
-            }
+/*
+    for(size_t i = 0; i < nBlock; ++i){
+        getBlock(snpIndex, snpList, genotype, snpLoc, finalizeBuff,completed, boundary);
+        if(finalizeBuff){
+            return; //Done with this
         }
     }
+*/
 }
 
 

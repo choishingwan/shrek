@@ -34,7 +34,13 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
     std::deque<size_t> boundary; //The boundary is used to indicate the blocks
     while(!completed){
         // Get the required genotypes
-        genotypeFileHandler.getSnps(snpIndex, snpList, genotype, snpLoc, finalizeBuff, completed, boundary);
+        // The concept now is simpler
+        // 1. Get all the required SNPs for the analysis using genotypeFileHandler
+        //    - Remove all SNPs that doesn't pass the threshold or QC
+        // 2. Perform the LD matrix construction
+        // 3. For each window, remove the perfect LD by not including them in the decomposition
+        //    - Remember, if they are in perfect LD, we can just move the row around and they will still be the same
+        genotypeFileHandler.getSNP(snpIndex, snpList, genotype, snpLoc, finalizeBuff, completed, boundary);
 
     }
 }
