@@ -56,6 +56,10 @@ class GenotypeFileHandler
         size_t m_prevLoc = 0, m_snpLoc=0;
         Genotype *m_buffGenotype=nullptr;
 
+        //Method number two, the method I used before, the inclusion vector
+        std::vector<int> inclusion;
+
+
         // Crazy functions
         // This function is responsible for obtaining the first ever SNP that can be used for the analysis,
         // taking into consideration of the MAF and validation of SNP

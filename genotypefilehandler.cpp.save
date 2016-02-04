@@ -121,13 +121,46 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     if(!bfile_SNP_major)
         throw std::runtime_error("We currently have no plan of implementing the individual-major mode. Please use the snp-major format");
     std::string bimFileName = m_genotypeFilePrefix+".bim";
-    m_bimFile.open(bimFileName.c_str());
-    if(!m_bimFile.is_open()){
-        throw std::runtime_error("Cannot open bim file");
+    std::ifstream bimFile;
+    bimFile.open(bimFileName.c_str());
+    if(!bimFile.is_open())  throw std::runtime_error("Cannot open bim file");
+//    m_bimFile.open(bimFileName.c_str());
+//    if(!m_bimFile.is_open()){
+//        throw std::runtime_error("Cannot open bim file");
+//    }
+//    fprintf(stderr, "Start reading the first SNP\n");
+//    initializeSNP(snpIndex, snpList);
+//    fprintf(stderr, "Finished initializing the first SNP\n");
+
+    size_t emptyLineCheck = 0; // Only use for checking for empty line, consider this as a safeguard
+    while(std::getline(bimFile, line)){
+        line = usefulTools::trim(line);
+        //The only thing I cannot filter beforehand is the MAF
+        if(!line.empty()){
+            std::vector<std::string> token;
+            usefulTools::tokenizer(line, "\t", &token);
+            m_include.push_back(-1);
+            if(token.size()>=6){
+                std::string rs = token[1];
+                if(m_duplicateCheck.find(rs)!=m_duplicateCheck.end())   m_nDuplicated++; // Don't want it if it is duplicated (impossible here actually)
+                else if(snpIndex.find(rs)!=snpIndex.end()){
+                    size_t location = snpIndex.at(rs);
+                    bool ambig = false;
+                    if(snpList.at(location).concordant(token[0], atoi(token[3].c_str()), rs, token[4], token[5], ambig )){
+                        if(!m_keepAmbiguous && ambig) m_nAmbig ++; // We don't want to keep ambiguous SNPs and this is an ambiguous SNP
+                        else m_include.back()=location;
+                    }
+                    else{
+        
+                    }
+                }
+            }
+            else m_nInvalid++;
+        }
+        else emptyLineCheck++;
     }
-    fprintf(stderr, "Start reading the first SNP\n");
-    initializeSNP(snpIndex, snpList);
-    fprintf(stderr, "Finished initializing the first SNP\n");
+    bimFile.close();
+
 }
 
 
@@ -151,7 +184,6 @@ void GenotypeFileHandler::initializeSNP(const std::map<std::string, size_t> &snp
         usefulTools::tokenizer(line, "\t ", &token);
         if(token.size() >=6){ // Now make sure the number of column is big enough for it to contain all required information
             std::string rs = token[1];
-
             std::cout << rs;
             if(m_duplicateCheck.find(rs)!=m_duplicateCheck.end()){
                     m_nDuplicated++; // Don't want it if it is duplicated (impossible here actually)

@@ -82,10 +82,6 @@ void Linkage::construct(boost::ptr_list<Genotype> &genotype, std::list<size_t> &
     // then we skip any SNP that are found to be in perfect LD with others
     // This will allow us to avoid the need of removing rols (only column)
     // which should be fast considering armadillo is column major
-    fprintf(stderr, "Start of SNP loc: %lu\n", snpLoc.front());
-    fprintf(stderr, "size of boundary: %lu\n", boundary.size());
-    fprintf(stderr, "Boundary back: %lu\n", (*(boundary.back())));
-    fprintf(stderr, "SNP loc end %lu\n", snpLoc.back());
     std::vector<size_t> perfectLd; // This is the vector use to store the perfect LD information
     std::vector<std::thread> threadStore;
     if(boundary.size() < 3){

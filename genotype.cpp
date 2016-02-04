@@ -48,12 +48,12 @@ void Genotype::GetbothR(const Genotype &snpB, const bool correction, double &r, 
     if(snpB.m_standardDeviation != 0 && m_standardDeviation!=0){
         for(; i < range;){
             size_t numSampleInBlock = __builtin_popcountll(m_missing[i] & snpB.m_missing[i]);
-            std::cerr << "Num sample in block: " << numSampleInBlock << std::endl;
             //size_t numSampleInBlock = usefulTools::NumberOfSetBits(m_missing[i] & snpB.m_missing[i]);
+            std::cerr << "Num sample in block: " << numSampleInBlock << std::endl;
             nSample+= numSampleInBlock;
             if(numSampleInBlock != 0){
                 r += (__builtin_popcountll(m_genotypeA[i] & snpB.m_genotypeB[i] )- numSampleInBlock*m_mean*snpB.m_mean)/(m_standardDeviation *snpB.m_standardDeviation);
-//                r += (usefulTools::NumberOfSetBits(m_genotypeA[i] & snpB.m_genotypeB[i] )- numSampleInBlock*m_mean*snpB.m_mean)/(m_standardDeviation *snpB.m_standardDeviation);
+                //r += (usefulTools::NumberOfSetBits(m_genotypeA[i] & snpB.m_genotypeB[i] )- numSampleInBlock*m_mean*snpB.m_mean)/(m_standardDeviation *snpB.m_standardDeviation);
             }
             i++;
         }
