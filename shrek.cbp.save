@@ -38,12 +38,14 @@
 		<Unit filename="configure.h" />
 		<Unit filename="decomposition.cpp" />
 		<Unit filename="decomposition.h" />
+		<Unit filename="decompositionthread.h" />
 		<Unit filename="genotype.cpp" />
 		<Unit filename="genotype.h" />
 		<Unit filename="genotypefilehandler.cpp" />
 		<Unit filename="genotypefilehandler.h" />
 		<Unit filename="linkage.cpp" />
 		<Unit filename="linkage.h" />
+		<Unit filename="linkagethread.h" />
 		<Unit filename="main.cpp" />
 		<Unit filename="processcode.h" />
 		<Unit filename="region.cpp" />

@@ -14,6 +14,7 @@
 #include <deque>
 
 #include <stdio.h>
+#include <iostream>
 #include <assert.h>
 
 #include <armadillo>
@@ -40,8 +41,7 @@ class Linkage
         size_t m_thread=1;
         static std::mutex linkageMtx;
         // This will return the list of index that we would like to remove from the analysis
-        void startComputeLd(boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, size_t index, size_t horiStart, size_t endOfBlock, boost::ptr_vector<Snp> &snpList, const bool correction);
-        void computeLd(const boost::ptr_list<Genotype> &genotype, const std::list<size_t> &snpLoc, size_t index, size_t horiStart, size_t endOfBlock, boost::ptr_vector<Snp> &snpList, const bool correction, std::vector<size_t> &perfectLd, std::vector<size_t> &calculatedR, std::vector<size_t> &calculatedR2);
+        void computeLd(const boost::ptr_list<Genotype> &genotype, const std::list<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart,size_t horiEnd, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd);
 };
 
 #endif // LINKAGE_H

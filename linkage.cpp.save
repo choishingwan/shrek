@@ -1,234 +1,209 @@
 #include "linkage.h"
 
+std::mutex Linkage::linkageMtx;
+
 Linkage::Linkage(size_t thread):m_thread(thread){}
 Linkage::~Linkage(){}
-std::mutex Linkage::mtx;
 
 
-void Linkage::Initialize(const boost::ptr_deque<Genotype> &genotype, const size_t &prevResiduals){
-	if(genotype.empty()){
-        std::runtime_error("Cannot build LD without genotypes");
+void Linkage::computeLd(const boost::ptr_list<Genotype> &genotype, const std::list<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, size_t horiEnd, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd){
+linkageMtx.lock();
+    fprintf(stderr, "Start: %lu\n", startIndex);
+    fprintf(stderr, "VerEnd: %lu\n", verEnd);
+    fprintf(stderr, "HorStart: %lu\n", horistart);
+    fprintf(stderr, "HorEnd: %lu\n", horiEnd);
+linkageMtx.unlock();
+
+    std::vector<size_t> perfectBuff;
+    boost::ptr_list<Genotype>::const_iterator  iter = genotype.begin(), endIter = genotype.begin(), horiEndIter=genotype.begin();
+    std::advance(iter, startIndex);
+    std::advance(endIter, verEnd);
+    std::advance(horiEndIter, horiEnd);
+
+    size_t i = startIndex;
+    for(; iter != endIter; ++iter){
+        size_t nextStart = (i>horistart)? i:horistart;
+        size_t j = nextStart;
+        boost::ptr_list<Genotype>::const_iterator  horiStartIter=genotype.begin();
+        std::advance(horiStartIter, nextStart);
+        for(; horiStartIter!=horiEndIter;  ++horiStartIter){
+                if(i==j){
+                    m_linkage(i,j) = 1.0;
+                    m_linkageSqrt(i,j) = 1.0;
+                }
+                else{
+                    double r = 0.0;
+                    double r2 = 0.0;
+                    (*iter).GetbothR((*horiStartIter), correction, r, r2);
+                    m_linkage(i,j) = r2;
+                    m_linkageSqrt(i,j) = r;
+                    // Now check if it is perfect LD
+                    // Store the index j into perfectBuff
+                    if(std::fabs(r-1.0) < 1e-6 ) perfectBuff.push_back(j);
+                }
+            //This is for the update of the matrix indexing;
+            ++j;
+        }
+        ++i; //Again, this is for the update of matrix index
+    }
+    // Now we can insert the buff back to the result
+    linkageMtx.lock();
+        perfectLd.insert(perfectLd.end(), perfectBuff.begin(), perfectBuff.end());
+    linkageMtx.unlock();
+
+}
+
+
+
+void Linkage::construct(boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, std::deque<std::list<size_t>::iterator > &boundary, boost::ptr_vector<Snp> &snpList, const bool correction){
+    // This is yet another complicated algorithm
+    // The aim of this function is to construct the required LD matrix
+    // (Think about it, maybe I will shift the perfect LD removal to the other function)
+    if(genotype.empty()){
+        throw std::runtime_error("Cannot build LD without genotypes");
 	}
-	//Use previous informations
-    if(prevResiduals == 0){
-        m_linkage = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
-        m_linkageSqrt = Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
+    // If this is the first of its kind, then we need to initialize the matrix
+    bool start = false;
+	if(m_linkage.n_cols==0){
+        start = true;
+        m_linkage = arma::mat(genotype.size(), genotype.size(),arma::fill::eye);
+        m_linkageSqrt = arma::mat(genotype.size(), genotype.size(), arma::fill::eye);
     }
-    else{
-		Eigen::MatrixXd temp = m_linkage.bottomRightCorner(prevResiduals,prevResiduals);
-		m_linkage= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
-		m_linkage.topLeftCorner(prevResiduals, prevResiduals) = temp;
-        //Currently we only need the R2 matrix, so we will ignore the R matrix
-		temp = m_linkageSqrt.bottomRightCorner(prevResiduals,prevResiduals);
-        m_linkageSqrt= Eigen::MatrixXd::Zero(genotype.size(), genotype.size());
-		m_linkageSqrt.topLeftCorner(prevResiduals, prevResiduals) = temp;
-
+    else{ // Otherwise, just make sure the matrix is of the right size
+        m_linkage.resize(genotype.size(), genotype.size());
+        m_linkageSqrt.resize(genotype.size(), genotype.size());
     }
-}
-
-void Linkage::buildLd(const bool correction, const size_t vStart, const size_t vEnd, const size_t hEnd, const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &ldLoc){
-    //Will work on all SNPs from vStart to hEnd
-    //Not inclusive of hEnd
-    /** ldLoc contains the SNP index on file, therefore corresponds to the number in block e.g. vStart, vEnd, hEnd **/
-    size_t genotypeStart = genotype.size();
-    size_t genotypeEnd = genotype.size(); //Bound
-    size_t bottom = genotype.size(); //Bound
-
-    for(size_t i = 0; i < ldLoc.size(); ++i){
-        if(ldLoc[i]==vStart) genotypeStart = i;
-        else if(ldLoc[i] == vEnd) bottom = i;
-        if(ldLoc[i]==hEnd){
-            genotypeEnd = i;
-            break;
-        }
-    }
-    /** All the ENDs are exclusive **/
-
-    //Linkage::mtx.lock();
-    //std::cerr << "Block info: " << genotypeStart << "\t" << genotypeEnd << "\t" << bottom << "\t" << m_linkage.cols() << "\t" << m_linkage.rows() << "\t" << genotype.size()<< std::endl;
-    //Linkage::mtx.unlock();
-//
-    for(size_t i = genotypeStart; i < bottom; ++i){
-        //Transversing vertically
-        m_linkage(i,i) = 1.0;
-        for(size_t j = i+1; j< genotypeEnd+1 && j < genotype.size(); ++j){
-            //Transversing horizontally
-            if(m_linkage(i,j) == 0.0){ //Again, this is problematic because you are finding equal of double
-                double rSquare=0.0;
-                double r =0.0;
-                genotype[i].GetbothR(&(genotype[j]),correction, r, rSquare);
-                m_linkage(i,j) = rSquare;
-                m_linkage(j,i) = rSquare;
-                m_linkageSqrt(j,i) = r;
-                m_linkageSqrt(j,i) = r;
+    // We don't need the buff information
+    // because for this function, we should build all the matrix anyway
+    // Now if we are not working on the new stuff, we assume the LD matrix has been clean
+    // of the unwanted materials
+    // So we only need to construct the matrix here
+    // When we construct the LD matrix, we do it per SNP level but still use multi-threading
+    // then we skip any SNP that are found to be in perfect LD with others
+    // This will allow us to avoid the need of removing rols (only column)
+    // which should be fast considering armadillo is column major
+    fprintf(stderr, "Start of SNP loc: %lu\n", snpLoc.front());
+    fprintf(stderr, "size of boundary: %lu\n", boundary.size());
+    fprintf(stderr, "Boundary back: %lu\n", (*(boundary.back())));
+    fprintf(stderr, "SNP loc end %lu\n", snpLoc.back());
+    std::vector<size_t> perfectLd; // This is the vector use to store the perfect LD information
+    std::vector<std::thread> threadStore;
+    if(boundary.size() < 3){
+        //Very small input, so we will do the whole part together
+        size_t startIndex = 0, endBound= genotype.size();
+        if(genotype.size() < m_thread){
+            // Use as much thread as we can
+            for(size_t i = startIndex; i < endBound; ++i){
+                threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), i, i+1, i,genotype.size(), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
             }
-        }
-    }
-
-    //Do extra, the previous loop make sure thread safe and all block will only get "extra", problem is
-    //the last block in the matrix will be missing
-    if(bottom +1 ==genotype.size()){
-        m_linkage(bottom, bottom) = 1.0;
-        m_linkageSqrt(bottom, bottom) = 1.0;
-    }
-}
-
-void Linkage::Construct(const boost::ptr_deque<Genotype> &genotype, const size_t &genotypeIndex, const size_t& remainedLD, const boost::ptr_vector<Interval> &blockInfo, const bool correction, const std::deque<size_t> &ldLoc){
-	if(genotype.empty())    throw std::runtime_error("There is no genotype to work on");
-    /** genotypeIndex = beginning block for this iteration **/
-    size_t startRange =  genotypeIndex;
-    /** remainedLD = number of genotypes that were from previous situations**/
-    size_t endRange=0;
-    size_t range = m_thread;
-    if(remainedLD==0)range +=2;
-    else{
-        /**
-         *  If something is left behind, we also need them for LD construction
-         *  As we typically retain the last two block, we backtrack our startRange to two items forward
-         */
-        startRange -= 2;//Two steps is only right if I have remove stuffs
-    }
-    std::string currentChr = blockInfo[startRange].getChr();
-
-    bool firstEntry = true;
-    size_t boundHunter = genotypeIndex;
-    for(; boundHunter < genotypeIndex+range && boundHunter < blockInfo.size(); ++boundHunter){
-        if(blockInfo[boundHunter].getChr().compare(currentChr)!=0) break;
-        else if(!firstEntry && blockInfo[boundHunter].getStart() != blockInfo[endRange].getEnd()){
-            firstEntry = false;
-            break;
         }
         else{
-            endRange = boundHunter;
+            // distribute the work
+            int jobBlock = endBound/m_thread;
+            int remainder = endBound % m_thread;
+            int currentBlock = startIndex;
+            for(size_t i = 0; i < m_thread; ++i){
+                // For each thread
+                if(remainder > 0){
+                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock+1, currentBlock, genotype.size(), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+                    --remainder;
+                    currentBlock+=jobBlock+1;
+                }
+                else{
+                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock, currentBlock, genotype.size(), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+                    currentBlock+=jobBlock;
+                }
+
+            }
         }
     }
-    endRange++;
-    //Here, endRange = last block that we need to process +1.
-
-    // So now the startRange and endRange will contain the index of the intervals to include in the LD construction
-    // It is inclusive, where we need to work on blocks from [startRange, endRange)
-    // Each thread will process one sausage       \------------|
-    //                                             \-----------|
-
-
-    std::vector<std::thread> threadStore;
-    size_t threadRunCounter = startRange;
-    while(threadRunCounter < endRange){
-        while(threadStore.size() <= m_thread && threadRunCounter < endRange){
-            if(threadRunCounter+2 < endRange){
-                //We on purposely
-                threadStore.push_back(std::thread(&Linkage::buildLd, this, correction, blockInfo[threadRunCounter].getStart(), blockInfo[threadRunCounter].getEnd(),blockInfo[threadRunCounter+2].getEnd(), std::cref(genotype), std::cref(ldLoc)));
-            }
-            else if(threadRunCounter+1 < endRange){
-                threadStore.push_back(std::thread(&Linkage::buildLd, this, correction, blockInfo[threadRunCounter].getStart(), blockInfo[threadRunCounter].getEnd(),blockInfo[threadRunCounter+1].getEnd(), std::cref(genotype), std::cref(ldLoc)));
+    else{ // This is big enough
+        // Two situation, either this is the start or this is not the start
+        if(start){
+            // If this is the start, then we need special handling of the first block
+            // in order to have a faster computation
+            size_t endBound =(*(boundary[1]));
+            size_t startIndex = 0;
+            int numSnps = endBound-startIndex;
+            assert(numSnps>0 && "There must be some SNPs for the construct to work with!");
+            if(numSnps < (signed)m_thread){
+                // Use as much threads as possible
+                for(size_t i = startIndex; i < endBound; ++i){
+                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), i, i+1, i, (*(boundary.back())), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+                }
             }
             else{
-                threadStore.push_back(std::thread(&Linkage::buildLd, this, correction, blockInfo[threadRunCounter].getStart(), blockInfo[threadRunCounter].getEnd(),blockInfo[threadRunCounter].getEnd(), std::cref(genotype), std::cref(ldLoc)));
+                // divide the jobs
+                int jobBlock = numSnps/m_thread;
+                int remainder =numSnps%m_thread;
+                int currentBlock = startIndex;
+                for(size_t i = 0; i < m_thread; ++i){
+                    if(remainder>0){
+                        threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock+1, currentBlock, (*(boundary.back())), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+                        currentBlock+= jobBlock+1;
+                        remainder--;
+                    }
+                    else{
+                        threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock, currentBlock, (*(boundary.back())), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+                        currentBlock+= jobBlock;
+                    }
+                }
             }
-            threadRunCounter++;
+            // now we finish up all the job for the first block
+            for (size_t i = 0; i < threadStore.size(); ++i) {
+                threadStore[i].join();
+            }
+            threadStore.clear();
         }
 
-        for (size_t j = 0; j < threadStore.size(); ++j) {
-            threadStore[j].join();
+        // If it is not the start, then we can ignore the first block
+        // and only need to compute the end of each block as most were already calculated before
+        size_t startIndex = (*(boundary[1]));
+        size_t endBound = genotype.size();
+        // We do have enough stuff to work on
+        int numSnps = endBound-startIndex;
+        assert(numSnps>0 && "There must be some SNPs for the construct to work with!");
+
+        size_t horiStart = (start)? startIndex : (*(boundary.back()));
+        if(numSnps< (signed) m_thread){
+            //very unlikely, but we will consider it anyway
+            for(size_t i = startIndex; i < endBound; ++i){
+                threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), i, i+1, horiStart, endBound, std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+            }
+        }
+        else{
+            // Divide the jobs
+            int jobBlock = numSnps/m_thread;
+            int remainder =numSnps%m_thread;
+            int currentBlock = startIndex;
+            for(size_t i = 0; i < m_thread; ++i){
+                if(remainder>0){
+                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock+1, horiStart, endBound, std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+                    currentBlock+= jobBlock+1;
+                    remainder--;
+                }
+                else{
+                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock, horiStart, endBound, std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+                    currentBlock+= jobBlock;
+                }
+            }
+        }
+        // Join all the results
+        for (size_t i = 0; i < threadStore.size(); ++i) {
+            threadStore[i].join();
         }
         threadStore.clear();
     }
-}
 
-void Linkage::print(){
+    std::sort(perfectLd.begin(), perfectLd.end());
+    // Now we want to remove duplicated index
+    perfectLd.erase( std::unique( perfectLd.begin(), perfectLd.end() ), perfectLd.end() );
+    //Here goes the crazy part
+    for(size_t i = 0; i < perfectLd.size(); ++i) 
     std::cout << m_linkage << std::endl;
-}
-
-void Linkage::solve(const size_t loc, const size_t length, const Eigen::MatrixXd &betaEstimate, Eigen::MatrixXd &heritability, Eigen::MatrixXd &effectiveNumber, Eigen::VectorXd &ldScore) const {
-    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(loc, loc, length, length));
-    double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().maxCoeff();
-    Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
-    /** Calculate the h vector here **/
-    heritability= rInverse*betaEstimate.block(loc, 0,length,betaEstimate.cols());
-    Eigen::MatrixXd error =m_linkage.block(loc, loc, length, length)*heritability - betaEstimate.block(loc, 0,length,betaEstimate.cols());
-	double bNorm = betaEstimate.block(loc, 0,length,betaEstimate.cols()).norm();
-    double relative_error = error.norm() / bNorm;
-    double prev_error = relative_error+1;
-    Eigen::MatrixXd update = heritability;
-    //Iterative improvement, arbitrary max iteration
-    size_t maxIter = 300;
-    size_t iterCount = 0;
-    while(relative_error < prev_error && iterCount < maxIter){
-        prev_error = relative_error;
-        update.noalias()=rInverse*(-error);
-        relative_error = 0.0;
-        error.noalias()= m_linkage.block(loc, loc, length, length)*(heritability+update) - betaEstimate.block(loc, 0,length,betaEstimate.cols());
-        relative_error = error.norm() / bNorm;
-        if(relative_error < 1e-300) relative_error = 0;
-        heritability = heritability+update;
-        iterCount++;
-    }
-
-    /** have not decide whether if we should use the original method for sd calculation
-     *  maybe it will be more accurate now consider we have used the dynamic block size?
-     */
-    Eigen::MatrixXd vecOfOne = Eigen::MatrixXd::Constant(length,betaEstimate.cols(), 1.0);
-    double eNorm = vecOfOne.norm();
-    /** Calculate the effective number here **/
-    effectiveNumber = rInverse*vecOfOne;
-    error = m_linkage.block(loc, loc, length, length)*effectiveNumber-vecOfOne;
-    relative_error = error.norm()/eNorm;
-    prev_error = relative_error+1;
-    update=effectiveNumber;
-    iterCount = 0;
-    while(relative_error < prev_error && iterCount < maxIter){
-        prev_error = relative_error;
-        update.noalias()=rInverse*(-error);
-        relative_error = 0.0;
-        error.noalias()= m_linkage.block(loc, loc, length, length)*(effectiveNumber+update) - vecOfOne;
-        relative_error = error.norm() / eNorm;
-        if(relative_error < 1e-300) relative_error = 0;
-        effectiveNumber = effectiveNumber+update;
-        iterCount++;
-    }
-
-    /** Calculate LDSCore **/
-    ldScore =m_linkage.block(loc, loc, length, length).colwise().sum();
+    exit(-1);
+    // Now we need to handle the perfect LD stuff
 }
 
 
 
-void Linkage::solve(const size_t loc, const size_t length, const Eigen::MatrixXd &betaEstimate, const Eigen::MatrixXd &sqrtChi, Eigen::MatrixXd &heritability, Eigen::MatrixXd &variance, Eigen::VectorXd &ldScore,const Eigen::MatrixXd &sampleSize) const {
-    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(m_linkage.block(loc, loc, length, length));
-    double tolerance = std::numeric_limits<double>::epsilon() * length * es.eigenvalues().array().maxCoeff();
-    Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
-    /** Calculate the h vector here **/
-    heritability= rInverse*betaEstimate.block(loc, 0,length,betaEstimate.cols());
-    Eigen::MatrixXd error =m_linkage.block(loc, loc, length, length)*heritability - betaEstimate.block(loc, 0,length,betaEstimate.cols());
-	double bNorm = betaEstimate.block(loc, 0,length,betaEstimate.cols()).norm();
-    double relative_error = error.norm() / bNorm;
-    double prev_error = relative_error+1;
-    Eigen::MatrixXd update = heritability;
-    //Iterative improvement, arbitrary max iteration
-    size_t maxIter = 300;
-    size_t iterCount = 0;
-    while(relative_error < prev_error && iterCount < maxIter){
-        prev_error = relative_error;
-        update.noalias()=rInverse*(-error);
-        relative_error = 0.0;
-        error.noalias()= m_linkage.block(loc, loc, length, length)*(heritability+update) - betaEstimate.block(loc, 0,length,betaEstimate.cols());
-        relative_error = error.norm() / bNorm;
-        if(relative_error < 1e-300) relative_error = 0;
-        heritability = heritability+update;
-        iterCount++;
-    }
-    //Use the complex method for variance
-    Eigen::MatrixXd ncpEstimate =(4*m_linkageSqrt.block(loc, loc, length, length)).array()*(sqrtChi.block(loc, 0,length,sqrtChi.cols())*sqrtChi.block(loc, 0,length,sqrtChi.cols()).transpose()).array();
-    Eigen::VectorXd m
-    /*
-    Eigen::MatrixXd ncpEstimate = (4*m_linkageSqrt.block(loc, loc, length, length)).array()*(sqrtChi.block(loc, 0,length,sqrtChi.cols())*sqrtChi.block(loc, 0,length,sqrtChi.cols()).transpose()).array();
-    Eigen::VectorXd minusF = Eigen::VectorXd::Constant(length, 1.0)-betaEstimate.block(loc, 0,length,betaEstimate.cols());
-    for(size_t i = 0; i < length; ++i){
-        minusF(i) = minusF(i)/((double)(sampleSize.block(loc, 0,length,sampleSize.cols()))(i,0)-2.0+(sqrtChi.block(loc, 0,length,sqrtChi.cols()))(i,0)*(sqrtChi.block(loc, 0,length,sqrtChi.cols()))(i,0));
-    }
-    variance = (rInverse*minusF.asDiagonal()*(ncpEstimate-2*m_linkage.block(loc, loc, length, length))*minusF.asDiagonal()*rInverse);
-    */
-
-    /** Calculate LDSCore **/
-    ldScore =m_linkage.block(loc, loc, length, length).colwise().sum();
-}

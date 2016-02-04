@@ -151,6 +151,7 @@ void GenotypeFileHandler::initializeSNP(const std::map<std::string, size_t> &snp
         usefulTools::tokenizer(line, "\t ", &token);
         if(token.size() >=6){ // Now make sure the number of column is big enough for it to contain all required information
             std::string rs = token[1];
+            std::cout << rs;
             if(m_duplicateCheck.find(rs)!=m_duplicateCheck.end()){
                     m_nDuplicated++; // Don't want it if it is duplicated (impossible here actually)
             }
@@ -255,14 +256,20 @@ void GenotypeFileHandler::transverseBed(){
         char ch[1];
         m_bedFile.read(ch,1); //Read the information
         if (!m_bedFile) throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
+        std::bitset<8> b; //Initiate the bit array with maximum size of 8 bit
+        b = ch[0];
         int c=0;
         while (c<7 && indx < m_nRefSample ){
+            int first = b[c++]; // Use c, then plus 1 to it
+            int second = b[c++];
+            std::cout << "\t" << first << " " << second;
         //Going through the bit flag. Stop when it have read all the samples as the end == NULL
         //As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
         ++indx; //Each sample is represented by 2 bit
         c+=2; // That's why we increase c by 2
         }
     }
+    std::cout << std::endl;
 }
 
 void GenotypeFileHandler::getBlock(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary){
