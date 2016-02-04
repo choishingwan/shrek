@@ -66,14 +66,13 @@ Snp::~Snp()
 }
 void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> const &regionList){
     std::vector<size_t> regionIncrementationIndex(regionList.size(), 0); // The current index of all regions are set to 0
+
     for(size_t i = 0; i < snpList.size(); ++i){
+
         snpIndex[snpList[i].getRs()] = i;
         // Now perform the flag setting
-        snpList[i].m_regionFlag.push_back(false); //Set the base region flag to false;
-        if(regionList.size() != 0){
-            std::vector<bool> padding(regionList.size(), false);
-            snpList[i].m_regionFlag.insert(snpList[i].m_regionFlag.end(), padding.begin(), padding.end()); //Initialize all the flags
-        }
+        std::vector<bool> padding(regionList.size(), false);
+        snpList[i].m_regionFlag.insert(snpList[i].m_regionFlag.end(), padding.begin(), padding.end()); //Initialize all the flags
         for(size_t j = 1; j < regionList.size(); ++j){
             // Doesn't have to bother with the base region
             for(size_t k = regionIncrementationIndex.at(j); k < regionList.at(j).getIntervalSize(); ++k){
@@ -180,7 +179,7 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
                     if(!usefulTools::isNumeric(token[sumStatIndex-1])) invalid = true;
 
                     if(invalid) nInvalid++; //This line is invalid because some of the numerical information are not numeric
-                    else if(imputeScore < infoThreshold) nFilter ++;
+                    else if(imputeIndex!=0 && imputeScore < infoThreshold) nFilter ++;
                     else{
                         double statistic = atof(token[sumStatIndex-1].c_str());
                         // We cannot convert a p-value of 0 to a valid summary statistic

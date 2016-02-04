@@ -2,12 +2,14 @@
 #define SNPESTIMATION_H
 
 #include <deque>
+#include <list>
 #include <boost/ptr_container/ptr_vector.hpp>
-#include <boost/ptr_container/ptr_deque.hpp>
+#include <boost/ptr_container/ptr_list.hpp>
 #include <stdio.h>
 #include "genotypefilehandler.h"
 #include "genotype.h"
 #include "region.h"
+#include "linkage.h"
 // I didn't include all the required header yet
 // Only include them as I start to use them
 

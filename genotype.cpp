@@ -39,20 +39,20 @@ double Genotype::Getr(Genotype* snpB, bool correction){
     return r;
 }
 
-void Genotype::GetbothR(const Genotype* snpB, const bool correction, double &r, double &rSq) const {
+void Genotype::GetbothR(const Genotype &snpB, const bool correction, double &r, double &rSq) const {
 	size_t range = (m_requiredBit /(8*m_bitSize))+1;
     r = 0.0;
     size_t i = 0;
     size_t nSample = 0; //Should always use the correct number of samples
     //The sample size will be the number of samples containing BOTH genotypes
-    if(snpB->m_standardDeviation != 0 && m_standardDeviation!=0){
+    if(snpB.m_standardDeviation != 0 && m_standardDeviation!=0){
         for(; i < range;){
 //            size_t numSampleInBlock = __builtin_popcountll(m_missing[i] & snpB->m_missing[i]);
-            size_t numSampleInBlock = usefulTools::NumberOfSetBits(m_missing[i] & snpB->m_missing[i]);
+            size_t numSampleInBlock = usefulTools::NumberOfSetBits(m_missing[i] & snpB.m_missing[i]);
             nSample+= numSampleInBlock;
             if(numSampleInBlock != 0){
 //                r += (__builtin_popcountll(m_genotypeA[i] & snpB->m_genotypeB[i] )- numSampleInBlock*m_mean*snpB->m_mean)/(m_standardDeviation *snpB->m_standardDeviation);
-                r += (usefulTools::NumberOfSetBits(m_genotypeA[i] & snpB->m_genotypeB[i] )- numSampleInBlock*m_mean*snpB->m_mean)/(m_standardDeviation *snpB->m_standardDeviation);
+                r += (usefulTools::NumberOfSetBits(m_genotypeA[i] & snpB.m_genotypeB[i] )- numSampleInBlock*m_mean*snpB.m_mean)/(m_standardDeviation *snpB.m_standardDeviation);
             }
             i++;
         }

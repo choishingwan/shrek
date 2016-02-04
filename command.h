@@ -92,7 +92,7 @@ class Command
         double m_extremeAdjust = 1.0;
         // Filtering information
         double m_mafThreshold = 0.0; // 0.0 = not performing filtering (nothing to filter)
-        double m_infoThreshold = 0.9; // again, 0 = nothing to filter
+        double m_infoThreshold = 0.0; // again, 0 = nothing to filter
 
         //Misc Information
         int m_nThread=1; // Use int for better checking of input

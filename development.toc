@@ -1,5 +1,18 @@
-\contentsline {subsection}{\numberline {0.1}Finished today}{2}{subsection.0.1}
-\contentsline {subsection}{\numberline {0.2}Finished today}{3}{subsection.0.2}
-\contentsline {subsection}{\numberline {0.3}Aim}{3}{subsection.0.3}
-\contentsline {subsection}{\numberline {0.4}Finished today}{3}{subsection.0.4}
-\contentsline {subsection}{\numberline {0.5}Finished today}{4}{subsection.0.5}
+\contentsline {section}{\numberline {1}Assumption in implementation}{2}{section.1}
+\contentsline {section}{\numberline {2}January 25, 2016}{2}{section.2}
+\contentsline {subsection}{\numberline {2.1}Finished today}{3}{subsection.2.1}
+\contentsline {section}{\numberline {3}January 26, 2016}{3}{section.3}
+\contentsline {subsection}{\numberline {3.1}Finished today}{4}{subsection.3.1}
+\contentsline {section}{\numberline {4}January 27, 2016}{4}{section.4}
+\contentsline {subsection}{\numberline {4.1}Aim}{4}{subsection.4.1}
+\contentsline {subsection}{\numberline {4.2}Finished today}{4}{subsection.4.2}
+\contentsline {section}{\numberline {5}January 28, 2016}{4}{section.5}
+\contentsline {subsection}{\numberline {5.1}Finished today}{4}{subsection.5.1}
+\contentsline {section}{\numberline {6}January 29, 2016}{5}{section.6}
+\contentsline {section}{\numberline {7}February 1, 2016}{5}{section.7}
+\contentsline {section}{\numberline {8}February 2, 2016}{6}{section.8}
+\contentsline {subsection}{\numberline {8.1}Finished today}{6}{subsection.8.1}
+\contentsline {section}{\numberline {9}February 3, 2016}{6}{section.9}
+\contentsline {subsection}{\numberline {9.1}To Do}{6}{subsection.9.1}
+\contentsline {subsection}{\numberline {9.2}Finished today}{6}{subsection.9.2}
+\contentsline {subsection}{\numberline {9.3}Problem identified today}{7}{subsection.9.3}

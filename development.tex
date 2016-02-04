@@ -21,7 +21,7 @@
 	\maketitle
 	\tableofcontents
 	
-	\section*{Assumption in implementation}
+	\section{Assumption in implementation}
 	To make life easier, I made a number of assumption when I implement the programme and they are listed as follow
 	\begin{enumerate}
 		\item The intervals within each individual bed files are non-overlapping
@@ -37,7 +37,7 @@
 		\item We do not consider a SNP ambiguous unless we need to perform flipping
 	\end{enumerate}
 	
-	\section*{January 25, 2016}
+	\section{January 25, 2016}
 	We are going to re-write SHREK starting from today. 
 	There are a number of main goal in this re-work
 	\begin{enumerate}
@@ -58,7 +58,7 @@
 		\item Disabled risk prediction, should focus on the heritability estimation first
 	\end{enumerate}
 	\emph{I have not perform debugging, there can be error}
-	\section*{January 26, 2016}
+	\section{January 26, 2016}
 	Continue on where I left yesterday
 	Assumptions we made in the programme
 	\begin{enumerate}
@@ -72,7 +72,7 @@
 		\item Finished refining the usage messages
 		\item Finished the basic parameter parsing (Still haven't finish the index based parameter though)
 	\end{enumerate}
-	\section*{January 27, 2016}
+	\section{January 27, 2016}
 	\subsection{Aim}
 	We want to at least finish the region parsing and SNP class update today
 	\subsection{Finished today}
@@ -83,7 +83,7 @@
 	\end{enumerate}
 	I also \emph{haven't} test run the programme, so there might be additional syntax / logic error that are not picked up at the current stage.
 	
-	\section*{January 28, 2016}
+	\section{January 28, 2016}
 	\subsection{Finished today}
 	\begin{enumerate}
 		\item Finished the checking of reference panel
@@ -105,13 +105,13 @@
 		
 	\end{enumerate}
 	
-	\section*{January 29, 2016}
+	\section{January 29, 2016}
 	Need to at least finish the getSNP function.
 	Must be careful with it as this is not only complicated, but also extremely important for the whole programme.
 	
 	I spent whole day in annotating the document of the class to make sure I don't overlook any problem.
 	
-	\section*{February 1, 2016}
+	\section{February 1, 2016}
 	Start to implement the getSNP function. 
 	A number of point to note
 	\begin{enumerate}
@@ -124,4 +124,40 @@
 			\item So they will not appear in subsequent analysis
 		\end{enumerate}
 	\end{enumerate}
+	
+	\section{February 2, 2016}
+	Try to perform extensive check on codes that has been written
+	\subsection{Finished today}
+	\begin{enumerate}
+		\item Finished debugging, everything up until the initialization of genotypeFileHandler is ok
+	\end{enumerate}
+	\section{February 3, 2016}
+	Sat in a meeting with Pak today, now we have a few things to-do.
+	\subsection{To Do}
+	\begin{enumerate}
+		\item Compare the condition number of the LD matrix before and after the LD correction
+		\item Compare the performance of case control estimation with different sample size 
+		\item For LD correction, might also worth testing how the density and total number of SNPs affect the estimation
+		\item For effect size estimation, don't use the complicated method
+	\end{enumerate}
+	\subsection{Finished today}
+	We have switched to use list instead of deque. 
+	The benefit of list is that it is a double linked list, therefore it is much easier for one to remove the middle part.
+	Such property is ideal for the handling of perfect LD. 
+	However, it also means that we cannot access the elements of the list by index. 
+	The only way for us to access the elements is to use the iterators and the advance function from the iterator library.
+	Although this makes the implementation more difficult, it should be able to help us to speed up our code even if we want to perform perfect LD removal.
+	\begin{enumerate}
+		\item Extensive testing of the previous classes
+		\item Now use iterators for the boundary, this is more dynamic and can work with the perfect LD removal without inducing much complication into the algorithm (however, the implementation itself can be complicated)
+	\end{enumerate}
+	\subsection{Problem identified today}
+	So assuming that the SNPs A B C are occurring in the genome by alphabetical order, when we calculate the LD of A with B C, we do not observe any perfect LD. 
+	This will lead us to continue with the calculation of SNP B and C. 
+	However, if SNP B and SNP C is in perfect LD, we will need to go back to the LDs of SNP A to remove the column of SNP C.
+	Not only is this procedure complicates the implementation, it will also significantly slow down the computation because of the constant resizing of the matrix.
+	
+	To conclude, it might be better for us to use the original ``sausage'' approach, where we should also locate all the perfect LD location.
+	Then we can remove the perfect LD afterwards.
+	
 \end{document}

@@ -43,8 +43,12 @@ int main(int argc, char *argv[]){
         //commander.printRunSummary(std::to_string(regionInfo.getNumRegion()));
         time_t now = time(0);
         char* dt = ctime(&now);
-        std::cerr << "Time: " << dt << std::endl;
-        std::cerr << "Command: "<< argv << std::endl; //This is the simplest way to present the input
+        std::cerr << std::endl << "Time: " << dt << std::endl;
+        std::cerr << "Command: " << argv[0] << " " << argv[argc-1];
+        for(int i = 1; i < argc -1; ++i){
+            std::cerr << " " << argv[i];
+        }
+        std::cerr << std::endl; //This is the simplest way to present the input
 
         //Now we need to parse the region information
         //Parsing the region information

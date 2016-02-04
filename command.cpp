@@ -31,7 +31,7 @@ void Command::btUsage(){
     fprintf(stderr, "Usage:   shrek binary [options] \n\n");
     fprintf(stderr, "Required Arguments:\n");
     fprintf(stderr, "         -p | --pfile       P-value file name\n");
-    fprintf(stderr, "         -r | --bFile       Reference Panel file prefix\n"); //Currently we only support plink format
+    fprintf(stderr, "         -r | --bfile       Reference Panel file prefix\n"); //Currently we only support plink format
     fprintf(stderr, "         -K | --prevalence  Population Prevalence of the trait\n");
     fprintf(stderr, "         -s | --stat        Column name for summary statistic / p-value\n");
     fprintf(stderr, "         -S | --sign        Column name for direction of effect\n");
@@ -100,6 +100,8 @@ bool Command::processCode(int argc,char *argv[]){
         else if(mode.compare("binary")==0) btUsage();
         return false;
     }
+    if(mode.compare("quant")==0) m_qt=true;
+    else if(mode.compare("binary")==0) m_caseControl = true;
     static const char *optString = "o:L:b:ekut:f:I:p:r:K:x:s:S:v:V:w:W:c:m:l:a:A:i:n:N:U:h?";
     static const struct option longOpts[]={
 	    //Qt specific parameter
@@ -113,7 +115,7 @@ bool Command::processCode(int argc,char *argv[]){
 		{"maf",required_argument,NULL,'f'},
 		{"impute",required_argument,NULL,'I'},
 		{"pfile",required_argument,NULL,'p'},
-		{"bFile",required_argument,NULL,'r'},
+		{"bfile",required_argument,NULL,'r'},
 		{"prevalence",required_argument,NULL,'K'},
 		{"extreme",required_argument,NULL,'x'},
 		{"stat",required_argument,NULL,'s'},
@@ -517,7 +519,7 @@ bool Command::processCode(int argc,char *argv[]){
     }
     if(m_refIndex==0 || m_altIndex==0){
         fprintf(stderr, "WARNING: Column for reference/alternative allele not provided.  SNPs validation can\n");
-        fprintf(stderr, "         only performed based on coordinates which can introduce errors\n");
+        fprintf(stderr, "         only be performed based on coordinates which can introduce errors\n");
     }
     if(m_imputeInfoIndex==0){
         fprintf(stderr, "WARNING: Column for impute info not provided. Will not perform filtering\n");

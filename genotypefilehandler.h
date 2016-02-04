@@ -1,9 +1,11 @@
 #ifndef GENOTYPEFILEHANDLER_H
 #define GENOTYPEFILEHANDLER_H
 
-
 #include <boost/ptr_container/ptr_vector.hpp>
-#include <boost/ptr_container/ptr_deque.hpp>
+#include <boost/ptr_container/ptr_list.hpp>
+#include <list>
+#include <deque>
+
 #include <fstream>
 #include <map>
 #include <bitset> //For plink
@@ -24,7 +26,7 @@ class GenotypeFileHandler
         virtual ~GenotypeFileHandler();
         void initialize(const Command &commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList);
 
-        void getSNP(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList,  boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary);
+        void getSNP(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary);
 
     protected:
     private:
@@ -42,6 +44,7 @@ class GenotypeFileHandler
         size_t m_nFilter = 0;
         size_t m_nAmbig=0; // Number of SNPs that are ambiguous
         size_t m_nSnp=0;
+        size_t m_blockSize=0;
         bool m_keepAmbiguous = false;
         bool m_include = false;
         bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
@@ -57,7 +60,8 @@ class GenotypeFileHandler
         // This function is responsible for obtaining the first ever SNP that can be used for the analysis,
         // taking into consideration of the MAF and validation of SNP
         void initializeSNP(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList);
-        void getBlock(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary);
+        void getBlock(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary);
+        void transverseBed();
 };
 
 #endif // GENOTYPEFILEHANDLER_H
