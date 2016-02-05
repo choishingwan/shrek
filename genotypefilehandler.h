@@ -63,9 +63,8 @@ class GenotypeFileHandler
         // Crazy functions
         // This function is responsible for obtaining the first ever SNP that can be used for the analysis,
         // taking into consideration of the MAF and validation of SNP
-        void initializeSNP(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList);
         void getBlock(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary);
-        void transverseBed();
+
 };
 
 #endif // GENOTYPEFILEHANDLER_H

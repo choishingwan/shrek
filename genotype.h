@@ -13,6 +13,7 @@
 #include <string.h>
 #include <iostream>
 #include <deque>
+#include <limits.h>
 #include "usefulTools.h"
 
 /** \class Genotype

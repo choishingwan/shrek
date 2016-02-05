@@ -3,14 +3,14 @@
 size_t Genotype::m_sampleNum;
 
 Genotype::Genotype(){
-	m_bitSize = sizeof(unsigned long long);
-	m_requiredBit = Genotype::m_sampleNum*4;
-	m_genotypeA = new unsigned long long [(m_requiredBit /(8*m_bitSize))+1];
-	m_genotypeB = new unsigned long long [(m_requiredBit /(8*m_bitSize))+1];
-	m_missing = new unsigned long long [(m_requiredBit /(8*m_bitSize))+1];
-	memset(m_genotypeA, 0x0,((m_requiredBit /(8*m_bitSize))+1)*sizeof(unsigned long long));
-	memset(m_genotypeB, 0x0,((m_requiredBit /(8*m_bitSize))+1)*sizeof(unsigned long long));
-	memset(m_missing, 0x0,((m_requiredBit /(8*m_bitSize))+1)*sizeof(unsigned long long));
+    m_bitSize = sizeof(unsigned long long)*CHAR_BIT;
+    m_requiredBit = Genotype::m_sampleNum*4;
+    m_genotypeA = new unsigned long long [(m_requiredBit /(m_bitSize))+1];
+    m_genotypeB = new unsigned long long [(m_requiredBit /(m_bitSize))+1];
+    m_missing = new unsigned long long [(m_requiredBit /(m_bitSize))+1];
+    memset(m_genotypeA, 0x0,((m_requiredBit /(m_bitSize))+1)*sizeof(unsigned long long));
+    memset(m_genotypeB, 0x0,((m_requiredBit /(m_bitSize))+1)*sizeof(unsigned long long));
+    memset(m_missing, 0x0,((m_requiredBit /(m_bitSize))+1)*sizeof(unsigned long long));
 }
 
 Genotype::~Genotype(){
@@ -20,7 +20,7 @@ Genotype::~Genotype(){
 }
 
 double Genotype::Getr(Genotype* snpB, bool correction){
-	size_t range = (m_requiredBit /(8*m_bitSize))+1;
+    size_t range = (m_requiredBit /(m_bitSize))+1;
     double r = 0.0;
     size_t i = 0;
     if(snpB->m_standardDeviation != 0 && m_standardDeviation!=0){
@@ -33,14 +33,14 @@ double Genotype::Getr(Genotype* snpB, bool correction){
         }
     }
     r *= 1.0/(m_sampleNum-1.0);
-	if(correction){
+    if(correction){
         return r*(1+(1-r*r)/(2*(m_sampleNum-4))); //POPA
-	}
+    }
     return r;
 }
 
 void Genotype::GetbothR(const Genotype &snpB, const bool correction, double &r, double &rSq) const {
-	size_t range = (m_requiredBit /(8*m_bitSize))+1;
+    size_t range = (m_requiredBit /(m_bitSize))+1;
     r = 0.0;
     size_t i = 0;
     size_t nSample = 0; //Should always use the correct number of samples
@@ -48,36 +48,26 @@ void Genotype::GetbothR(const Genotype &snpB, const bool correction, double &r, 
     if(snpB.m_standardDeviation != 0 && m_standardDeviation!=0){
         for(; i < range;){
             size_t numSampleInBlock = __builtin_popcountll(m_missing[i] & snpB.m_missing[i]);
-            //size_t numSampleInBlock = usefulTools::NumberOfSetBits(m_missing[i] & snpB.m_missing[i]);
-            std::cerr << "Num sample in block: " << numSampleInBlock << std::endl;
+//            size_t numSampleInBlock = usefulTools::NumberOfSetBits(m_missing[i] & snpB.m_missing[i]);
             nSample+= numSampleInBlock;
             if(numSampleInBlock != 0){
                 r += (__builtin_popcountll(m_genotypeA[i] & snpB.m_genotypeB[i] )- numSampleInBlock*m_mean*snpB.m_mean)/(m_standardDeviation *snpB.m_standardDeviation);
-                //r += (usefulTools::NumberOfSetBits(m_genotypeA[i] & snpB.m_genotypeB[i] )- numSampleInBlock*m_mean*snpB.m_mean)/(m_standardDeviation *snpB.m_standardDeviation);
+//                r += (usefulTools::NumberOfSetBits(m_genotypeA[i] & snpB.m_genotypeB[i] )- numSampleInBlock*m_mean*snpB.m_mean)/(m_standardDeviation *snpB.m_standardDeviation);
             }
             i++;
         }
     }
-//
-//    std::cerr << "Mean A: " << m_mean << std::endl;
-//    std::cerr << "Mean B: " << m_mean << std::endl;
-//    std::cerr << "SD A: " << m_standardDeviation << std::endl;
-//    std::cerr << "SD B: " << snpB.m_standardDeviation << std::endl;
-//    std::cerr << "Total Sample: " << nSample << std::endl;
     r *= 1.0/(nSample-1.0);
-//    std::cerr << "The R should be : " << r << std::endl;
     rSq = r*r;
-
-//    std::cerr << "The R2 should be : " << rSq << std::endl;
-	if(correction){
+    if(correction){ // Advice against for now
         r= r*(1+(1-r*r)/(2*(nSample-4))); //POPA
         rSq=rSq-1.0/(2.0*nSample); //Weir & Hill
-	}
+    }
 }
 
 
 double Genotype::GetrSq(Genotype* snpB, bool correction){
-	size_t range = (m_requiredBit /(8*m_bitSize))+1;
+    size_t range = (m_requiredBit /(m_bitSize))+1;
     double rSquare = 0.0;
     size_t i = 0;
     if(m_standardDeviation != 0 &&snpB->m_standardDeviation != 0){
@@ -91,18 +81,18 @@ double Genotype::GetrSq(Genotype* snpB, bool correction){
         }
     }
     rSquare *= 1.0/(m_sampleNum-1.0);
-	rSquare *= rSquare;
-	if(correction){
+    rSquare *= rSquare;
+    if(correction){
         return 1.0-((m_sampleNum-3.0)/(m_sampleNum-2.0))*(1.0-rSquare)*(1.0+(2.0*(1.0-rSquare))/(m_sampleNum-3.3));
-	}
+    }
 
     return rSquare;
 }
 
 void Genotype::SetsampleNum(size_t sampleNum){
-	if(sampleNum < 2){
+    if(sampleNum < 2){
         throw "ERROR! Sample number must be bigger than 1!";
-	}
+    }
     Genotype::m_sampleNum = sampleNum;
 }
 
@@ -113,29 +103,29 @@ void Genotype::SetstandardDeviation(double standardDeviation){ m_standardDeviati
 
 void Genotype::AddsampleGenotype(int genotype, size_t sampleIndex){
     switch(genotype){
-	case 0:
-		m_missing[(sampleIndex*4)/(8*m_bitSize)] = m_missing[(sampleIndex*4)/(8*m_bitSize)]  | 0x1ull << ((sampleIndex*4)% (8*m_bitSize));
-		break;
-	case 1:
-		m_genotypeA[(sampleIndex*4)/(8*m_bitSize)] = m_genotypeA[(sampleIndex*4)/(8*m_bitSize)]  | 0x5ull  << ((sampleIndex*4)% (8*m_bitSize));
-		m_genotypeB[(sampleIndex*4)/(8*m_bitSize)] = m_genotypeB[(sampleIndex*4)/(8*m_bitSize)]  | 0x3ull << ((sampleIndex*4)% (8*m_bitSize));
-		m_missing[(sampleIndex*4)/(8*m_bitSize)] = m_missing[(sampleIndex*4)/(8*m_bitSize)]  | 0x1ull << ((sampleIndex*4)% (8*m_bitSize));
-		break;
-	case 2:
-		m_genotypeA[(sampleIndex*4)/(8*m_bitSize)]= m_genotypeA[(sampleIndex*4)/(8*m_bitSize)]  | 0xfull << ((sampleIndex*4)% (8*m_bitSize));
-		m_genotypeB[(sampleIndex*4)/(8*m_bitSize)]= m_genotypeB[(sampleIndex*4)/(8*m_bitSize)]  | 0xfull << ((sampleIndex*4)% (8*m_bitSize));
-		m_missing[(sampleIndex*4)/(8*m_bitSize)] = m_missing[(sampleIndex*4)/(8*m_bitSize)]  | 0x1ull << ((sampleIndex*4)% (8*m_bitSize));
+    case 0:
+        m_missing[(sampleIndex*4)/(m_bitSize)] = m_missing[(sampleIndex*4)/(m_bitSize)]  | 0x1ull << ((sampleIndex*4)% (m_bitSize));
         break;
-	case 3: //missing
+    case 1:
+        m_genotypeA[(sampleIndex*4)/(m_bitSize)] = m_genotypeA[(sampleIndex*4)/(m_bitSize)]  | 0x5ull  << ((sampleIndex*4)% (m_bitSize));
+        m_genotypeB[(sampleIndex*4)/(m_bitSize)] = m_genotypeB[(sampleIndex*4)/(m_bitSize)]  | 0x3ull << ((sampleIndex*4)% (m_bitSize));
+        m_missing[(sampleIndex*4)/(m_bitSize)] = m_missing[(sampleIndex*4)/(m_bitSize)]  | 0x1ull << ((sampleIndex*4)% (m_bitSize));
         break;
-	default:
+    case 2:
+        m_genotypeA[(sampleIndex*4)/(m_bitSize)]= m_genotypeA[(sampleIndex*4)/(m_bitSize)]  | 0xfull << ((sampleIndex*4)% (m_bitSize));
+        m_genotypeB[(sampleIndex*4)/(m_bitSize)]= m_genotypeB[(sampleIndex*4)/(m_bitSize)]  | 0xfull << ((sampleIndex*4)% (m_bitSize));
+        m_missing[(sampleIndex*4)/(m_bitSize)] = m_missing[(sampleIndex*4)/(m_bitSize)]  | 0x1ull << ((sampleIndex*4)% (m_bitSize));
+        break;
+    case 3: //missing
+        break;
+    default:
         throw "Undefined genotype: "+std::to_string(genotype)+" please check your input!\nWe expect the bed file to contain only 0, 1 or 2 and nothing else (missing will be considered as 0)";
     }
 }
 
 void Genotype::clean(std::deque<Genotype*> &genotype, size_t remaining){
-	size_t sizeOfGenotype = genotype.size();
-	size_t removeCount = sizeOfGenotype-remaining;
+    size_t sizeOfGenotype = genotype.size();
+    size_t removeCount = sizeOfGenotype-remaining;
     for(size_t i = 0; i < removeCount; ++i){
         Genotype* temp = genotype.front();
         genotype.pop_front();

@@ -46,7 +46,6 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
         //    - Remember, if they are in perfect LD, we can just move the row around and they will still be the same
         fprintf(stderr, "Get Block\n");
         genotypeFileHandler.getSNP(snpIndex, snpList, genotype, snpLoc, finalizeBuff, completed, boundary);
-        exit(-1);
         // Now start performing the linkage stuff
         fprintf(stderr, "Compute LD\n");
         linkage.construct(genotype, snpLoc, boundary, snpList,m_ldCorrection);
