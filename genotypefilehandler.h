@@ -43,10 +43,8 @@ class GenotypeFileHandler
         size_t m_nInvalid=0; // SNPs that have different information as the p-value file
         size_t m_nFilter = 0;
         size_t m_nAmbig=0; // Number of SNPs that are ambiguous
-        size_t m_nSnp=0;
         size_t m_blockSize=0;
         bool m_keepAmbiguous = false;
-        bool m_include = false;
         bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
         std::map<std::string, bool> m_duplicateCheck;
 
@@ -57,7 +55,9 @@ class GenotypeFileHandler
         Genotype *m_buffGenotype=nullptr;
 
         //Method number two, the method I used before, the inclusion vector
-        std::vector<int> inclusion;
+        std::vector<int> m_inclusion;
+        size_t m_snpIter=0; //This is for the iteration of inclusion
+        size_t m_nSnp=0;
 
 
         // Crazy functions

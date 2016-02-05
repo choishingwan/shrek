@@ -16,3 +16,4 @@
 \contentsline {subsection}{\numberline {9.1}To Do}{6}{subsection.9.1}
 \contentsline {subsection}{\numberline {9.2}Finished today}{6}{subsection.9.2}
 \contentsline {subsection}{\numberline {9.3}Problem identified today}{7}{subsection.9.3}
+\contentsline {section}{\numberline {10}February 4, 2016}{7}{section.10}

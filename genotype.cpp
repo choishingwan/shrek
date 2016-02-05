@@ -58,17 +58,17 @@ void Genotype::GetbothR(const Genotype &snpB, const bool correction, double &r, 
             i++;
         }
     }
-
-    std::cerr << "Mean A: " << m_mean << std::endl;
-    std::cerr << "Mean B: " << m_mean << std::endl;
-    std::cerr << "SD A: " << m_standardDeviation << std::endl;
-    std::cerr << "SD B: " << snpB.m_standardDeviation << std::endl;
-    std::cerr << "Total Sample: " << nSample << std::endl;
+//
+//    std::cerr << "Mean A: " << m_mean << std::endl;
+//    std::cerr << "Mean B: " << m_mean << std::endl;
+//    std::cerr << "SD A: " << m_standardDeviation << std::endl;
+//    std::cerr << "SD B: " << snpB.m_standardDeviation << std::endl;
+//    std::cerr << "Total Sample: " << nSample << std::endl;
     r *= 1.0/(nSample-1.0);
-    std::cerr << "The R should be : " << r << std::endl;
+//    std::cerr << "The R should be : " << r << std::endl;
     rSq = r*r;
 
-    std::cerr << "The R2 should be : " << rSq << std::endl;
+//    std::cerr << "The R2 should be : " << rSq << std::endl;
 	if(correction){
         r= r*(1+(1-r*r)/(2*(nSample-4))); //POPA
         rSq=rSq-1.0/(2.0*nSample); //Weir & Hill
