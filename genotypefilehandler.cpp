@@ -170,7 +170,11 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
 }
 
 
-void GenotypeFileHandler::getBlock(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary){
+
+// Find the first SNP that for us to include.
+// Then read all the SNPs within the region
+
+void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary){
     // We try to use the old version of stuff to work on
     // Start of block info
 
@@ -256,6 +260,7 @@ void GenotypeFileHandler::getBlock(const std::map<std::string, size_t> &snpIndex
                 else{
                     genotype.push_back(tempGenotype);
                     snpLoc.push_back(currentLoc);
+                    lastUsedLoc  = currentLoc;
                     // fprintf(stderr, "Check %lu\n",m_snpLoc);
                     if(starting) boundary.push_back(std::prev(snpLoc.end()));
                     starting = false;
@@ -286,45 +291,145 @@ void GenotypeFileHandler::getBlock(const std::map<std::string, size_t> &snpIndex
 
 }
 
-void GenotypeFileHandler::getSNP(const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary){
+void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary){
     // boundary size should at most be 4
 
     // Very complicated need to write carefully
     // Something we know
     // When we reached the end of the chromosome or when the distance between the two SNPs are too large
     // we will set finalizeBuff to true such that other function will start cleaning up
-    /** The content of the boundary is important so it is worth the time to document it
-     *  The boundary should contain the boundaries of the block. The start of the first
-     *  block will always be 0. Let the start of the second block be x, then the first
-     *  block will be [0,x) and second block will be [x,y). Also, the distance of
-     *  SNP[x] - SNP[0] >= defined distance
-     */
-    // If the boundary size is 0, then we need a lot of blocks (3), otherwise, we only
-    // need to read one additional block
-    //size_t nBlock = (boundary.size()==0)? 4:1; //we read one more, just so that we might need to merge the remaining information
-    /** From this point onward, we assume prevChr, prevLoc and bufferGenotype contains the last SNP entry **/
-    while( boundary.size() < 4){
-    //for(size_t i = 0; i < nBlock; ++i){
-        // Get get block here
-        // When trying to get the blocks, we will try to get all the SNPs within region of the SNP in the bufferGenotype,
-        // we will also read one extra SNP (e.g. first SNP off the bufferGenotype) and put it into the buffer.
-        getBlock(snpIndex, snpList, genotype, snpLoc, finalizeBuff,completed, boundary);
-        if(finalizeBuff && boundary.size() > 3){
-            // Now check if we need to merge the last two blocks
-            size_t lastSnpOfThirdBlock = (*boundary.back()); // The last of boundary indicate the start of the last block
-            lastSnpOfThirdBlock = snpList.at(lastSnpOfThirdBlock).getLoc();
-            size_t lastSnp = snpLoc.back(); //The last of snpLoc is the last of the last block
-            lastSnp = snpList.at(lastSnp).getLoc();
-            if(lastSnp-lastSnpOfThirdBlock <= m_blockSize){
-                boundary.pop_back();
+//    /** The content of the boundary is important so it is worth the time to document it
+//     *  The boundary should contain the boundaries of the block. The start of the first
+//     *  block will always be 0. Let the start of the second block be x, then the first
+//     *  block will be [0,x) and second block will be [x,y). Also, the distance of
+//     *  SNP[x] - SNP[0] >= defined distance
+//     */
+//    // If the boundary size is 0, then we need a lot of blocks (3), otherwise, we only
+//    // need to read one additional block
+//    //size_t nBlock = (boundary.size()==0)? 4:1; //we read one more, just so that we might need to merge the remaining information
+//    /** From this point onward, we assume prevChr, prevLoc and bufferGenotype contains the last SNP entry **/
+//    while( boundary.size() < 4){
+//    //for(size_t i = 0; i < nBlock; ++i){
+//        // Get get block here
+//        // When trying to get the blocks, we will try to get all the SNPs within region of the SNP in the bufferGenotype,
+//        // we will also read one extra SNP (e.g. first SNP off the bufferGenotype) and put it into the buffer.
+//        getBlock(snpIndex, snpList, genotype, snpLoc, finalizeBuff,completed, boundary);
+//        if(finalizeBuff && boundary.size() > 3){
+//            // Now check if we need to merge the last two blocks
+//            size_t lastSnpOfThirdBlock = (*boundary.back()); // The last of boundary indicate the start of the last block
+//            lastSnpOfThirdBlock = snpList.at(lastSnpOfThirdBlock).getLoc();
+//            size_t lastSnp = snpLoc.back(); //The last of snpLoc is the last of the last block
+//            lastSnp = snpList.at(lastSnp).getLoc();
+//            if(lastSnp-lastSnpOfThirdBlock <= m_blockSize){
+//                boundary.pop_back();
+//            }
+//            return; //Done with this
+//        }
+//        else if(finalizeBuff){ // When we basically have too little SNPs as an input
+//            while(boundary.size()!=1) boundary.pop_back();
+//            return;
+//        }
+//    }
+ /** I have updated the functions, now getSnp should just get more SNPs to fill in the last block **/
+
+
+    size_t lastStartIndex = *(boundary.end());
+    std::string blockChr = snpList.at(lastStartIndex).getChr();
+    size_t blockStartLoc = snpList.at(lastStartIndex).getLoc();
+    size_t lastUsedLoc = blockStartLoc;
+
+    for(; m_snpIter < m_nSnp; ++m_snpIter){
+        bool snp = false;
+        //indicate whether if we need this snp
+		if(m_inclusion[m_snpIter] != -1) snp=true;
+		if(snp){
+            size_t currentLoc = snpList.at(m_inclusion[m_snpIter]).getLoc();
+
+            std::string currentChr = snpList.at(m_inclusion[m_snpIter]).getChr();
+            if(currentChr.compare(blockChr)!=0 ||  // new chromosome
+                currentLoc - blockStartLoc > m_blockSize || // way too far
+                currentLoc - lastUsedLoc > m_blockSize){
+                // we don't need this SNP, so we will return immediately
+                finalizeBuff=true;
+                return;
             }
-            return; //Done with this
-        }
-        else if(finalizeBuff){ // When we basically have too little SNPs as an input
-            while(boundary.size()!=1) boundary.pop_back();
-            return;
-        }
+            else{
+                // This is something we need
+                Genotype *tempGenotype = new Genotype();
+                size_t indx = 0; //The iterative count
+                double oldM=0.0, newM=0.0,oldS=0.0, newS=0.0;
+                size_t alleleCount=0, validSample=0;
+                while ( indx < m_nRefSample ){
+                    std::bitset<8> b; //Initiate the bit array
+                    char ch[1];
+                    m_bedFile.read(ch,1); //Read the information
+                    if (!m_bedFile) throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
+                    b = ch[0];
+                    int c=0;
+                    while (c<7 && indx < m_nRefSample ){ //Going through the bit flag. Stop when it have read all the samples as the end == NULL
+                        //As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
+                        ++indx; //so that we only need to modify the indx when adding samples but not in the mean and variance calculation
+                        int first = b[c++];
+                        int second = b[c++];
+
+                        if(first == 1 && second == 0){
+                            first = 3; //Missing value should be 3
+                        }
+                        else{
+                            validSample++;
+                            alleleCount += first+second;
+                            double value = first+second+0.0;
+                            if(validSample==1){
+                                oldM = newM = value;
+                                oldS = 0.0;
+                            }
+                            else{
+                                newM = oldM + (value-oldM)/(validSample);
+                                newS = oldS + (value-oldM)*(value-newM);
+                                oldM = newM;
+                                oldS = newS;
+                            }
+                        }
+                        tempGenotype->AddsampleGenotype(first+second, indx-1); //0 1 2 or 3 where 3 is missing
+                    }
+                }
+                validSample > 0 ? tempGenotype->Setmean(newM) : tempGenotype->Setmean(0.0);
+                validSample > 1 ? tempGenotype->SetstandardDeviation(std::sqrt(newS/(validSample - 1.0))) : tempGenotype->SetstandardDeviation(0.0);
+                double currentMaf = (alleleCount+0.0)/(2.0*validSample*1.0);
+                currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
+                if(m_mafThreshold > currentMaf){
+                    m_inclusion[m_snpIter]=-1;
+                    m_nFilter++;
+                    delete tempGenotype;
+                }
+                else{
+                    genotype.push_back(tempGenotype);
+                    snpLoc.push_back(currentLoc);
+                    lastUsedLoc  = currentLoc;
+                }
+            }
+		}
+		else{
+            //Doesn't matter, just read the thing and proceed
+            size_t indx = 0; //The iterative count
+            while ( indx < m_nRefSample ){
+                std::bitset<8> b; //Initiate the bit array
+                char ch[1];
+                m_bedFile.read(ch,1); //Read the information
+                if (!m_bedFile) throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
+                b = ch[0];
+                int c=0;
+                while (c<7 && indx < m_nRefSample ){ //Going through the bit flag. Stop when it have read all the samples as the end == NULL
+                        //As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
+                    ++indx; //so that we only need to modify the indx when adding samples but not in the mean and variance calculation
+                    c+=2;
+                }
+            }
+		}
     }
+
+    finalizeBuff = true;
+    completed = true;
 }
 
 

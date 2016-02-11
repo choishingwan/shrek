@@ -29,6 +29,7 @@ class SnpEstimation
         double m_prevalence =-1.0;
         bool m_qt=false;
         bool m_bt = false;
+        size_t m_blockSize =0;
 };
 
 #endif // SNPESTIMATION_H
