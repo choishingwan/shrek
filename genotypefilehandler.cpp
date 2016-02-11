@@ -301,9 +301,10 @@ void GenotypeFileHandler::getSNP(const std::map<std::string, size_t> &snpIndex, 
      */
     // If the boundary size is 0, then we need a lot of blocks (3), otherwise, we only
     // need to read one additional block
-    size_t nBlock = (boundary.size()==0)? 4:1; //we read one more, just so that we might need to merge the remaining information
+    //size_t nBlock = (boundary.size()==0)? 4:1; //we read one more, just so that we might need to merge the remaining information
     /** From this point onward, we assume prevChr, prevLoc and bufferGenotype contains the last SNP entry **/
-    for(size_t i = 0; i < nBlock; ++i){
+    while( boundary.size() < 4){
+    //for(size_t i = 0; i < nBlock; ++i){
         // Get get block here
         // When trying to get the blocks, we will try to get all the SNPs within region of the SNP in the bufferGenotype,
         // we will also read one extra SNP (e.g. first SNP off the bufferGenotype) and put it into the buffer.
@@ -327,76 +328,3 @@ void GenotypeFileHandler::getSNP(const std::map<std::string, size_t> &snpIndex, 
 }
 
 
-/*
-    Store the script here for now
-    std::string bimFileName = m_genotypeFilePrefix+".bim";
-    std::ifstream bimFile;
-    bimFile.open(bimFileName.c_str());
-    if(!bimFile.is_open()){
-        throw std::runtime_error("Cannot open bim file");
-    }
-    size_t nDuplicated= 0; //Check for duplication within the REFERENCE
-    size_t nInvalid=0; // SNPs that have different information as the p-value file
-    size_t nSnp=0;
-    size_t nAmbig=0; // Number of SNPs that are ambiguous
-
-	std::string prevChr="";
-	std::map<std::string, bool> duplicateCheck,sortCheck; //The sortCheck is basically a sanity check, bim file should be sorted to start with
-
-    while(std::getline(bimFile, line)){
-        line = usefulTools::trim(line);
-        if(!line.empty()){
-            std::vector<std::string> token;
-            usefulTools::tokenizer(line, "\t ", &token);
-            if(token.size() >=6){
-                std::string chr= token[0];
-                std::string rs = token[1];
-                size_t bp = std::atoi(token[3].c_str());
-                std::string refAllele = token[4];
-                std::string altAllele = token[5];
-                m_nSnp++; //Number of total input Snps
-                m_inclusion.push_back(-1); // -1 = now include, otherwise this is the index
-                if(prevChr.empty()){
-                    sortCheck[chr]=true;
-                }
-                else if(prevChr.compare(chr) != 0){
-                    //Check whether if the bim file is sorted correctly
-                    if(sortCheck.find(chr)!=sortCheck.end())
-                        throw std::runtime_error("The programme require the SNPs to be sorted according to their chromosome.");
-                    else sortCheck[chr] = true;
-                }
-                //Check if the SNP is duplicated in the reference panel
-                if(snpIndex.find(rs)!=snpIndex.end() && duplicateCheck.find(rs)==duplicateCheck.end()){
-                    //This is something that we need
-                    size_t snpLoc = snpIndex.at(rs);
-                    bool ambig = false;
-                    if(snpList.at(snpLoc).concordant(chr, bp, rs, refAllele, altAllele, ambig)){
-                        if(!keepAmbiguous && ambig) nAmbig ++;
-                        else{
-                            //This is found in the reference file, so it is in the base set
-                            snpList.at(snpLoc).setFlag(0, true);
-                            m_inclusion.back()=snpLoc;
-                            duplicateCheck[rs] = true;
-                            snpList.at(snpLoc).setStatus('I');
-                            nSnp++;
-                        }
-                    }
-                    else{
-                        snpList.at(snpLoc).setStatus('v');
-                        nInvalid++;
-                    }
-                }
-                else if(duplicateCheck.find(rs) != duplicateCheck.end()) nDuplicated++;
-            }
-
-        }
-    }
-    bimFile.close();
-    fprintf(stderr, "\n");
-    fprintf(stderr, "Reference File Information:\n");
-    fprintf(stderr, "================================\n");
-    fprintf(stderr, "%lu samples found in the reference panel\n", m_nRefSample);
-    if(nDuplicated != 0) fprintf(stderr, "%lu duplicated SNP(s) in the reference panel\n", nDuplicated);
-    if(nInvalid != 0) fprintf(stderr, "%lu discordant SNP(s)\n", nInvalid);
-    if(nAmbig!= 0 ) fprintf(stderr, "%lu ambiguous SNP(s) removed\n", nAmbig);
-*/

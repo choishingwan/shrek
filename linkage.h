@@ -12,6 +12,7 @@
 #include <list>
 #include <iterator>
 #include <deque>
+#include <algorithm>
 
 #include <stdio.h>
 #include <iostream>
@@ -42,6 +43,7 @@ class Linkage
         static std::mutex linkageMtx;
         // This will return the list of index that we would like to remove from the analysis
         void computeLd(const boost::ptr_list<Genotype> &genotype, const std::list<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart,size_t horiEnd, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd);
+        void perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, std::deque<std::list<size_t>::iterator > &boundary, boost::ptr_vector<Snp> &snpList, bool start);
 };
 
 #endif // LINKAGE_H

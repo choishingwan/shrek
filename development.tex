@@ -1,7 +1,7 @@
 \documentclass[12pt]{article}
 \usepackage{amsmath}
 \usepackage{bm}
-\usepackage[colorlinks=true,urlcolor=blue]{hyperref}
+\usepackage[hidelinks,colorlinks=false,urlcolor=blue]{hyperref}
 
 \title{Snp HeRitability Estimation Kit (SHREK) Development Log}
 \date{\today}
@@ -20,7 +20,7 @@
 	
 	\maketitle
 	\tableofcontents
-	
+	\newpage
 	\section{Assumption in implementation}
 	To make life easier, I made a number of assumption when I implement the programme and they are listed as follow
 	\begin{enumerate}
@@ -167,5 +167,22 @@
 	We will then check the implementation of the $R^2$ computation right after we have make sure the genotype reading is correct.
 	\section{February 5, 2016}
 	Try to continue on what we have been doing yesterday.
+	\subsection{Finished Today}
+	\begin{enumerate}
+		\item 	Finished debugging the genotype reading.
+				By using the old inclusion method, we avoid a lot of complication and the programme now works accordingly.
+				We also checked the bit arithmetic and decided to use our original calculation which unlike what I previously thought, isn't platform specific.
+				
+	\end{enumerate}
+	\subsection{Special Note}
+	The NumberOfBit function in the usefulTools doesn't work in our case because our number is longer than uint32\_t. 
+	I am rather uncertain how should we change the script accordingly because it involves extreme high level bit arithmetic.
+	However, based on online sources, it seems like the \_\_builtin\_popcountll function will work as long as we compile the programme using gcc.
+	So we will stick to that function for now.
+	
+	\section{February 11, 2016}
+	Back from holiday, now taking the perfect LD seriously and start implementing the perfect LD removal algorithm.
+	It is important to note that it is possible for the boundaries to be in perfect LD, therefore potentially changing the boundary.
+	However, take into account of our current procedure, most of the time, only the last block need our attention, unless this is the beginning of the chromosome or decomposition region.
 	
 \end{document}

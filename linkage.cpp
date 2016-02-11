@@ -7,12 +7,12 @@ Linkage::~Linkage(){}
 
 
 void Linkage::computeLd(const boost::ptr_list<Genotype> &genotype, const std::list<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, size_t horiEnd, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd){
-linkageMtx.lock();
-    fprintf(stderr, "Start: %lu\n", startIndex);
-    fprintf(stderr, "VerEnd: %lu\n", verEnd);
-    fprintf(stderr, "HorStart: %lu\n", horistart);
-    fprintf(stderr, "HorEnd: %lu\n", horiEnd);
-linkageMtx.unlock();
+//linkageMtx.lock();
+//    fprintf(stderr, "Start: %lu\n", startIndex);
+//    fprintf(stderr, "VerEnd: %lu\n", verEnd);
+//    fprintf(stderr, "HorStart: %lu\n", horistart);
+//    fprintf(stderr, "HorEnd: %lu\n", horiEnd);
+//linkageMtx.unlock();
 
     std::vector<size_t> perfectBuff;
     boost::ptr_list<Genotype>::const_iterator  iter = genotype.begin(), endIter = genotype.begin(), horiEndIter=genotype.begin();
@@ -27,19 +27,21 @@ linkageMtx.unlock();
         boost::ptr_list<Genotype>::const_iterator  horiStartIter=genotype.begin();
         std::advance(horiStartIter, nextStart);
         for(; horiStartIter!=horiEndIter;  ++horiStartIter){
-                if(i==j){
-                    m_linkage(i,j) = 1.0;
-                    m_linkageSqrt(i,j) = 1.0;
-                }
-                else{
-                    double r = 0.0;
-                    double r2 = 0.0;
-                    (*iter).GetbothR((*horiStartIter), correction, r, r2);
-                    m_linkage(i,j) = r2;
-                    m_linkageSqrt(i,j) = r;
-                    // Now check if it is perfect LD
-                    // Store the index j into perfectBuff
-                    if(std::fabs(r-1.0) < 1e-6 || r > 1.0 || r < -1.0) perfectBuff.push_back(j);
+                if(m_linkage(i,j)==0.0){  // Only do updating, this should speed things up in the update stuff
+                    if(i==j){
+                        m_linkage(i,j) = 1.0;
+                        m_linkageSqrt(i,j) = 1.0;
+                    }
+                    else{
+                        double r = 0.0;
+                        double r2 = 0.0;
+                        (*iter).GetbothR((*horiStartIter), correction, r, r2);
+                        m_linkage(i,j) = r2;
+                        m_linkageSqrt(i,j) = r;
+                        // Now check if it is perfect LD
+                        // Store the index j into perfectBuff
+                        if(std::fabs(r-1.0) < 1e-6 || r > 1.0 || r < -1.0) perfectBuff.push_back(j);
+                    }
                 }
             //This is for the update of the matrix indexing;
             ++j;
@@ -207,17 +209,51 @@ void Linkage::construct(boost::ptr_list<Genotype> &genotype, std::list<size_t> &
 
     }
     std::cerr << "Problem: " << perfectLd.size() << std::endl;
-    std::sort(perfectLd.begin(), perfectLd.end());
+    std::sort(perfectLd.begin(), perfectLd.end(), std::greater<size_t>());
     // Now we want to remove duplicated index
     perfectLd.erase( std::unique( perfectLd.begin(), perfectLd.end() ), perfectLd.end() );
-    //Here goes the crazy part
-    for(size_t i = 0; i < perfectLd.size(); ++i) std::cerr << perfectLd[i] << std::endl;
-
-
-    std::cout << m_linkage << std::endl;
+    // Here goes the crazy part
+    // Need to remove the perfect LD
+    for (auto &element : perfectLd)
+        std::cerr << element << std::endl;
     exit(-1);
     // Now we need to handle the perfect LD stuff
+    if(perfectLd.size()==0){
+        m_linkage = arma::symmatu(m_linkage);
+        m_linkageSqrt = arma::symmatu(m_linkageSqrt);
+    }
+    else{
+        perfectRemove(perfectLd, genotype, snpLoc, boundary, snpList, start);
+        // need to work more:
+        // 1. read sufficient SNPs for the whole blocks (because the boundary may change
+        // 2. construct the corresponding LD matrix again
+        // 3. check for the perfectLd again
+        // 4. repeat until all perfectLd within the region are removed
+    }
 }
 
 
+void perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, std::deque<std::list<size_t>::iterator > &boundary, boost::ptr_vector<Snp> &snpList, bool start){
+// Challenge here: If the boundary is the perfect LD
+// then we need to reconstruct stuff, also, if the next
+// boundary is too far, we will have to cut the block...
+    if(perfectLd.size() ==0) return; //nothing to do
 
+    // First check if any of the boundary is in perfect LD and see if the replaced SNP is within reasonable range from the last SNP
+    // from previous block
+    if(start){
+        //The worst case scenario, most complicated and easiest to have problem + bugs
+    }
+    else{
+        //only need to check the last boundary is not in perfect LD with others
+        for(size_t i = 0; i < perfectLd.size(); ++i){
+
+        }
+    }
+
+
+
+
+    // Now hopefully we have solved the problem of the boundaries
+
+}
