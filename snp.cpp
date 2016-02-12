@@ -1,6 +1,10 @@
 #include "snp.h"
 
-Snp::Snp(std::string chr, std::string rsId, size_t loc, size_t nSample, size_t nCase, size_t nControl, std::string refAllele, std::string altAllele, double statistic, double info, int sign):m_chr(chr),m_rsId(rsId), m_loc(loc),m_nSample(nSample),m_nCase(nCase),m_nControl(nControl),m_ref(refAllele),m_alt(altAllele),m_statistic(statistic),m_infoScore(info),m_sign(sign){}
+Snp::Snp(std::string chr, std::string rsId, size_t loc, size_t nSample, size_t nCase, size_t nControl, std::string refAllele, std::string altAllele, double statistic, double info, int sign):m_chr(chr),m_rsId(rsId), m_loc(loc),m_nSample(nSample),m_nCase(nCase),m_nControl(nControl),m_ref(refAllele),m_alt(altAllele),m_infoScore(info),m_sign(sign){
+	m_statistic = std::make_shared<double>(statistic);
+	m_heritability = std::make_shared<double>(0.0);
+	m_ldScore = std::make_shared<double>(0.0);
+}
 
 void Snp::setFlag(const size_t i, bool flag){ m_regionFlag.at(i) = flag;}
 void Snp::setStatus(char status){ m_status=status; }
@@ -10,6 +14,36 @@ void Snp::flip(){
     m_alt = temp;
     m_sign *= -1;
 }
+
+ void Snp::shareHeritability( Snp& i ){
+ 	if(i.m_statistic == m_statistic) return;
+    (*i.m_statistic) += (*m_statistic); //Add up the beta to get an average
+    (*i.m_heritability) += (*m_heritability);
+ 	//i is the one who buy
+ 	//this is the one who sell
+    //For this's family, all of them should point to the same location
+    m_statistic = (i.m_statistic); //They now share the same beta
+    m_heritability = (i.m_heritability);
+    m_status = 'L';
+    i.m_status='L';
+    m_ldScore = (i.m_ldScore);
+    Snp* currentClass = m_targetClass;
+    Snp* prevClass = this;
+    while(currentClass != this){
+        currentClass->m_statistic = i.m_statistic; //The subsequent stuff are also pointing here
+        currentClass->m_heritability = i.m_heritability;
+        currentClass->m_ldScore = i.m_ldScore;
+        currentClass->m_status = 'L';
+        prevClass = currentClass;
+        currentClass = currentClass->m_targetClass;
+    }
+    //Now they are all pointing to the same value
+    //Now prevClass is the last person in chain
+    prevClass->m_targetClass = i.m_targetClass;
+    i.m_targetClass = this;
+ }
+
+
 
 bool Snp::concordant(const std::string chr, const size_t loc, const std::string rs, std::string refAllele, std::string altAllele, bool &ambig){
     std::transform(refAllele.begin(), refAllele.end(), refAllele.begin(), toupper);
@@ -45,19 +79,16 @@ bool Snp::concordant(const std::string chr, const size_t loc, const std::string 
 }
 void Snp::computeSummaryStatistc(){
     double beta = 0.0;
-    if(m_statistic < 1.0){ //Direct transform p-value of 1 to summary statistics of 0
-        errno = 0;
-        log(fabs(1.0-m_statistic/2.0)); //We know the reason of calculation problem is the log, so we check if the log will cause any error
-        if(errno != 0){ //It means we cannot get the result from it
-            errno = 0;
-            log(fabs(m_statistic/2.0));
-            assert(errno!=0&&"I am uncertain why this error occurs");
-            if(errno == 0) beta = fabs(usefulTools::qnorm((m_statistic+0.0)/2.0));
+    if((*m_statistic) < 1.0){ //Direct transform p-value of 1 to summary statistics of 0
+        beta = fabs(usefulTools::qnorm(1.0-(((*m_statistic)+0.0)/2.0)));
+        if(isnan(beta)){ //It means we cannot get the result from it
+            beta = fabs(usefulTools::qnorm((*m_statistic)/2.0));
+            assert(!isnan(beta)&& "I don't know what is the problem");
         }
-        else beta = fabs(usefulTools::qnorm(1.0-((m_statistic+0.0)/2.0)));
     }
-    if(m_nSample != 0) m_statistic = beta*beta; //Because we want to keep the statistic as the summary stat instead of p-value
-    else m_statistic = beta; //Because we want to keep the statistic as the summary stat instead of p-value
+    if(m_nSample != 0) (*m_statistic) = fabs(beta); //Because we want to keep the statistic as the summary stat instead of p-value
+    else (*m_statistic) = sqrt(fabs(beta)); //Because we want to keep the statistic as the summary stat instead of p-value
+    if(m_sign!=0) (*m_statistic) = m_sign*(*m_statistic); // Give the value a sign if it is provided
 }
 
 Snp::~Snp()
@@ -123,7 +154,6 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
     int nSample = commander.getNSample();
     size_t maxIndex =commander.getMaxIndex();
     //We have got all the required information, now read the file and start processing
-
     size_t nSkipped = 0, nDuplicate=0, nInvalid=0, nFilter=0, nOverSig = 0;
     std::map<std::string, bool> duplication;
 
@@ -132,7 +162,7 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
         if(!line.empty()){ //Only process lines with information
             std::vector<std::string> token;
             usefulTools::tokenizer(line, " \t", &token);
-            if(token.size() > maxIndex){
+            if(token.size() >= maxIndex){
                 std::string rsId = token[rsIndex-1];
                 if(duplication.find(rsId) !=duplication.end()){
                     // Check if the same rs ID has been used

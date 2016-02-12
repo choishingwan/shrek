@@ -10,6 +10,7 @@
 #include "genotype.h"
 #include "region.h"
 #include "linkage.h"
+#include "decomposition.h"
 // I didn't include all the required header yet
 // Only include them as I start to use them
 

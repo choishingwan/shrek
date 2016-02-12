@@ -11,6 +11,7 @@
 
 // Each region should only contain the information of their own intervals
 // and the corresponding variance
+// A rather embarrassing class... It only do half the work here (e.g. useless when class not provided)
 class Region
 {
     public:
@@ -32,7 +33,7 @@ class Region
         boost::ptr_vector<Interval> m_intervalList;
         std::string m_name;
         double m_variance=0.0;
-        double m_varianceBuff=0.0; //This contain the variance that are not included into the final variance
+        //double m_varianceBuff=0.0;
 };
 
 #endif // REGION_H

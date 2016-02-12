@@ -27,6 +27,7 @@
 */
 
 
+extern "C" void openblas_set_num_threads(int); //This is for controlling the multi-thread
 
 
 int main(int argc, char *argv[]){
@@ -38,7 +39,7 @@ int main(int argc, char *argv[]){
         if(!commander.parseCommand(argc, argv)){ //Parameter parsing
             return EXIT_SUCCESS;
         }
-
+        openblas_set_num_threads(commander.getNThread());
         //Printing out the input parameters
         //commander.printRunSummary(std::to_string(regionInfo.getNumRegion()));
         time_t now = time(0);

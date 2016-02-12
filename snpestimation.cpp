@@ -27,6 +27,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
     bool finalizeBuff = false;
 
     Linkage linkage(m_thread, m_blockSize);
+    Decomposition decompose(m_thread);
     fprintf(stderr, "Estimate SNP heritability\n");
     // Ignore the progress bar just yet
     // Only add it in when everything is completed
@@ -37,6 +38,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
     // This thing is getting advance...
     std::deque<std::list<size_t>::iterator > boundary;
     //std::deque<size_t> boundary; //The boundary is used to indicate the blocks
+    size_t roundNumber = 0;
     while(!completed){
         // Get the required genotypes
         // The concept now is simpler
@@ -63,7 +65,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
             // 2. Boundary changed, but still in range. Read more SNPs and continue
             // 3. Boundary changed, out of range now, start decomposition
             // Here we need to check the boundaries
-            if(boundChange){
+            if(boundChange && boundary.back() != snpLoc.end()){
                 // need to check if the blocks are now ok, if not, change finalizeBuff to true
                 // Also, need special
                 size_t lastLoc = *(boundary.back());
@@ -76,6 +78,10 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
                 else{}// everything as normal
 
             }
+            else if(boundChange){ // this is the abnormal situation where the after removing the perfect LDs, we lost the whole block
+                finalizeBuff = true;
+                boundary.pop_back(); //The last one is just for checking
+            }
             else{} //everything as normal
             // now pad the remaining SNPs for the last block
             // then construct the LD and remove the perfectLD again.
@@ -83,10 +89,36 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
             genotypeFileHandler.getSNP(snpList, genotype, snpLoc, finalizeBuff, completed,boundary);
             linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
         }
+        // Need to check if we need to merge the last block into the one in front
+        // Only consider it when we reached the end of the current region
+        if(finalizeBuff && boundary.size() > 3){
+//            // Now check if we need to merge the last two blocks
+            size_t lastSnpOfThirdBlock = snpList.at(*std::prev(boundary.back())).getLoc();
+            size_t lastSnp = snpLoc.back(); //The last of snpLoc is the last of the last block
+            lastSnp = snpList.at(lastSnp).getLoc();
+            if(lastSnp-lastSnpOfThirdBlock <= m_blockSize){
+                boundary.pop_back(); //Because the boundary changed, we should also update the LD matrix
+                // Mainly, the top right and bottom left corner
+                bool boundChange = false;
+                // Can consider writing a more efficient algorithm for this, however, this should also be rare.
+                linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
+                //There will be no boundary change because we have already removed the only bound that might be changed by the perfect LD
+            }
+        }
         // When we reach here, we are ready for decomposition
+        fprintf(stderr, "Decomposition\n");
+        if(finalizeBuff) decompose.run(linkage, snpLoc, boundary, snpList, !retainLastBlock, roundNumber, regionList);
+        else decompose.run(linkage, snpLoc, boundary, snpList, false, roundNumber, regionList);
 
+        linkage.print();
 
+        if(finalizeBuff) roundNumber=0;
+        else roundNumber++;
 
+        // A number of possibilities
+        // 1. Normal situation (1 last block that don't need to be checked)
+        // 2. Ending (decompose the whole thing)
+        // 3. Ending (1 last blcok extra)
         break; //End things first
 
     }

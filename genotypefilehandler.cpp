@@ -157,7 +157,7 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
         else emptyLineCheck++;
     }
     bimFile.close();
-    fprintf(stderr,"\n Reference Panel Information:\n");
+    fprintf(stderr,"\nReference Panel Information:\n");
     fprintf(stderr,"=================================\n");
     fprintf(stderr, "%lu samples were found in the reference panel\n", m_nRefSample);
     fprintf(stderr, "%lu discordant SNP(s) identified\n", m_nInvalid);
@@ -202,10 +202,13 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_l
 
             std::string currentChr = snpList.at(m_inclusion[m_snpIter]).getChr();
             if(currentChr.compare(blockChr)!=0 ||  // new chromosome
-                currentLoc - blockStartLoc > m_blockSize || // way too far
                 currentLoc - lastUsedLoc > m_blockSize){
                 // we don't need this SNP, so we will return immediately
                 finalizeBuff=true;
+                return;
+            }
+            else if(currentLoc - blockStartLoc > m_blockSize){
+                //This is the normal exit
                 return;
             }
             else{
@@ -259,7 +262,7 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_l
                 }
                 else{
                     genotype.push_back(tempGenotype);
-                    snpLoc.push_back(currentLoc);
+                    snpLoc.push_back(m_snpIter);
                     lastUsedLoc  = currentLoc;
                     // fprintf(stderr, "Check %lu\n",m_snpLoc);
                     if(starting) boundary.push_back(std::prev(snpLoc.end()));
@@ -332,25 +335,25 @@ void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_lis
 //    }
  /** I have updated the functions, now getSnp should just get more SNPs to fill in the last block **/
 
-
-    size_t lastStartIndex = *(boundary.end());
+    size_t lastStartIndex = *(boundary.back());
     std::string blockChr = snpList.at(lastStartIndex).getChr();
     size_t blockStartLoc = snpList.at(lastStartIndex).getLoc();
-    size_t lastUsedLoc = blockStartLoc;
-
+    size_t lastUsedLoc = snpList.at(snpLoc.back()).getLoc();
     for(; m_snpIter < m_nSnp; ++m_snpIter){
         bool snp = false;
         //indicate whether if we need this snp
 		if(m_inclusion[m_snpIter] != -1) snp=true;
 		if(snp){
             size_t currentLoc = snpList.at(m_inclusion[m_snpIter]).getLoc();
-
             std::string currentChr = snpList.at(m_inclusion[m_snpIter]).getChr();
             if(currentChr.compare(blockChr)!=0 ||  // new chromosome
-                currentLoc - blockStartLoc > m_blockSize || // way too far
                 currentLoc - lastUsedLoc > m_blockSize){
                 // we don't need this SNP, so we will return immediately
                 finalizeBuff=true;
+                return;
+            }
+            else if(currentLoc - blockStartLoc > m_blockSize){
+                //This is the normal exit
                 return;
             }
             else{
@@ -404,7 +407,7 @@ void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_lis
                 }
                 else{
                     genotype.push_back(tempGenotype);
-                    snpLoc.push_back(currentLoc);
+                    snpLoc.push_back(m_snpIter);
                     lastUsedLoc  = currentLoc;
                 }
             }

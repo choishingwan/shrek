@@ -32,11 +32,12 @@ class Snp
         int getNSample() const{return m_nSample;};
         int getNCase() const{return m_nCase;};
         int getNControl() const{return m_nControl;};
+        int getSampleSize() const{return m_nCase+m_nControl+m_nSample;};
         std::string getRef() const{return m_ref;};
         std::string getAlt() const{return m_alt;};
-        double getStat() const{return m_statistic;};
-        double getHeritability() const{return m_heritability;};
-        double getLDSC() const {return m_ldScore;};
+        double getStat() const{return (*m_statistic)/(double)m_statistic.use_count();};
+        double getHeritability() const{return (*m_heritability)/(double)m_heritability.use_count();};
+        double getLDSC() const {return (*m_ldScore);};
         double getEffective() const{return m_effectiveNumber;};
         double getInfo() const{return m_infoScore; };
         int getSign() const{return m_sign;};
@@ -44,10 +45,16 @@ class Snp
         //Setters
         void setFlag(const size_t i, bool flag);
         void setStatus(char status);
+        void setHeritability(double herit){(*m_heritability)=herit;};
+        void setEffective(double effective){ m_effectiveNumber=effective; };
         //Checking
         // This programme will return whether if the result is concordant and will flip accordingly
         // It will flip the SNP even if it is ambiguous, but will let the caller know through ambig
         bool concordant(const std::string chr, const size_t loc, const std::string rs, std::string refAllele, std::string altAllele, bool &ambig);
+
+        //Perfect LD stuff
+        void shareHeritability( Snp& i );
+
         //Uncertain
         Snp(const Snp& that) = delete; //I honestly can't remember what is this for, I guess this is to disable copying
     protected:
@@ -61,9 +68,8 @@ class Snp
         int m_nControl=0;
         std::string m_ref="";
         std::string m_alt="";
-        double m_statistic=0.0; // This is the original input (Inform of summary statistic)
-        double m_heritability = 0.0; // This is the result
-        double m_ldScore = 0.0;
+//        double m_statistic=0.0; // This is the original input (Inform of summary statistic)
+//        double m_heritability = 0.0; // This is the result
         double m_effectiveNumber =0.0; // This is for the calculation of heuristic variance
         double m_infoScore = 0.0;
         int m_sign  = 0; //When sign = 0, it means there is no sign given
@@ -75,8 +81,11 @@ class Snp
         // remove due to MAF (F)
         // Need to write these in the manual
         char m_status='r';
-
-
+        /** Special members use for managing the perfect LD stuff **/
+        std::shared_ptr<double> m_statistic; //Average of all Snps with perfect LD
+        std::shared_ptr<double> m_heritability; //The master heritability
+        std::shared_ptr<double> m_ldScore;
+        Snp* m_targetClass;
         std::vector<bool> m_regionFlag;
 
         static bool sortSnp(const Snp& i, const Snp& j);

@@ -2,6 +2,8 @@
 \usepackage{amsmath}
 \usepackage{bm}
 \usepackage[hidelinks,colorlinks=false,urlcolor=blue]{hyperref}
+\usepackage{booktabs}
+\usepackage[section]{placeins}
 
 \title{Snp HeRitability Estimation Kit (SHREK) Development Log}
 \date{\today}
@@ -35,6 +37,12 @@
 			That's definitely overkill but that avoid problem of crazy perfect LD interactions (to be honest, I would consider those as error, yet it is easier for me to just remove them)
 		\end{enumerate}
 		\item We do not consider a SNP ambiguous unless we need to perform flipping
+		\item Only when the direction of effect is presented will we perform the detail variance estimation calculation.
+		The equation for the variance calculation is:
+		\begin{math}
+			\boldsymbol{R_{sq}}^{-1}\boldsymbol{n}(4\boldsymbol{R}\circ(\boldsymbol{zz}^t)-2\boldsymbol{R_{sq}}^{-1})\boldsymbol{n}\boldsymbol{R_{sq}}^{-1}
+		\end{math}
+		where $\boldsymbol{n}$ is a square diagonal matrix with diagonal as the sample size and $\boldsymbol{z}$ is the vector of z-statistics.
 	\end{enumerate}
 	
 	\section{January 25, 2016}
@@ -184,5 +192,49 @@
 	Back from holiday, now taking the perfect LD seriously and start implementing the perfect LD removal algorithm.
 	It is important to note that it is possible for the boundaries to be in perfect LD, therefore potentially changing the boundary.
 	However, take into account of our current procedure, most of the time, only the last block need our attention, unless this is the beginning of the chromosome or decomposition region.
+	\subsection{Finished Today}
+	\begin{enumerate}
+		\item Implemented the slow but simple version of the perfect LD removal, need to test run it.
+		\item Solved some bugs, e.g. the genotype collection and LD construction bug (use the wrong index)
+		\item Found that there are still problems with the perfect LD removal.
+		Specifically, when the SNP at the bound is in perfect LD with previous SNPs, the handling are still problematic. 
+		Need to change my test case in which I reduce the gap between the two SNPs (e.g. the 4$->$7)
+	\end{enumerate}
+	\section{February 12, 2016}
+	Finishing the first part of debugging. 
+	Basically, the LD construction seems to be ok for now.
+	Also, I reused my old code for getting the mean of the test-statistics.
+	Now, we store only the z-score in the Snp object.
+	This reduces the number of information we store in Snp object but slightly increases the number of computation we have to perform.
+	\subsection{Finished Today}
+	\begin{enumerate}
+		\item Finished all the test run for linkage construction (have not test the cross chromosome yet)
+		\item Implemented the decomposition and variance calculation. (Using Tim's Equation)
+		Will need to perform the simulation to see if the variance estimation works. 
+		\item Updated the Snp class to accommodate the perfect LD computation.
+	\end{enumerate}
 	
+	\subsection{Note}
+	Unfortunately, I am not used to template usage in c++, therefore I will have to write two separate function for the decomposition of the matrix depending on whether if the sign is provided.
+	
+	An important finding regarding the linking of the library.
+	You must have the armadillo/usr/lib folder under your LD\_LIBRARY\_PATH.
+	Also, you will need -larmadillo when you compile and it should come \emph{after} the cpp file.
+	
+	When performing the test code, it was found that the pinv function of armadillo is actually 100 times faster than my self-implemented pseudo inverse. 
+	Therefore, we should use their implementation instead.
+	
+	What we have to do next is to store the results of the estimated variance and to generate the required output.
+	\newpage
+	\section{Useful Resources}
+	\begin{table}
+		\centering
+		\begin{tabular}{rr}
+			\toprule
+			Description & URL \\
+			\midrule
+			Timing the functions in c++ programme & \href{http://stackoverflow.com/a/21995693}{link}\\
+			\bottomrule
+		\end{tabular}
+	\end{table}
 \end{document}
