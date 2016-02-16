@@ -36,8 +36,8 @@ class Linkage
         // The snpList is required for the perfectLD stuff
         void construct(boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, std::deque<std::list<size_t>::iterator > &boundary, boost::ptr_vector<Snp> &snpList, const bool correction,bool &boundCheck);
         void print();
-        void decompose(const arma::vec &fStat, arma::vec &heritResult, arma::vec &varResult);
-        void decompose(const arma::vec &zStat, const arma::vec &fStat, const arma::vec &nSample, arma::vec &heritResult, arma::mat &varResult);
+        void decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult, arma::vec &varResult);
+        void decompose(size_t start, const arma::vec &zStat, const arma::vec &fStat, const arma::vec &nSample, arma::vec &heritResult, arma::mat &varResult);
         void computeHerit(const arma::vec &fStat, arma::vec &heritResult);
     protected:
     private:

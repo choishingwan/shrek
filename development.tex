@@ -225,6 +225,18 @@
 	Therefore, we should use their implementation instead.
 	
 	What we have to do next is to store the results of the estimated variance and to generate the required output.
+	\section {February 15, 2016}
+	Start working on the variance capturing for the complex variance calculation.
+	The most difficult part is to determine the denominator of the calculation.
+	The best way might be to use median, which is less sensitive to outliers.
+	However, the problem is, how to calculate the median without storing the whole matrix, which is memory intensive?
+	
+	According to Tim, we only need the \emph{rows} of the target SNPs, therefore we only need to capture each \emph{rectangle} per run.
+	Currently trying to list out all possible scenarios to avoid bugs.
+	
+	\section{February 16, 2016}
+	Continue on what I was doing yesterday.
+	
 	\newpage
 	\section{Useful Resources}
 	\begin{table}

@@ -38,7 +38,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
     // This thing is getting advance...
     std::deque<std::list<size_t>::iterator > boundary;
     //std::deque<size_t> boundary; //The boundary is used to indicate the blocks
-    size_t roundNumber = 0;
+    bool starting = true;
     while(!completed){
         // Get the required genotypes
         // The concept now is simpler
@@ -107,13 +107,13 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
         }
         // When we reach here, we are ready for decomposition
         fprintf(stderr, "Decomposition\n");
-        if(finalizeBuff) decompose.run(linkage, snpLoc, boundary, snpList, !retainLastBlock, roundNumber, regionList);
-        else decompose.run(linkage, snpLoc, boundary, snpList, false, roundNumber, regionList);
+        if(finalizeBuff) decompose.run(linkage, snpLoc, boundary, snpList, finalizeBuff, !retainLastBlock, starting, regionList);
+        else decompose.run(linkage, snpLoc, boundary, snpList, false, false, starting, regionList);
 
         linkage.print();
 
-        if(finalizeBuff) roundNumber=0;
-        else roundNumber++;
+        if(finalizeBuff) starting = true;
+        else starting = false;
 
         // A number of possibilities
         // 1. Normal situation (1 last block that don't need to be checked)

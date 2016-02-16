@@ -41,7 +41,7 @@ class Snp
         double getEffective() const{return m_effectiveNumber;};
         double getInfo() const{return m_infoScore; };
         int getSign() const{return m_sign;};
-
+        bool flag(size_t loc) const {return m_regionFlag.at(loc); };
         //Setters
         void setFlag(const size_t i, bool flag);
         void setStatus(char status);

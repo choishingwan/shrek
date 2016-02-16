@@ -278,11 +278,12 @@ void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_list<Geno
 }
 
 
-void Linkage::decompose(const arma::vec &fStat, arma::vec &heritResult, arma::vec &varResult){
+void Linkage::decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult, arma::vec &varResult){
+    if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
     size_t endOfBlock = fStat.n_elem-1;
-    arma::mat rInv=pinv((arma::mat)m_linkage.submat( 0, 0, endOfBlock,endOfBlock ));
+    arma::mat rInv=pinv((arma::mat)m_linkage.submat( start, start, endOfBlock,endOfBlock ));
     heritResult = rInv * fStat;
-    arma::mat error = m_linkage.submat( 0, 0, endOfBlock, endOfBlock )*heritResult - fStat;
+    arma::mat error = m_linkage.submat( start, start, endOfBlock, endOfBlock )*heritResult - fStat;
  	double oriNorm = norm(fStat);
     double relative_error = norm(error) / oriNorm;
     double prev_error = relative_error+1;
@@ -291,7 +292,7 @@ void Linkage::decompose(const arma::vec &fStat, arma::vec &heritResult, arma::ve
     while(relative_error < prev_error && iterCount < maxIter){
         prev_error = relative_error;
         update=rInv*(-error);
-        error= m_linkage.submat( 0, 0, endOfBlock, endOfBlock )*(heritResult+update) - fStat;
+        error= m_linkage.submat( start, start, endOfBlock, endOfBlock )*(heritResult+update) - fStat;
         relative_error = norm(error) / oriNorm;
         if(relative_error < 1e-300) relative_error = 0; // 1e-300 is more than enough...
         heritResult = heritResult+update;
@@ -300,7 +301,7 @@ void Linkage::decompose(const arma::vec &fStat, arma::vec &heritResult, arma::ve
     // Now calculate the variance
     arma::vec effectiveNumber(heritResult.n_elem, arma::fill::ones);
     varResult = rInv*effectiveNumber;
-    arma::vec errorVec = m_linkage.submat( 0, 0, endOfBlock, endOfBlock )*varResult - effectiveNumber;
+    arma::vec errorVec = m_linkage.submat( start, start, endOfBlock, endOfBlock )*varResult - effectiveNumber;
  	oriNorm = norm(effectiveNumber);
     relative_error = norm(errorVec) / oriNorm;
     prev_error = relative_error+1;
@@ -309,7 +310,7 @@ void Linkage::decompose(const arma::vec &fStat, arma::vec &heritResult, arma::ve
     while(relative_error < prev_error && iterCount < maxIter){
         prev_error = relative_error;
         updateVec=rInv*(-errorVec);
-        errorVec= m_linkage.submat( 0, 0, endOfBlock, endOfBlock )*(varResult+updateVec) - effectiveNumber;
+        errorVec= m_linkage.submat( start, start, endOfBlock, endOfBlock )*(varResult+updateVec) - effectiveNumber;
         relative_error = norm(errorVec) / oriNorm;
         if(relative_error < 1e-300) relative_error = 0; // 1e-300 is more than enough...
         varResult = varResult+updateVec;
@@ -318,11 +319,12 @@ void Linkage::decompose(const arma::vec &fStat, arma::vec &heritResult, arma::ve
 
 }
 
-void Linkage::decompose(const arma::vec &zStat, const arma::vec &fStat, const arma::vec &nSample, arma::vec &heritResult, arma::mat &varResult){
+void Linkage::decompose(size_t start, const arma::vec &zStat, const arma::vec &fStat, const arma::vec &nSample, arma::vec &heritResult, arma::mat &varResult){
+    if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
     size_t endOfBlock = fStat.n_elem-1;
-    arma::mat rInv=pinv((arma::mat)m_linkage.submat( 0, 0, endOfBlock, endOfBlock ));
+    arma::mat rInv=pinv((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ));
     heritResult = rInv * fStat;
-    arma::mat error = m_linkage.submat( 0, 0, endOfBlock, endOfBlock )*heritResult - fStat;
+    arma::mat error = m_linkage.submat( start, start, endOfBlock, endOfBlock )*heritResult - fStat;
  	double oriNorm = norm(fStat);
     double relative_error = norm(error) / oriNorm;
     double prev_error = relative_error+1;
@@ -331,7 +333,7 @@ void Linkage::decompose(const arma::vec &zStat, const arma::vec &fStat, const ar
     while(relative_error < prev_error && iterCount < maxIter){
         prev_error = relative_error;
         update=rInv*(-error);
-        error= m_linkage.submat( 0, 0, endOfBlock, endOfBlock )*(heritResult+update) - fStat;
+        error= m_linkage.submat( start, start, endOfBlock, endOfBlock )*(heritResult+update) - fStat;
         relative_error = norm(error) / oriNorm;
         if(relative_error < 1e-300) relative_error = 0; // 1e-300 is more than enough...
         heritResult = heritResult+update;
@@ -339,7 +341,7 @@ void Linkage::decompose(const arma::vec &zStat, const arma::vec &fStat, const ar
     }
 
     // Now calculate the varaince, this is for the complicated variance
-    varResult = rInv*arma::diagmat(nSample)*(4*m_linkageSqrt.submat(0,0,endOfBlock,endOfBlock)%(zStat*zStat.t())-2*m_linkage.submat(0,0,endOfBlock, endOfBlock))*arma::diagmat(nSample)*rInv;
+    varResult = rInv*arma::diagmat(nSample)*(4*m_linkageSqrt.submat(start,start,endOfBlock,endOfBlock)%(zStat*zStat.t())-2*m_linkage.submat(start,start,endOfBlock, endOfBlock))*arma::diagmat(nSample)*rInv;
 }
 
 
