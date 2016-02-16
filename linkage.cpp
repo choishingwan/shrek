@@ -38,9 +38,9 @@ void Linkage::computeLd(const boost::ptr_list<Genotype> &genotype, const std::li
                             perfectBuff.push_back(j);
                             //This can be slow?? But then, this should also be rare
                             std::list<size_t>::const_iterator currentSnp = snpLoc.begin();
-                            std::advance(currentSnp, startIndex);
+                            std::advance(currentSnp, std::distance(genotype.begin(), iter));
                             std::list<size_t>::const_iterator targetSnp = snpLoc.begin();
-                            std::advance(targetSnp, startIndex);
+                            std::advance(targetSnp, std::distance(genotype.begin(), horiStartIter));
                             snpList.at((*currentSnp)).shareHeritability(snpList.at((*targetSnp)));
                         }
                     }

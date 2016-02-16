@@ -36,7 +36,7 @@ class Snp
         std::string getRef() const{return m_ref;};
         std::string getAlt() const{return m_alt;};
         double getStat() const{return (*m_statistic)/(double)m_statistic.use_count();};
-        double getHeritability() const{std::cerr << "C " << m_heritability.use_count() << std::endl; return (*m_heritability)/(double)m_heritability.use_count();};
+        double getHeritability() const{std::cerr return (*m_heritability)/(double)m_heritability.use_count();};
         double getLDSC() const {return (*m_ldScore);};
         double getEffective() const{return m_effectiveNumber;};
         double getInfo() const{return m_infoScore; };
@@ -86,7 +86,7 @@ class Snp
         std::shared_ptr<double> m_statistic; //Average of all Snps with perfect LD
         std::shared_ptr<double> m_heritability; //The master heritability
         std::shared_ptr<double> m_ldScore;
-        Snp* m_targetClass=this;
+        Snp* m_targetClass;
         std::vector<bool> m_regionFlag;
 
         static bool sortSnp(const Snp& i, const Snp& j);

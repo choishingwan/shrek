@@ -39,7 +39,6 @@
 		<Unit filename="decomposition.cpp" />
 		<Unit filename="decomposition.h" />
 		<Unit filename="decompositionthread.cpp" />
-		<Unit filename="decompositionthread.h" />
 		<Unit filename="genotype.cpp" />
 		<Unit filename="genotype.h" />
 		<Unit filename="genotypefilehandler.cpp" />
@@ -47,7 +46,6 @@
 		<Unit filename="linkage.cpp" />
 		<Unit filename="linkage.h" />
 		<Unit filename="linkagethread.cpp" />
-		<Unit filename="linkagethread.h" />
 		<Unit filename="main.cpp" />
 		<Unit filename="processcode.h" />
 		<Unit filename="region.cpp" />

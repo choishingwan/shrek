@@ -24,6 +24,7 @@ void Snp::flip(){
     //For this's family, all of them should point to the same location
     m_statistic = (i.m_statistic); //They now share the same beta
     m_heritability = (i.m_heritability);
+    std::cerr << "Snp checking here: " << m_statistic << "\t" << i.m_statistic << "\t" << i.m_statistic.use_count() << std::endl;
     m_status = 'L';
     i.m_status='L';
     m_ldScore = (i.m_ldScore);
