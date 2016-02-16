@@ -42,6 +42,7 @@ class Snp
         double getInfo() const{return m_infoScore; };
         int getSign() const{return m_sign;};
         bool flag(size_t loc) const {return m_regionFlag.at(loc); };
+        char getStatus() const{return m_status;};
         //Setters
         void setFlag(const size_t i, bool flag);
         void setStatus(char status);

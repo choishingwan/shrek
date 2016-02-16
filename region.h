@@ -23,7 +23,8 @@ class Region
         std::string getChr(size_t i) const {return m_intervalList.at(i).getChr();};
         size_t getStart(size_t i) const {return m_intervalList.at(i).getStart();};
         size_t getEnd(size_t i) const {return m_intervalList.at(i).getEnd();};
-
+        double getVariance() const{return m_variance;};
+        std::string getName() const{return m_name;};
         void addVariance(double i){m_variance+=i;};
         virtual ~Region();
         // The aim of this function is to generate the required region list, each region item

@@ -8,6 +8,7 @@ SnpEstimation::SnpEstimation(const Command &commander){
     m_qt = commander.quantitative();
     m_bt = commander.binary();
     m_blockSize = commander.getSizeOfBlock();
+    m_output = commander.getOutputPrefix();
 }
 
 SnpEstimation::~SnpEstimation()
@@ -65,6 +66,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
             // 2. Boundary changed, but still in range. Read more SNPs and continue
             // 3. Boundary changed, out of range now, start decomposition
             // Here we need to check the boundaries
+            bool skip = false;
             if(boundChange && boundary.back() != snpLoc.end()){
                 // need to check if the blocks are now ok, if not, change finalizeBuff to true
                 // Also, need special
@@ -81,13 +83,16 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
             else if(boundChange){ // this is the abnormal situation where the after removing the perfect LDs, we lost the whole block
                 finalizeBuff = true;
                 boundary.pop_back(); //The last one is just for checking
+                skip = true; // don't bother in padding
             }
             else{} //everything as normal
             // now pad the remaining SNPs for the last block
             // then construct the LD and remove the perfectLD again.
             // however, this time, we are certain there will be no boundary change
-            genotypeFileHandler.getSNP(snpList, genotype, snpLoc, finalizeBuff, completed,boundary);
-            linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
+            if(!skip){
+                genotypeFileHandler.getSNP(snpList, genotype, snpLoc, finalizeBuff, completed,boundary);
+                linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
+            }
         }
         // Need to check if we need to merge the last block into the one in front
         // Only consider it when we reached the end of the current region
@@ -106,20 +111,145 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
             }
         }
         // When we reach here, we are ready for decomposition
+
         fprintf(stderr, "Decomposition\n");
         if(finalizeBuff) decompose.run(linkage, snpLoc, boundary, snpList, finalizeBuff, !retainLastBlock, starting, regionList);
         else decompose.run(linkage, snpLoc, boundary, snpList, false, false, starting, regionList);
 
-        linkage.print();
 
-        if(finalizeBuff) starting = true;
-        else starting = false;
+        if(finalizeBuff){
+            starting = true;
+            // We need to check if we are going to store the last block
+            if(retainLastBlock){
+                boost::ptr_list<Genotype>::iterator genoIter = genotype.begin();
+                size_t nRemoveElements =std::distance(snpLoc.begin(), boundary[1]);
+                std::advance(genoIter,nRemoveElements);
+                genotype.erase(genotype.begin(), genoIter);
+                snpLoc.erase(snpLoc.begin(), boundary[1]);
+                boundary.pop_front();
+                linkage.clear(nRemoveElements);
+            }
+            else{
+                //clean everything
+                snpLoc.clear();
+                boundary.clear();
+                genotype.clear();
+                linkage.clear();
+            }
+        }
+        else{
+            starting = false;
+            //Also clean everything except the last block
+            boost::ptr_list<Genotype>::iterator genoIter = genotype.begin();
+            size_t nRemoveElements =std::distance(snpLoc.begin(), boundary[1]);
+            std::advance(genoIter,nRemoveElements);
+            genotype.erase(genotype.begin(), genoIter);
+            snpLoc.erase(snpLoc.begin(), boundary[1]);
+            boundary.pop_front();
+            linkage.clear(nRemoveElements);
 
-        // A number of possibilities
-        // 1. Normal situation (1 last block that don't need to be checked)
-        // 2. Ending (decompose the whole thing)
-        // 3. Ending (1 last blcok extra)
-        break; //End things first
+        }
+        fprintf(stderr, "Next round\n");
+    }
+    fprintf(stderr, "Estimated the SNP Heritability, now output the results\n");
+}
 
+
+
+void SnpEstimation::result(const boost::ptr_vector<Snp> &snpList, const boost::ptr_vector<Region> &regionList){
+
+    double i2 = (m_bt)? usefulTools::dnorm(usefulTools::qnorm(m_prevalence))/(m_prevalence): 0;
+    i2 = i2*i2;
+    double adjust = 0.0;
+    size_t count  = 0;
+    double sampleSize = 0.0;
+    std::vector<double> heritability;
+    std::vector<double> variance;
+    std::vector<double> effective;
+    for(size_t i = 0; i < regionList.size(); ++i){
+        // add stuff
+        heritability.push_back(0.0);
+        variance.push_back(regionList[i].getVariance());
+        effective.push_back(0.0);
+    }
+    std::ofstream fullOutput;
+    bool requireFullOut = false;
+    if(!m_output.empty()) requireFullOut = true;
+    if(requireFullOut){
+        std::string fullOutName = m_output;
+        fullOutName.append(".res");
+        fullOutput.open(fullOutName.c_str());
+        if(!fullOutput.is_open()){
+            requireFullOut = false;
+            fprintf(stderr, "Cannot access output file: %s\n", fullOutName.c_str());
+            fprintf(stderr, "Will only provide basic output\n");
+        }
+        else{
+            fullOutput << "Chr\tLoc\trsID\tZ\tH\tStatus" << std::endl;
+        }
+    }
+    for(size_t i = 0; i < snpList.size(); ++i){
+        if(requireFullOut){
+            fullOutput << snpList[i].getChr() << "\t" << snpList[i].getLoc() << "\t" << snpList[i].getRs() << "\t" << snpList[i].getStat() << "\t" << snpList[i].getHeritability() << "\t" << snpList[i].getStatus() << std::endl;
+        }
+        for(size_t j = 0; j < regionList.size(); ++j){
+            if(j ==0) std::cerr << snpList[i].flag(j) << std::endl;
+            if(snpList[i].flag(j)) heritability[j]+=snpList[i].getHeritability();
+            if(snpList[i].flag(j)) effective[j] += snpList[i].getEffective();
+        }
+        sampleSize +=(double)(snpList[i].getSampleSize());
+        count++;
+        if(m_bt){
+            double portionCase = (double)(snpList[i].getNCase()) / (double)(snpList[i].getSampleSize());
+            adjust+= ((1.0-m_prevalence)*(1.0-m_prevalence))/(i2*portionCase*(1-portionCase));
+        }
+
+    }
+
+    if(requireFullOut) fullOutput.close();
+
+    double adjustment = adjust/(double)count; // we use the average adjustment value here
+    if(!m_bt) adjustment = m_extreme;
+    double averageSampleSize = sampleSize/(double)count;
+    std::cerr << "Adjustment is: " << adjustment << std::endl;
+    if(!m_output.empty()) requireFullOut =true;
+    std::ofstream sumOut;
+    if(requireFullOut){
+        std::string sumOutName = m_output;
+        sumOutName.append(".sum");
+        sumOut.open(sumOutName.c_str());
+        if(!sumOut.is_open()){
+            fprintf(stderr, "Cannot access output file %s\n", sumOutName.c_str());
+            fprintf(stderr, "Will output to stdout instead\n");
+            requireFullOut=false;
+        }
+    }
+    if(!requireFullOut){
+        // Only output to the stdout
+        std::cout << "Region\tHeritability\tVariance" << std::endl;
+        for(size_t i = 0; i < regionList.size(); ++i){
+            std::cout << regionList[i].getName() << "\t" << adjustment*heritability[i] << "\t";
+
+            if(variance[i]==0.0){ // We use effective number
+                std::cout << adjustment*(2.0*(effective[i]*adjustment*adjustment+2.0*adjustment*effective[i]*averageSampleSize)/(averageSampleSize*averageSampleSize)) << std::endl;
+            }
+            else{
+                std::cout << adjustment*adjustment*variance[i] << std::endl;
+            }
+        }
+    }
+    else{
+        sumOut << "Region\tHeritability\tVariance" << std::endl;
+        for(size_t i = 0; i < regionList.size(); ++i){
+            sumOut << regionList[i].getName() << "\t" << adjustment*heritability[i] << "\t";
+
+            if(variance[i]==0.0){ // We use effective number
+                sumOut << adjustment*(2.0*(effective[i]*adjustment*adjustment+2.0*adjustment*effective[i]*averageSampleSize)/(averageSampleSize*averageSampleSize)) << std::endl;
+            }
+            else{
+                sumOut << adjustment*adjustment*variance[i] << std::endl;
+            }
+        }
+        sumOut.close();
     }
 }

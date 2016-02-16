@@ -39,6 +39,8 @@ class Linkage
         void decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult, arma::vec &varResult);
         void decompose(size_t start, const arma::vec &zStat, const arma::vec &fStat, const arma::vec &nSample, arma::vec &heritResult, arma::mat &varResult);
         void computeHerit(const arma::vec &fStat, arma::vec &heritResult);
+        void clear();
+        void clear(size_t nRemoveElements);
     protected:
     private:
         arma::mat m_linkage;

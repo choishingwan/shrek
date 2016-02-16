@@ -10,7 +10,9 @@ Decomposition::~Decomposition()
 
 void Decomposition::decompose(Linkage &linkage, std::list<size_t> &snpLoc, std::list<size_t>::iterator startDecompIter, std::list<size_t>::iterator endDecompIter, std::list<size_t>::iterator startCopyIter, std::list<size_t>::iterator endCopyIter, std::list<size_t>::iterator startVarIter, std::list<size_t>::iterator endVarIter, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> &regionList, bool sign, bool start, bool ending){
     // Might want to add a check here to check if the iterators are out of bound
+
     size_t sizeOfMatrix = std::distance(startDecompIter, endDecompIter);
+    size_t copyStartCoordinate = std::distance(snpLoc.begin(), startCopyIter);
     size_t startCoordinate = std::distance(snpLoc.begin(), startDecompIter);
     arma::vec fStat = arma::vec(sizeOfMatrix, arma::fill::zeros);
     arma::vec zStat = arma::vec(sizeOfMatrix, arma::fill::zeros);
@@ -22,7 +24,7 @@ void Decomposition::decompose(Linkage &linkage, std::list<size_t> &snpLoc, std::
         int sampleSize = snpList.at(*(snpLocIter)).getSampleSize();
         zStat(i) = stat;
         fStat(i) = (stat*stat-1.0)/((double)sampleSize-2.0+stat*stat); // This is the f-statistic
-        nSample(i) = sampleSize;
+        nSample(i) = (double)1/(double)sampleSize;
         ++i;
     }
     if(sign){
@@ -30,7 +32,7 @@ void Decomposition::decompose(Linkage &linkage, std::list<size_t> &snpLoc, std::
         linkage.decompose(startCoordinate,zStat, fStat, nSample, heritResult, varResult);
         /** Get the heritability **/
         std::list<size_t>::iterator iter = startCopyIter;
-        for(size_t j = startCoordinate; j < sizeOfMatrix; ++j){
+        for(size_t j = copyStartCoordinate; j < sizeOfMatrix; ++j){
             snpList.at(*(iter)).setHeritability(heritResult(j));
             std::advance(iter,1);
         }
@@ -100,7 +102,7 @@ void Decomposition::decompose(Linkage &linkage, std::list<size_t> &snpLoc, std::
         // In this case, we can just update the effective number
         /** Get the effective number and heritability **/
         std::list<size_t>::iterator iter = startCopyIter;
-        for(size_t j = startCoordinate; j < sizeOfMatrix; ++j){
+        for(size_t j = copyStartCoordinate; j < sizeOfMatrix; ++j){
             snpList.at(*(iter)).setHeritability(heritResult(j));
             snpList.at(*(iter)).setEffective(varResult(j));
             std::advance(iter,1);
@@ -122,7 +124,6 @@ void Decomposition::run(Linkage &linkage, std::list<size_t> &snpLoc, std::deque<
     /** KEY POINT HERE: We don't need to know if it is the last one, because if it isn't the last
      *                  the information will be overwrote in the upcoming round
      */
-
     if(starting){
         // Check if we decomposeAll, because the situation may differ in that case
         if(decomposeAll){

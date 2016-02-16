@@ -6,6 +6,8 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/ptr_container/ptr_list.hpp>
 #include <stdio.h>
+#include <fstream>
+#include <iostream>
 #include "genotypefilehandler.h"
 #include "genotype.h"
 #include "region.h"
@@ -22,6 +24,7 @@ class SnpEstimation
         /** Default destructor */
         virtual ~SnpEstimation();
         void estimate(GenotypeFileHandler &genotypeFileHandler,const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> &regionList);
+        void result(const boost::ptr_vector<Snp> &snpList, const boost::ptr_vector<Region> &regionList);
     protected:
     private:
         int m_thread =1;
@@ -31,6 +34,7 @@ class SnpEstimation
         bool m_qt=false;
         bool m_bt = false;
         size_t m_blockSize =0;
+        std::string m_output="";
 };
 
 #endif // SNPESTIMATION_H

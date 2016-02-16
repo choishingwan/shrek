@@ -79,6 +79,7 @@ int main(int argc, char *argv[]){
             SnpEstimation snpEstimation(commander);
             //The estimate command will basically perform all the analysis except the printing of the results
             snpEstimation.estimate(genotypeFileHandler, snpIndex, snpList, regionList);
+            snpEstimation.result(snpList,regionList);
         }
         else{
             fprintf(stderr, "We currently only support SNP heritability estimation in quantitative traits or binary traits\n");

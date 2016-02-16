@@ -147,7 +147,10 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
                     bool ambig = false;
                     if(snpList.at(location).concordant(token[0], atoi(token[3].c_str()), rs, token[4], token[5], ambig )){
                         if(!m_keepAmbiguous && ambig) m_nAmbig ++; // We don't want to keep ambiguous SNPs and this is an ambiguous SNP
-                        else m_inclusion.back()=location;
+                        else{
+                            m_inclusion.back()=location;
+                            snpList.at(location).setFlag(0,true);
+                        }
                     }
                     else m_nInvalid++;
                 }
@@ -265,7 +268,10 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_l
                     snpLoc.push_back(m_snpIter);
                     lastUsedLoc  = currentLoc;
                     // fprintf(stderr, "Check %lu\n",m_snpLoc);
-                    if(starting) boundary.push_back(std::prev(snpLoc.end()));
+                    if(starting){
+                        boundary.push_back(std::prev(snpLoc.end()));
+                    }
+
                     starting = false;
                 }
             }
@@ -291,6 +297,7 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_l
 
     finalizeBuff = true;
     completed = true;
+    m_bedFile.close();
 
 }
 
@@ -334,7 +341,7 @@ void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_lis
 //        }
 //    }
  /** I have updated the functions, now getSnp should just get more SNPs to fill in the last block **/
-
+    if(!m_bedFile.is_open()) return; // nothing to read anymore
     size_t lastStartIndex = *(boundary.back());
     std::string blockChr = snpList.at(lastStartIndex).getChr();
     size_t blockStartLoc = snpList.at(lastStartIndex).getLoc();

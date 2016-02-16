@@ -202,24 +202,32 @@ void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_list<Geno
 // then we need to reconstruct stuff, also, if the next
 // boundary is too far, we will have to cut the block...
     // No matter what, we need to update the SNP test statistics
+    std::cerr << "m_linkage: " << std::endl;
+    for(std::list<size_t>::iterator iter = snpLoc.begin(); iter != snpLoc.end(); ++iter) std::cerr << *(iter) << " ";
+    std::cerr << std::endl;
 
+    std::cerr << m_linkageSqrt << std::endl;
+    for(size_t i = 0; i < boundary.size(); ++i) std::cerr << "Bound check: "<< *(boundary[i]) << std::endl;
     if(boundary.size() !=1){
         // we have to check the boundary, but only with the last one
         // perfectLD is sorted in ascending order
         for(size_t i = 0; i < perfectLd.size(); ++i){
             std::list<size_t>::iterator currentSnp = snpLoc.begin();
             std::advance(currentSnp, perfectLd[i]);
+            std::cerr <<"Checking: " << perfectLd[i] << std::endl;
             // We need to check, if the current bound is the last bound, then we
             // should just delete it?
-            if(std::next(boundary.back())==snpLoc.end()){
-                //This is the last one
-                boundary.back() = snpLoc.end();
-            }
-            else if(currentSnp == boundary.back()){
-                // Problem here
-
+            if(currentSnp == boundary.back()){
+                // The boundary SNP is also in perfect LD with previous SNPs
+                // So we will advance the pointer.
                 std::advance(boundary.back(),1); // we will move the SNP to the next one that is not perfect LD
+                // However, if the boundary is now at the end of the snpLoc, it means there is no SNP in this block that
+                // is not in perfect LD
+                // in this case, we will just remove the boundary?
                 boundCheck = true;
+                if(boundary.back()==snpLoc.end()){
+                    break;
+                }
             }
             // We will loop through the whole thing, such that we will make sure the boundary.back is pointing to
             // somewhere that is not in perfect LD with any existing SNPs
@@ -277,6 +285,16 @@ void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_list<Geno
 
 }
 
+void Linkage::clear(){
+    m_linkage.clear();
+    m_linkageSqrt.clear();
+}
+void Linkage::clear(size_t nRemoveElements){
+
+    size_t blockSize = m_linkage.n_cols-1;
+    m_linkage = m_linkage.submat(nRemoveElements, nRemoveElements,blockSize,blockSize);
+    m_linkageSqrt = m_linkageSqrt.submat(nRemoveElements, nRemoveElements,blockSize,blockSize);
+}
 
 void Linkage::decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult, arma::vec &varResult){
     if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
