@@ -6,6 +6,7 @@
 #include <limits>
 #include <math.h>
 
+#include <stdexcept>
 
 #include <boost/ptr_container/ptr_list.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>

@@ -36,6 +36,7 @@ void Decomposition::decompose(Linkage &linkage, std::list<size_t> &snpLoc, std::
             snpList.at(*(iter)).setHeritability(heritResult(j));
             std::advance(iter,1);
         }
+//        std::cerr << "Done copying" << std::endl;
         /** Get the variance **/
         /** This is where the true problem occurs **/
         /** We actually need to know if this is the end **/
@@ -45,6 +46,8 @@ void Decomposition::decompose(Linkage &linkage, std::list<size_t> &snpLoc, std::
         size_t xCor = 0, yCor = 0;
 
         xCor = std::distance(startDecompIter,endVarIter);
+//        std::cerr << "Copy first part of variance " << std::endl;
+
         for(std::list<size_t>::iterator iter=startDecompIter; iter != startVarIter; ++iter){
             // This is the top part
             // For this part, we only take the ending
@@ -62,6 +65,7 @@ void Decomposition::decompose(Linkage &linkage, std::list<size_t> &snpLoc, std::
             yCor++;
         }
 
+//        std::cerr << "Copy mid part of variance " << std::endl;
         for(std::list<size_t>::iterator iter=startVarIter; iter != endVarIter; ++iter){
             // This is for the mid band
             // For this part, we take everything
@@ -79,6 +83,7 @@ void Decomposition::decompose(Linkage &linkage, std::list<size_t> &snpLoc, std::
             yCor++;
         }
 
+//        std::cerr << "Copy last part of variance " << std::endl;
         for(std::list<size_t>::iterator iter=endVarIter; iter != endDecompIter; ++iter){
             // This is the last part
             // For this part, we only take the beginning stuffs
@@ -93,6 +98,7 @@ void Decomposition::decompose(Linkage &linkage, std::list<size_t> &snpLoc, std::
             }
             yCor++;
         }
+//        std::cerr << "Finished all copying stuff" << std::endl;
 
 
     }
@@ -173,29 +179,36 @@ void Decomposition::run(Linkage &linkage, std::list<size_t> &snpLoc, std::deque<
         if(boundary.size() < 3) throw std::runtime_error("For non-starting window(s), there must be at least 3 blocks");
         if(decomposeAll && boundary.size()==3){
             //In this case, decompose everything
+//            std::cerr << "First" << std::endl;
             decompose(linkage, snpLoc,
                       snpLoc.begin(), snpLoc.end(), // Define the decomposition block
                       boundary[1], snpLoc.end(),    // Define the heritability vector copy range
                       boundary[1], snpLoc.end(), // Define the mid band region of the variance matrix
                       snpList, regionList, sign, starting, true);
+//                      std::cerr << "Fine" << std::endl;
         }
         else if(boundary.size() ==3 && !decomposeAll) throw std::runtime_error("This is impossible for non-start region"); // for my debugging
         else if(boundary.size() ==4){
             // This is most common case, decompose everything except the last block, then continue
             std::list<size_t>::iterator midEndIter = boundary[2];
             if(finalizeBuff && !decomposeAll) midEndIter=boundary.back();
+
+//            std::cerr << "second" << std::endl;
             decompose(linkage, snpLoc,
                         snpLoc.begin(), boundary.back(),// Define the decomposition block
                         boundary[1], boundary.back(),   // Define the heritability vector copy range
                         boundary[1], midEndIter,        // Define the mid band region of the variance matrix
                         snpList, regionList, sign, starting, finalizeBuff && !decomposeAll);
+//                        std::cerr << "Fine" << std::endl;
             if(decomposeAll){
                 // Then we also decompose the last block
+//            std::cerr << "end" << std::endl;
                 decompose(linkage, snpLoc,
                             boundary[1], snpLoc.end(),  // Define the decomposition block
                             boundary[2], snpLoc.end(),  // Define the heritability vector copy range
                             boundary[2], snpLoc.end(),
                             snpList, regionList, sign, starting, true);
+//                            std::cerr << "Fine" << std::endl;
             }
         }
 

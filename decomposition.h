@@ -4,6 +4,7 @@
 #include <iterator>
 #include <deque>
 #include <list>
+#include <stdexcept>
 #include <boost/ptr_container/ptr_list.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <armadillo>

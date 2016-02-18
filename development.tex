@@ -45,6 +45,17 @@
 		where $\boldsymbol{n}$ is a square diagonal matrix with diagonal as the sample size and $\boldsymbol{z}$ is the vector of z-statistics.
 	\end{enumerate}
 	
+	\section{To Do}
+	\begin{enumerate}
+		\item Compare the condition number of the LD matrix before and after the LD correction
+		\item Compare the performance of case control estimation with different sample size 
+		\item For LD correction, might also worth testing how the density and total number of SNPs affect the estimation
+		\item For effect size estimation, don't use the complicated method
+		\item Compare the speed of the new and old implementation (remember that the complex variance calculation do takes more time to perform)
+	\end{enumerate}
+	
+	
+	
 	\section{January 25, 2016}
 	We are going to re-write SHREK starting from today. 
 	There are a number of main goal in this re-work
@@ -141,13 +152,7 @@
 	\end{enumerate}
 	\section{February 3, 2016}
 	Sat in a meeting with Pak today, now we have a few things to-do.
-	\subsection{To Do}
-	\begin{enumerate}
-		\item Compare the condition number of the LD matrix before and after the LD correction
-		\item Compare the performance of case control estimation with different sample size 
-		\item For LD correction, might also worth testing how the density and total number of SNPs affect the estimation
-		\item For effect size estimation, don't use the complicated method
-	\end{enumerate}
+	
 	\subsection{Finished today}
 	We have switched to use list instead of deque. 
 	The benefit of list is that it is a double linked list, therefore it is much easier for one to remove the middle part.
@@ -240,9 +245,36 @@
 	\begin{enumerate}
 		\item Finished implementing the whole programme, now need to start the debugging hell
 	\end{enumerate}
+	\section{February 17, 2016}
+	DEPENDENCY HELL!!!
+	AND BUGS, A LOT OF BUGS!!!
+	\subsection{Today's work}
+	\begin{enumerate}
+		\item Trying to debug the programme
+		\item Found that gdb doesn't work (too old)
+		\item Try to compile the gdb
+		\item Failed, so tried to compile latest gcc and see if that works
+		\item Need to make sure we recompile everything with the new gcc (otherwise, you will have tones of undefined referencing)
+		\item The variance is most likely to be wrong
+	\end{enumerate}
+	\section{February 18, 2016}
+	Early simulation results suggested that the MSE of the new programme doubles that of the old one which is really bad. 
+	So now we need to check what's the problem of that.
+	
+	Using the last simulated data, it was found that by not performing the LD correction, we can get a similar result as the new implementation. 
+	Therefore it is likely that the LD correction is accounting for the problem.
+	
+	\subsection{Note}
+	Given the following plink simulation input, we would like to have an empirical variance of around 0.002729694
+	
+	10 snp 0.05 0.05 0.05 0.05 1 0.001 0
+	100 snp2 0.05 0.05 0.05 0.05 0.7 0.001 0
+	890 null 0.05 0.05 0.05 0.05 0.8 0 0
+	
+
 	\newpage
 	\section{Useful Resources}
-	\begin{table}
+	\begin{table}[H]
 		\centering
 		\begin{tabular}{rr}
 			\toprule

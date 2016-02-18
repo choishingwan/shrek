@@ -4,6 +4,7 @@
 #include <ctime>
 #include <stdio.h>
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <omp.h>
 #include "command.h"
 #include "region.h"
 #include "snp.h"
@@ -40,6 +41,7 @@ int main(int argc, char *argv[]){
             return EXIT_SUCCESS;
         }
         openblas_set_num_threads(commander.getNThread());
+        goto_set_num_threads(commander.getNThread());
         //Printing out the input parameters
         //commander.printRunSummary(std::to_string(regionInfo.getNumRegion()));
         time_t now = time(0);
@@ -50,7 +52,7 @@ int main(int argc, char *argv[]){
             std::cerr << " " << argv[i];
         }
         std::cerr << std::endl; //This is the simplest way to present the input
-
+        double startTimer = omp_get_wtime();
         //Now we need to parse the region information
         //Parsing the region information
         boost::ptr_vector<Region> regionList;
@@ -85,21 +87,11 @@ int main(int argc, char *argv[]){
             fprintf(stderr, "We currently only support SNP heritability estimation in quantitative traits or binary traits\n");
             return EXIT_FAILURE;
         }
-        /*
-        GenotypeFileHandler genotypeFileHandler;
-        genotypeFileHandler.initialize(commander, snpIndex, snpList, blockInfo);
-        if(commander.quantitative() || commander.caseControl()){
-            //Now everything is prepared, we can start the SNP heritability estimation
-            SnpEstimation snpEstimation;
-            snpEstimation.Estimate(genotypeFileHandler, snpIndex, snpList, regionInfo, commander, blockInfo);
-            snpEstimation.getResult(commander, regionInfo, snpIndex,snpList);
-        }
-        else if(commander.diRisk() || commander.conRisk()){
-            SnpEstimation snpPrediction;
-            snpPrediction.Predict(genotypeFileHandler, snpIndex, snpList, regionInfo, commander, blockInfo,genoInclusion);
 
-        }
-        */
+        double endTimer = omp_get_wtime();
+        fprintf(stderr, "\nCompleted\n");
+        fprintf(stderr, "Took %f seconds\n\n", endTimer-startTimer);
+
     }
     catch( char const* error){
         std::cerr << error << std::endl;
@@ -113,7 +105,6 @@ int main(int argc, char *argv[]){
         std::cerr << ba.what() <<std::endl;
         return EXIT_FAILURE;
     }
-
 
     return 0;
 }

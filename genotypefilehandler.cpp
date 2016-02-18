@@ -181,7 +181,7 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_l
     // We try to use the old version of stuff to work on
     // Start of block info
 
-
+//    std::cerr << "SNP location is: " << m_snpIter << "\t" << m_nSnp << std::endl;
     bool starting  = true;
     int blockStartIndex = 0;
     std::string blockChr="";
@@ -265,8 +265,9 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_l
                 }
                 else{
                     genotype.push_back(tempGenotype);
-                    snpLoc.push_back(m_snpIter);
-                    lastUsedLoc  = currentLoc;
+//                    std::cerr << "Adding: " << m_inclusion[m_snpIter]<< std::endl;
+                    snpLoc.push_back(m_inclusion[m_snpIter]); //This should be the index of the SNP
+                    lastUsedLoc  = currentLoc; // This is for the coordinates
                     // fprintf(stderr, "Check %lu\n",m_snpLoc);
                     if(starting){
                         boundary.push_back(std::prev(snpLoc.end()));
@@ -341,7 +342,7 @@ void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_lis
 //        }
 //    }
  /** I have updated the functions, now getSnp should just get more SNPs to fill in the last block **/
-    if(!m_bedFile.is_open()) return; // nothing to read anymore
+    if(!m_bedFile.is_open())return; // nothing to read anymore
     size_t lastStartIndex = *(boundary.back());
     std::string blockChr = snpList.at(lastStartIndex).getChr();
     size_t blockStartLoc = snpList.at(lastStartIndex).getLoc();

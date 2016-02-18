@@ -5,7 +5,7 @@
 #include <boost/ptr_container/ptr_list.hpp>
 #include <list>
 #include <deque>
-
+#include <stdexcept>
 #include <fstream>
 #include <map>
 #include <bitset> //For plink

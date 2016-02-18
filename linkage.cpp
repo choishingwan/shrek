@@ -198,23 +198,25 @@ void Linkage::construct(boost::ptr_list<Genotype> &genotype, std::list<size_t> &
 
 
 void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, std::deque<std::list<size_t>::iterator > &boundary, boost::ptr_vector<Snp> &snpList,bool &boundCheck){
+
+//            fprintf(stderr, "Clean perfect\n");
 // Challenge here: If the boundary is the perfect LD
 // then we need to reconstruct stuff, also, if the next
 // boundary is too far, we will have to cut the block...
     // No matter what, we need to update the SNP test statistics
-    std::cerr << "m_linkage: " << std::endl;
-    for(std::list<size_t>::iterator iter = snpLoc.begin(); iter != snpLoc.end(); ++iter) std::cerr << *(iter) << " ";
-    std::cerr << std::endl;
+//    std::cerr << "m_linkage: " << std::endl;
+//    for(std::list<size_t>::iterator iter = snpLoc.begin(); iter != snpLoc.end(); ++iter) std::cerr << *(iter) << " ";
+//    std::cerr << std::endl;
 
-    std::cerr << m_linkageSqrt << std::endl;
-    for(size_t i = 0; i < boundary.size(); ++i) std::cerr << "Bound check: "<< *(boundary[i]) << std::endl;
+//    std::cerr << m_linkageSqrt << std::endl;
+//    for(size_t i = 0; i < boundary.size(); ++i) std::cerr << "Bound check: "<< *(boundary[i]) << std::endl;
     if(boundary.size() !=1){
         // we have to check the boundary, but only with the last one
         // perfectLD is sorted in ascending order
         for(size_t i = 0; i < perfectLd.size(); ++i){
             std::list<size_t>::iterator currentSnp = snpLoc.begin();
             std::advance(currentSnp, perfectLd[i]);
-            std::cerr <<"Checking: " << perfectLd[i] << std::endl;
+//            std::cerr <<"Checking: " << perfectLd[i] << std::endl;
             // We need to check, if the current bound is the last bound, then we
             // should just delete it?
             if(currentSnp == boundary.back()){

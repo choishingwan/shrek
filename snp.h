@@ -6,6 +6,7 @@
 #include <fstream>
 #include <stdio.h>
 #include <errno.h>
+#include <stdexcept>
 #include <math.h>
 #include <algorithm>
 #include <map>
@@ -36,7 +37,7 @@ class Snp
         std::string getRef() const{return m_ref;};
         std::string getAlt() const{return m_alt;};
         double getStat() const{return (*m_statistic)/(double)m_statistic.use_count();};
-        double getHeritability() const{std::cerr << "C " << m_heritability.use_count() << std::endl; return (*m_heritability)/(double)m_heritability.use_count();};
+        double getHeritability() const{ return (*m_heritability)/(double)m_heritability.use_count();};
         double getLDSC() const {return (*m_ldScore);};
         double getEffective() const{return m_effectiveNumber;};
         double getInfo() const{return m_infoScore; };
