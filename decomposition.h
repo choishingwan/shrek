@@ -8,7 +8,6 @@
 #include <boost/ptr_container/ptr_list.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <armadillo>
-
 #include "linkage.h"
 #include "snp.h"
 

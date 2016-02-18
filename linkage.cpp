@@ -341,7 +341,7 @@ void Linkage::decompose(size_t start, const arma::vec &fStat, arma::vec &heritRe
 
 void Linkage::decompose(size_t start, const arma::vec &zStat, const arma::vec &fStat, const arma::vec &nSample, arma::vec &heritResult, arma::mat &varResult){
     if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
-    size_t endOfBlock = fStat.n_elem-1;
+    size_t endOfBlock = start+fStat.n_elem-1;
     arma::mat rInv=pinv((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ));
     heritResult = rInv * fStat;
     arma::mat error = m_linkage.submat( start, start, endOfBlock, endOfBlock )*heritResult - fStat;
@@ -362,6 +362,22 @@ void Linkage::decompose(size_t start, const arma::vec &zStat, const arma::vec &f
 
     // Now calculate the varaince, this is for the complicated variance
     varResult = rInv*arma::diagmat(nSample)*(4*m_linkageSqrt.submat(start,start,endOfBlock,endOfBlock)%(zStat*zStat.t())-2*m_linkage.submat(start,start,endOfBlock, endOfBlock))*arma::diagmat(nSample)*rInv;
+    //This part is here to safe guard any stupid mistakes I made
+    if(isnan(arma::accu(varResult))){
+        std::cout << varResult << std::endl;
+        std::cout << "sample:"  << std::endl;
+        std::cout << arma::diagmat(nSample) << std::endl;
+        std::cout << "R2" << std::endl;
+        std::cout << m_linkage.submat(start,start,endOfBlock, endOfBlock) << std::endl;
+        std::cout << "R" << std::endl;
+        std::cout << m_linkageSqrt.submat(start,start,endOfBlock,endOfBlock) << std::endl;
+        std::cout << "Z" << std::endl;
+        std::cout << (zStat*zStat.t()) << std::endl;
+        std::cout << "Inverse" << std::endl;
+        std::cout << rInv << std::endl;
+        std::cout << "Fstat"<< std::endl;
+        std::cout << fStat << std::endl;
+    }
 }
 
 

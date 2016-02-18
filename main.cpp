@@ -29,7 +29,7 @@
 
 
 extern "C" void openblas_set_num_threads(int); //This is for controlling the multi-thread
-
+extern "C" void goto_set_num_threads(int);
 
 int main(int argc, char *argv[]){
     //Parsing the parameters
