@@ -7,20 +7,26 @@ Linkage::~Linkage(){}
 
 void Linkage::print(){ std::cout << m_linkage << std::endl; }
 
-void Linkage::computeLd(const boost::ptr_list<Genotype> &genotype, const std::list<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, size_t horiEnd, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd){
+//void Linkage::computeLd(const boost::ptr_list<Genotype> &genotype, const std::list<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, size_t horiEnd, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd){
+void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, size_t horiEnd, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd){
     std::vector<size_t> perfectBuff;
-    boost::ptr_list<Genotype>::const_iterator  iter = genotype.begin(), endIter = genotype.begin(), horiEndIter=genotype.begin();
-    std::advance(iter, startIndex);
-    std::advance(endIter, verEnd);
-    std::advance(horiEndIter, horiEnd);
+    size_t  iter = startIndex;
+    size_t endIter = verEnd;
+    size_t horiEndIter = horiEnd;
+//    boost::ptr_list<Genotype>::const_iterator  iter = genotype.begin(), endIter = genotype.begin(), horiEndIter=genotype.begin();
+//    std::advance(iter, startIndex);
+//    std::advance(endIter, verEnd);
+//    std::advance(horiEndIter, horiEnd);
 
-    size_t i = startIndex;
-    for(; iter != endIter; ++iter){
+//    size_t i = startIndex;
+    for(size_t i = startIndex; i < verEnd; ++i){
+//    for(; iter != endIter; ++iter){
         size_t nextStart = (i>horistart)? i:horistart;
         size_t j = nextStart;
-        boost::ptr_list<Genotype>::const_iterator  horiStartIter=genotype.begin();
-        std::advance(horiStartIter, nextStart);
-        for(; horiStartIter!=horiEndIter;  ++horiStartIter){
+//        boost::ptr_list<Genotype>::const_iterator  horiStartIter=genotype.begin();
+//        std::advance(horiStartIter, nextStart);
+        for(size_t j = nextStart; j < horiEnd; ++j){
+//        for(; horiStartIter!=horiEndIter;  ++horiStartIter){
                 if(m_linkage(i,j)==0.0){  // only calculate the R2 when this is a new spot
                     if(i==j){
                         m_linkage(i,j) = 1.0;
@@ -29,7 +35,8 @@ void Linkage::computeLd(const boost::ptr_list<Genotype> &genotype, const std::li
                     else{
                         double r = 0.0;
                         double r2 = 0.0;
-                        (*iter).GetbothR((*horiStartIter), correction, r, r2);
+//                        (*iter).GetbothR((*horiStartIter), correction, r, r2);
+                        genotype.at(i).GetbothR(genotype.at(j), correction, r, r2);
                         m_linkage(i,j) = r2;
                         m_linkageSqrt(i,j) = r;
                         // Now check if it is perfect LD
@@ -37,18 +44,19 @@ void Linkage::computeLd(const boost::ptr_list<Genotype> &genotype, const std::li
                         if(std::fabs(r-1.0) < 1e-6 || r > 1.0 || r < -1.0){
                             perfectBuff.push_back(j);
                             //This can be slow?? But then, this should also be rare
-                            std::list<size_t>::const_iterator currentSnp = snpLoc.begin();
-                            std::advance(currentSnp, std::distance(genotype.begin(), iter));
-                            std::list<size_t>::const_iterator targetSnp = snpLoc.begin();
-                            std::advance(targetSnp, std::distance(genotype.begin(), horiStartIter));
-                            snpList.at((*currentSnp)).shareHeritability(snpList.at((*targetSnp)));
+                            snpList.at(snpLoc.at(i)).shareHeritability(snpList.at(snpLoc.at(j)));
+//                            std::list<size_t>::const_iterator currentSnp = snpLoc.begin();
+//                            std::advance(currentSnp, std::distance(genotype.begin(), iter));
+//                            std::list<size_t>::const_iterator targetSnp = snpLoc.begin();
+//                            std::advance(targetSnp, std::distance(genotype.begin(), horiStartIter));
+//                            snpList.at((*currentSnp)).shareHeritability(snpList.at((*targetSnp)));
                         }
                     }
                 }
             //This is for the update of the matrix indexing;
-            ++j;
+//            ++j;
         }
-        ++i; //Again, this is for the update of matrix index
+//        ++i; //Again, this is for the update of matrix index
     }
     // Now we can insert the buff back to the result
     linkageMtx.lock();
@@ -58,25 +66,23 @@ void Linkage::computeLd(const boost::ptr_list<Genotype> &genotype, const std::li
 }
 
 
-void Linkage::construct(boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, std::deque<std::list<size_t>::iterator > &boundary, boost::ptr_vector<Snp> &snpList, const bool correction,bool &boundCheck){
+//void Linkage::construct(boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, std::deque<std::list<size_t>::iterator > &boundary, boost::ptr_vector<Snp> &snpList, const bool correction,bool &boundCheck){
+void Linkage::construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &boundary, boost::ptr_vector<Snp> &snpList, const bool correction,bool &boundCheck){
     // This is yet another complicated algorithm
     // The aim of this function is to construct the required LD matrix
-    // (Think about it, maybe I will shift the perfect LD removal to the other function)
     if(genotype.empty()){
         throw std::runtime_error("Cannot build LD without genotypes");
 	}
     // If this is the first of its kind, then we need to initialize the matrix
-//    std::cerr << "Checking: " << m_linkage.n_cols << "\t" << genotype.size() << std::endl;
+    size_t genoSize = genotype.size();
 	if(m_linkage.n_cols==0){
-        m_linkage = arma::mat(genotype.size(), genotype.size(),arma::fill::eye);
-        m_linkageSqrt = arma::mat(genotype.size(), genotype.size(), arma::fill::eye);
+        m_linkage = arma::mat(genoSize, genoSize,arma::fill::eye);
+        m_linkageSqrt = arma::mat(genoSize, genoSize, arma::fill::eye);
     }
     else{ // Otherwise, just make sure the matrix is of the right size
-        m_linkage.resize(genotype.size(), genotype.size());
-        m_linkageSqrt.resize(genotype.size(), genotype.size());
+        m_linkage.resize(genoSize, genoSize);
+        m_linkageSqrt.resize(genoSize, genoSize);
     }
-//    std::cerr << "Size expanded " << boundary.size() << std::endl;
-    // We don't need the buff information
     // because for this function, we should build all the matrix anyway
     // Now if we are not working on the new stuff, we assume the LD matrix has been clean
     // of the unwanted materials
@@ -86,39 +92,42 @@ void Linkage::construct(boost::ptr_list<Genotype> &genotype, std::list<size_t> &
     // This will allow us to avoid the need of removing rols (only column)
     // which should be fast considering armadillo is column major
     std::vector<size_t> perfectLd; // This is the vector use to store the perfect LD information
+    size_t boundSize = boundary.size();
     std::vector<std::thread> threadStore;
-    if(boundary.size() < 4){
+    if(boundSize < 4){
         //Very small input, so we will do the whole part together
-        size_t startIndex = 0, endBound= genotype.size();
-        if(genotype.size() < m_thread){
+        size_t startIndex = 0;
+        if(genoSize < m_thread){
             // Use as much thread as we can
-            for(size_t i = startIndex; i < endBound; ++i){
-                threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), i, i+1, i,genotype.size(), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+            for(size_t i = startIndex; i < genoSize; ++i){
+                threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), i, i+1, i,genoSize, std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
             }
-            for (size_t i = 0; i < threadStore.size(); ++i) {
+            size_t threadSize = threadStore.size();
+            for (size_t i = 0; i < threadSize; ++i) {
                 threadStore[i].join();
             }
             threadStore.clear();
         }
         else{
             // distribute the work
-            int jobBlock = endBound/m_thread;
-            int remainder = endBound % m_thread;
+            int jobBlock = genoSize/m_thread;
+            int remainder = genoSize % m_thread;
             int currentBlock = startIndex;
             for(size_t i = 0; i < m_thread; ++i){
                 // For each thread
                 if(remainder > 0){
-                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock+1, currentBlock, genotype.size(), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock+1, currentBlock, genoSize, std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
                     --remainder;
                     currentBlock+=jobBlock+1;
                 }
                 else{
-                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock, currentBlock, genotype.size(), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock, currentBlock, genoSize, std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
                     currentBlock+=jobBlock;
                 }
 
             }
-            for (size_t i = 0; i < threadStore.size(); ++i) {
+            size_t threadSize = threadStore.size();
+            for (size_t i = 0; i < threadSize; ++i) {
                 threadStore[i].join();
             }
             threadStore.clear();
@@ -135,23 +144,22 @@ void Linkage::construct(boost::ptr_list<Genotype> &genotype, std::list<size_t> &
         // rather, their distance from the beginning of snpLoc is
 
 
-        size_t startIndex = std::distance(snpLoc.begin(), boundary[1]); // Start from the second block
-        size_t endBound = genotype.size();
+//        size_t startIndex = std::distance(snpLoc.begin(), boundary[1]); // Start from the second block
+        size_t startIndex = boundary[1]; // Start from the second block
         // We do have enough stuff to work on
-        int numSnps = endBound-startIndex;
+        int numSnps = genoSize-startIndex;
         assert(numSnps>0 && "There must be some SNPs for the construct to work with!");
 
-        size_t horiStart = std::distance(snpLoc.begin(), boundary.back());
+//        size_t horiStart = std::distance(snpLoc.begin(), boundary.back());
+        size_t horiStart = boundary.back();
         if(numSnps< (signed) m_thread){
             //very unlikely, but we will consider it anyway
-            for(size_t i = startIndex; i < endBound; ++i){
-//                std::cerr << i << " " << i+1 << " " << horiStart << " " << endBound << std::endl;
-                threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), i, i+1, horiStart, endBound, std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+            for(size_t i = startIndex; i < genoSize; ++i){
+                threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), i, i+1, horiStart, genoSize, std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
 
             }
-            for (size_t i = 0; i < threadStore.size(); ++i) {
-                threadStore[i].join();
-            }
+            size_t threadSize = threadStore.size();
+            for (size_t i = 0; i < threadSize; ++i)  threadStore[i].join();
             threadStore.clear();
         }
         else{
@@ -161,20 +169,19 @@ void Linkage::construct(boost::ptr_list<Genotype> &genotype, std::list<size_t> &
             int currentBlock = startIndex;
             for(size_t i = 0; i < m_thread; ++i){
                 if(remainder>0){
-                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock+1, horiStart, endBound, std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock+1, horiStart, genoSize, std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
 //                    std::cerr << currentBlock << " " << currentBlock+jobBlock+1 << " " << horiStart << " " << endBound << std::endl;
                     currentBlock+= jobBlock+1;
                     remainder--;
                 }
                 else{
-                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock, horiStart, endBound, std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock, horiStart, genoSize, std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
 //                    std::cerr << currentBlock << " " << currentBlock+jobBlock << " " << horiStart << " " << endBound << std::endl;
                     currentBlock+= jobBlock;
                 }
             }
-            for (size_t i = 0; i < threadStore.size(); ++i) {
-                threadStore[i].join();
-            }
+            size_t threadSize = threadStore.size();
+            for (size_t i = 0; i < threadSize; ++i)  threadStore[i].join();
             threadStore.clear();
         }
         // Join all the results
@@ -197,63 +204,56 @@ void Linkage::construct(boost::ptr_list<Genotype> &genotype, std::list<size_t> &
 }
 
 
-void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, std::deque<std::list<size_t>::iterator > &boundary, boost::ptr_vector<Snp> &snpList,bool &boundCheck){
+//void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, std::deque<std::list<size_t>::iterator > &boundary, boost::ptr_vector<Snp> &snpList,bool &boundCheck){
+void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &boundary, boost::ptr_vector<Snp> &snpList, bool &boundCheck){
 
-//            fprintf(stderr, "Clean perfect\n");
 // Challenge here: If the boundary is the perfect LD
 // then we need to reconstruct stuff, also, if the next
 // boundary is too far, we will have to cut the block...
-    // No matter what, we need to update the SNP test statistics
-//    std::cerr << "m_linkage: " << std::endl;
-//    for(std::list<size_t>::iterator iter = snpLoc.begin(); iter != snpLoc.end(); ++iter) std::cerr << *(iter) << " ";
-//    std::cerr << std::endl;
-
-//    std::cerr << m_linkageSqrt << std::endl;
-//    for(size_t i = 0; i < boundary.size(); ++i) std::cerr << "Bound check: "<< *(boundary[i]) << std::endl;
-    if(boundary.size() !=1){
+// No matter what, we need to update the SNP test statistics
+    size_t boundSize = boundary.size();
+    size_t snpLocSize = snpLoc.size();
+    if(boundSize !=1){
         // we have to check the boundary, but only with the last one
         // perfectLD is sorted in ascending order
         for(size_t i = 0; i < perfectLd.size(); ++i){
-            std::list<size_t>::iterator currentSnp = snpLoc.begin();
-            std::advance(currentSnp, perfectLd[i]);
-//            std::cerr <<"Checking: " << perfectLd[i] << std::endl;
-            // We need to check, if the current bound is the last bound, then we
-            // should just delete it?
-            if(currentSnp == boundary.back()){
-                // The boundary SNP is also in perfect LD with previous SNPs
-                // So we will advance the pointer.
-                std::advance(boundary.back(),1); // we will move the SNP to the next one that is not perfect LD
-                // However, if the boundary is now at the end of the snpLoc, it means there is no SNP in this block that
-                // is not in perfect LD
-                // in this case, we will just remove the boundary?
-                boundCheck = true;
-                if(boundary.back()==snpLoc.end()){
-                    break;
-                }
+            if(perfectLd[i]== boundary.back()){
+                // If the bound is in perfect LD with something in front
+                // we change the bound to something in the back
+                boundary.back()++;
+                boundCheck=true;
             }
-            // We will loop through the whole thing, such that we will make sure the boundary.back is pointing to
-            // somewhere that is not in perfect LD with any existing SNPs
+            if(boundary.back()==snpLocSize) break;
+//            std::list<size_t>::iterator currentSnp = snpLoc.begin();
+//            std::advance(currentSnp, perfectLd[i]);
+//            if(currentSnp == boundary.back()){
+//                std::advance(boundary.back(),1);
+//                boundCheck = true;
+//                if(boundary.back()==snpLoc.end()){
+//                    break;
+//                }
+//            }
         }
-        // We don't care whether if the blocks are alright, we just need to remove all the perfect LD here
     }
-    // When we reach here, the perfect Ld stuff is solved and we should be able to just update the whole matrix
-    // now update the matrix
 
 
+    /** Matrix value update **/
+    /** Target for optimization **/
     // Need to update a few things,
     // 1. Genotype
     // 2. snpLoc
     // 3. m_linkage + m_linageSqrt
     // Do it slowly here first, optimize later when I am certain this works
+    size_t genoSize = genotype.size();
     size_t cI = 0;
     size_t perfectIndexI = 0;
-    for(size_t i = 0; i < genotype.size(); ++i){
+    for(size_t i = 0; i < genoSize; ++i){
         if(i == perfectLd[perfectIndexI]) perfectIndexI++;// This is perfect LD, we will skip it
         else{
             // the current I is required, so we will go over the j
 
             size_t cJ = cI, perfectIndexJ = perfectIndexI;
-            for(size_t j = i; j < genotype.size(); ++j){
+            for(size_t j = i; j < genoSize; ++j){
                 if(j == perfectLd[perfectIndexJ]) perfectIndexJ++;
                 else{
                     m_linkage(cJ,cI) = m_linkage(i,j);
@@ -264,24 +264,43 @@ void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_list<Geno
             cI++;
         }
     }
-    // now update the genotype and snpLoc
-    std::vector<std::list<size_t>::iterator> snpLocIterRemove;
-    std::vector<boost::ptr_list<Genotype>::iterator> genoIterRemove;
+
+    /** Delete stuff from the containers **/
+    // Problem: when we delete stuff, we need to update the location of the bound
+    size_t currentBoundIndex  = 0;
+    size_t itemRemoved = 0;
     for(size_t i = 0; i < perfectLd.size(); ++i){
-        std::list<size_t>::iterator currentLoc = snpLoc.begin();
-        boost::ptr_list<Genotype>::iterator currentGeno = genotype.begin();
-        std::advance(currentLoc, perfectLd[i]);
-        std::advance(currentGeno, perfectLd[i]);
-        snpLocIterRemove.push_back(currentLoc);
-        genoIterRemove.push_back(currentGeno);
+        snpLoc.erase(snpLoc.begin()+(perfectLd[i]-itemRemoved));
+        genotype.erase(genotype.begin()+(perfectLd[i]-itemRemoved));
+        while(currentBoundIndex < boundSize && perfectLd[i]-itemRemoved > boundary.at(currentBoundIndex)){
+            boundary.at(currentBoundIndex)-=itemRemoved;
+            currentBoundIndex++;
+        }
+        itemRemoved++;
     }
-    for(size_t i = 0; i < perfectLd.size(); ++i){
-        snpLoc.erase(snpLocIterRemove[i]);
-        genotype.erase(genoIterRemove[i]);
-    }
+    for(size_t i = currentBoundIndex; i < boundSize; ++i) boundary.at(i)-= itemRemoved;
+
+
+//
+//    std::vector<std::list<size_t>::iterator> snpLocIterRemove;
+//    std::vector<boost::ptr_list<Genotype>::iterator> genoIterRemove;
+//    for(size_t i = 0; i < perfectLd.size(); ++i){
+//        std::list<size_t>::iterator currentLoc = snpLoc.begin();
+//        boost::ptr_list<Genotype>::iterator currentGeno = genotype.begin();
+//        std::advance(currentLoc, perfectLd[i]);
+//        std::advance(currentGeno, perfectLd[i]);
+//        snpLocIterRemove.push_back(currentLoc);
+//        genoIterRemove.push_back(currentGeno);
+//    }
+//    for(size_t i = 0; i < perfectLd.size(); ++i){
+//        snpLoc.erase(snpLocIterRemove[i]);
+//        genotype.erase(genoIterRemove[i]);
+//    }
+
+    /** Matrix Size updates **/
     //The vectors will go out of scope and they are not pointers, so don't bother cleaning them up
-    m_linkage.resize(genotype.size(), genotype.size());
-    m_linkageSqrt.resize(genotype.size(), genotype.size());
+    m_linkage.resize(genoSize, genoSize);
+    m_linkageSqrt.resize(genoSize, genoSize);
     m_linkage = arma::symmatl(m_linkage);
     m_linkageSqrt = arma::symmatl(m_linkageSqrt);
 

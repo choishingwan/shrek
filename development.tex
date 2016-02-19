@@ -69,7 +69,7 @@
 		\item Implement the advance variance calculation 
 		\item Start documenting the codes
 	\end{enumerate}
-	\subsection{Finished today}
+	\subsection{Finished Today}
 	\begin{enumerate}
 		\item Finished the error message for different modes
 		\item Finished the parsing for binary trait
@@ -86,7 +86,7 @@
 	\end{enumerate}
 	I really want to write a more compacted code.
 	Will try to restructure the command class
-	\subsection{Finished today}
+	\subsection{Finished Today}
 	\begin{enumerate}
 		\item Finished refining the usage messages
 		\item Finished the basic parameter parsing (Still haven't finish the index based parameter though)
@@ -94,7 +94,7 @@
 	\section{January 27, 2016}
 	\subsection{Aim}
 	We want to at least finish the region parsing and SNP class update today
-	\subsection{Finished today}
+	\subsection{Finished Today}
 	\begin{enumerate}
 		\item Completed the update of the Command class (compiled without problem)
 		\item Completed the update of the Region class (compiled without problem)
@@ -103,7 +103,7 @@
 	I also \emph{haven't} test run the programme, so there might be additional syntax / logic error that are not picked up at the current stage.
 	
 	\section{January 28, 2016}
-	\subsection{Finished today}
+	\subsection{Finished Today}
 	\begin{enumerate}
 		\item Finished the checking of reference panel
 		\item Found a different algorithm for popcount, which should be platform independent
@@ -146,14 +146,14 @@
 	
 	\section{February 2, 2016}
 	Try to perform extensive check on codes that has been written
-	\subsection{Finished today}
+	\subsection{Finished Today}
 	\begin{enumerate}
 		\item Finished debugging, everything up until the initialization of genotypeFileHandler is ok
 	\end{enumerate}
 	\section{February 3, 2016}
 	Sat in a meeting with Pak today, now we have a few things to-do.
 	
-	\subsection{Finished today}
+	\subsection{Finished Today}
 	We have switched to use list instead of deque. 
 	The benefit of list is that it is a double linked list, therefore it is much easier for one to remove the middle part.
 	Such property is ideal for the handling of perfect LD. 
@@ -241,7 +241,7 @@
 	
 	\section{February 16, 2016}
 	Continue on what I was doing yesterday.
-	\subsection{Finished today}
+	\subsection{Finished Today}
 	\begin{enumerate}
 		\item Finished implementing the whole programme, now need to start the debugging hell
 	\end{enumerate}
@@ -267,11 +267,20 @@
 	\subsection{Note}
 	Given the following plink simulation input, we would like to have an empirical variance of around 0.002729694
 	
-	10 snp 0.05 0.05 0.05 0.05 1 0.001 0
-	100 snp2 0.05 0.05 0.05 0.05 0.7 0.001 0
-	890 null 0.05 0.05 0.05 0.05 0.8 0 0
+	\begin{tabular}[r]
+	10 snp 0.05 0.05 0.05 0.05 1 0.001 0\\
+	100 snp2 0.05 0.05 0.05 0.05 0.7 0.001 0\\
+	890 null 0.05 0.05 0.05 0.05 0.8 0 0\\
+	\end{tabular}
 	
-
+	\subsection{Finished Today}
+	\begin{enumerate}
+		\item The variance calculation has been fixed
+		\item It seems like the programme can produce sensible results for now
+	\end{enumerate}
+	\section{February 19,2016}
+	The use of List is very smart in a way that it preserves the iterator, however, using the profiling, it was found that the List operations are taking up most time. 
+	Therefore, I will now have to change all the List usage back to deque, hopefully make things a bit faster
 	\newpage
 	\section{Useful Resources}
 	\begin{table}[H]

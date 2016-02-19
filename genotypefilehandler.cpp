@@ -177,7 +177,8 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
 // Find the first SNP that for us to include.
 // Then read all the SNPs within the region
 
-void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary){
+//void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary){
+void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary){
     // We try to use the old version of stuff to work on
     // Start of block info
 
@@ -269,10 +270,8 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_l
                     snpLoc.push_back(m_inclusion[m_snpIter]); //This should be the index of the SNP
                     lastUsedLoc  = currentLoc; // This is for the coordinates
                     // fprintf(stderr, "Check %lu\n",m_snpLoc);
-                    if(starting){
-                        boundary.push_back(std::prev(snpLoc.end()));
-                    }
-
+//                    if(starting) boundary.push_back(std::prev(snpLoc.end()));
+                    if(starting) boundary.push_back(snpLoc.size()-1);
                     starting = false;
                 }
             }
@@ -302,7 +301,8 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_l
 
 }
 
-void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary){
+//void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary){
+void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary){
     // boundary size should at most be 4
 
     // Very complicated need to write carefully
@@ -343,7 +343,8 @@ void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_lis
 //    }
  /** I have updated the functions, now getSnp should just get more SNPs to fill in the last block **/
     if(!m_bedFile.is_open())return; // nothing to read anymore
-    size_t lastStartIndex = *(boundary.back());
+//    size_t lastStartIndex = *(boundary.back());
+    size_t lastStartIndex = snpLoc[boundary.back()];
     std::string blockChr = snpList.at(lastStartIndex).getChr();
     size_t blockStartLoc = snpList.at(lastStartIndex).getLoc();
     size_t lastUsedLoc = snpList.at(snpLoc.back()).getLoc();

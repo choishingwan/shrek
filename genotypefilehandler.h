@@ -2,7 +2,8 @@
 #define GENOTYPEFILEHANDLER_H
 
 #include <boost/ptr_container/ptr_vector.hpp>
-#include <boost/ptr_container/ptr_list.hpp>
+//#include <boost/ptr_container/ptr_list.hpp>
+#include <boost/ptr_container/ptr_deque.hpp>
 #include <list>
 #include <deque>
 #include <stdexcept>
@@ -25,9 +26,12 @@ class GenotypeFileHandler
         /** Default destructor */
         virtual ~GenotypeFileHandler();
         void initialize(const Command &commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList);
+//
+//        void getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary);
+//        void getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary);
 
-        void getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary);
-        void getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary);
+        void getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary);
+        void getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary);
 
     protected:
     private:
@@ -38,7 +42,7 @@ class GenotypeFileHandler
 
         // This is the file handler for the bed and bim file
         std::ifstream m_bedFile;
-        std::ifstream m_bimFile;
+//        std::ifstream m_bimFile;
         // Only used for log
         size_t m_nDuplicated= 0; //Check for duplication within the REFERENCE
         size_t m_nInvalid=0; // SNPs that have different information as the p-value file
