@@ -57,7 +57,6 @@ class GenotypeFileHandler
         // These are indicating the last USED SNP
         std::string m_prevChr = "";
         size_t m_prevLoc = 0, m_snpLoc=0;
-        Genotype *m_buffGenotype=nullptr;
 
         //Method number two, the method I used before, the inclusion vector
         std::vector<int> m_inclusion;

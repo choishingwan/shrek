@@ -2,49 +2,41 @@
 
 std::mutex Linkage::linkageMtx;
 
-Linkage::Linkage(size_t thread):m_thread(thread){}
+Linkage::Linkage(size_t thread, size_t blockSize):m_thread(thread), m_blockSize(blockSize){}
 Linkage::~Linkage(){}
 
+void Linkage::print(){ std::cout << m_linkage << std::endl; }
 
-void Linkage::computeLd(const boost::ptr_list<Genotype> &genotype, const std::list<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, size_t horiEnd, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd){
-linkageMtx.lock();
-    fprintf(stderr, "Start: %lu\n", startIndex);
-    fprintf(stderr, "VerEnd: %lu\n", verEnd);
-    fprintf(stderr, "HorStart: %lu\n", horistart);
-    fprintf(stderr, "HorEnd: %lu\n", horiEnd);
-linkageMtx.unlock();
-
+//void Linkage::computeLd(const boost::ptr_list<Genotype> &genotype, const std::list<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, size_t horiEnd, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd){
+void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd){
     std::vector<size_t> perfectBuff;
-    boost::ptr_list<Genotype>::const_iterator  iter = genotype.begin(), endIter = genotype.begin(), horiEndIter=genotype.begin();
-    std::advance(iter, startIndex);
-    std::advance(endIter, verEnd);
-    std::advance(horiEndIter, horiEnd);
-
-    size_t i = startIndex;
-    for(; iter != endIter; ++iter){
+    size_t horiEnd = snpLoc.size();
+    for(size_t i = startIndex; i < verEnd; ++i){
         size_t nextStart = (i>horistart)? i:horistart;
         size_t j = nextStart;
-        boost::ptr_list<Genotype>::const_iterator  horiStartIter=genotype.begin();
-        std::advance(horiStartIter, nextStart);
-        for(; horiStartIter!=horiEndIter;  ++horiStartIter){
-                if(i==j){
-                    m_linkage(i,j) = 1.0;
-                    m_linkageSqrt(i,j) = 1.0;
+        for(size_t j = nextStart; j < horiEnd; ++j){
+                if(m_linkage(i,j)==0.0){  // only calculate the R2 when this is a new spot
+                    if(i==j){
+                        m_linkage(i,j) = 1.0;
+                        m_linkageSqrt(i,j) = 1.0;
+                    }
+                    else{
+                        double r = 0.0;
+                        double r2 = 0.0;
+                        genotype.at(i).GetbothR(genotype.at(j), correction, r, r2);
+                        m_linkage(i,j) = r2;
+                        m_linkageSqrt(i,j) = r;
+                        m_linkage(j,i) = r2;
+                        m_linkageSqrt(j,i) = r;
+                        // Now check if it is perfect LD
+                        // Store the index j into perfectBuff
+                        if(std::fabs(r-1.0) < 1e-6 || r > 1.0 || r < -1.0){
+                            perfectBuff.push_back(j);
+                            snpList.at(snpLoc.at(i)).shareHeritability(snpList.at(snpLoc.at(j)));
+                        }
+                    }
                 }
-                else{
-                    double r = 0.0;
-                    double r2 = 0.0;
-                    (*iter).GetbothR((*horiStartIter), correction, r, r2);
-                    m_linkage(i,j) = r2;
-                    m_linkageSqrt(i,j) = r;
-                    // Now check if it is perfect LD
-                    // Store the index j into perfectBuff
-                    if(std::fabs(r-1.0) < 1e-6 ) perfectBuff.push_back(j);
-                }
-            //This is for the update of the matrix indexing;
-            ++j;
         }
-        ++i; //Again, this is for the update of matrix index
     }
     // Now we can insert the buff back to the result
     linkageMtx.lock();
@@ -53,156 +45,212 @@ linkageMtx.unlock();
 
 }
 
-
-
-void Linkage::construct(boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, std::deque<std::list<size_t>::iterator > &boundary, boost::ptr_vector<Snp> &snpList, const bool correction){
-    // This is yet another complicated algorithm
-    // The aim of this function is to construct the required LD matrix
-    // (Think about it, maybe I will shift the perfect LD removal to the other function)
-    if(genotype.empty()){
-        throw std::runtime_error("Cannot build LD without genotypes");
-	}
+void Linkage::construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &boundary, boost::ptr_vector<Snp> &snpList, const bool correction,bool &boundCheck){
+    // Here we try to prepare for the calculation of LD
+    // This function is mainly responsible for the thread distribution
+    if(genotype.empty()) throw std::runtime_error("Cannot build LD without genotypes");
     // If this is the first of its kind, then we need to initialize the matrix
-    bool start = false;
+    size_t genoSize = genotype.size();
 	if(m_linkage.n_cols==0){
-        start = true;
-        m_linkage = arma::mat(genotype.size(), genotype.size(),arma::fill::eye);
-        m_linkageSqrt = arma::mat(genotype.size(), genotype.size(), arma::fill::eye);
+        m_linkage = arma::mat(genoSize, genoSize,arma::fill::eye);
+        m_linkageSqrt = arma::mat(genoSize, genoSize, arma::fill::eye);
     }
     else{ // Otherwise, just make sure the matrix is of the right size
-        m_linkage.resize(genotype.size(), genotype.size());
-        m_linkageSqrt.resize(genotype.size(), genotype.size());
+        m_linkage.resize(genoSize, genoSize);
+        m_linkageSqrt.resize(genoSize, genoSize);
     }
-    // We don't need the buff information
-    // because for this function, we should build all the matrix anyway
-    // Now if we are not working on the new stuff, we assume the LD matrix has been clean
-    // of the unwanted materials
-    // So we only need to construct the matrix here
-    // When we construct the LD matrix, we do it per SNP level but still use multi-threading
-    // then we skip any SNP that are found to be in perfect LD with others
-    // This will allow us to avoid the need of removing rols (only column)
-    // which should be fast considering armadillo is column major
-    fprintf(stderr, "Start of SNP loc: %lu\n", snpLoc.front());
-    fprintf(stderr, "size of boundary: %lu\n", boundary.size());
-    fprintf(stderr, "Boundary back: %lu\n", (*(boundary.back())));
-    fprintf(stderr, "SNP loc end %lu\n", snpLoc.back());
-    std::vector<size_t> perfectLd; // This is the vector use to store the perfect LD information
-    std::vector<std::thread> threadStore;
-    if(boundary.size() < 3){
-        //Very small input, so we will do the whole part together
-        size_t startIndex = 0, endBound= genotype.size();
-        if(genotype.size() < m_thread){
-            // Use as much thread as we can
-            for(size_t i = startIndex; i < endBound; ++i){
-                threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), i, i+1, i,genotype.size(), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
-            }
-        }
-        else{
-            // distribute the work
-            int jobBlock = endBound/m_thread;
-            int remainder = endBound % m_thread;
-            int currentBlock = startIndex;
-            for(size_t i = 0; i < m_thread; ++i){
-                // For each thread
-                if(remainder > 0){
-                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock+1, currentBlock, genotype.size(), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
-                    --remainder;
-                    currentBlock+=jobBlock+1;
-                }
-                else{
-                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock, currentBlock, genotype.size(), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
-                    currentBlock+=jobBlock;
-                }
 
-            }
-        }
+    std::vector<size_t> perfectLd; // This is the vector use to store the perfect LD information
+    int boundSize = boundary.size();
+    size_t startBoundIndex = (boundSize-3>0)? boundary[boundSize-3]: boundary.front();
+    size_t snpLocSize = snpLoc.size();
+    size_t numSnpRequired = snpLocSize - startBoundIndex;
+    std::vector<std::thread> threadStore;
+    if(numSnpRequired < m_thread){
+        // We will use as much threads as possible
+        for(size_t i = startBoundIndex; i < snpLocSize; ++i)
+            threadStore.push_back(
+                std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc),
+                i, i+1, boundary.back(),  // Vertical start, vertical end, horizontal start
+                std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
     }
-    else{ // This is big enough
-        // Two situation, either this is the start or this is not the start
-        if(start){
-            // If this is the start, then we need special handling of the first block
-            // in order to have a faster computation
-            size_t endBound =(*(boundary[1]));
-            size_t startIndex = 0;
-            int numSnps = endBound-startIndex;
-            assert(numSnps>0 && "There must be some SNPs for the construct to work with!");
-            if(numSnps < (signed)m_thread){
-                // Use as much threads as possible
-                for(size_t i = startIndex; i < endBound; ++i){
-                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), i, i+1, i, (*(boundary.back())), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
-                }
+    else{
+        // We actually need to divide the job
+        int jobBlock = numSnpRequired/m_thread;
+        int remainder = numSnpRequired%m_thread;
+        int currentBlock = startBoundIndex;
+        for(size_t i = 0; i < m_thread; ++i){
+            if(remainder>0){
+                threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock+1, boundary.back(), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+                --remainder;
+                currentBlock+=jobBlock+1;
             }
             else{
-                // divide the jobs
-                int jobBlock = numSnps/m_thread;
-                int remainder =numSnps%m_thread;
-                int currentBlock = startIndex;
-                for(size_t i = 0; i < m_thread; ++i){
-                    if(remainder>0){
-                        threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock+1, currentBlock, (*(boundary.back())), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
-                        currentBlock+= jobBlock+1;
-                        remainder--;
-                    }
-                    else{
-                        threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock, currentBlock, (*(boundary.back())), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
-                        currentBlock+= jobBlock;
-                    }
-                }
+                threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock, boundary.back(), std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+                currentBlock+=jobBlock;
             }
-            // now we finish up all the job for the first block
-            for (size_t i = 0; i < threadStore.size(); ++i) {
-                threadStore[i].join();
-            }
-            threadStore.clear();
         }
+    }
+    size_t threadSize = threadStore.size();
+    for (size_t i = 0; i < threadSize; ++i) threadStore[i].join();
+    threadStore.clear();
 
-        // If it is not the start, then we can ignore the first block
-        // and only need to compute the end of each block as most were already calculated before
-        size_t startIndex = (*(boundary[1]));
-        size_t endBound = genotype.size();
-        // We do have enough stuff to work on
-        int numSnps = endBound-startIndex;
-        assert(numSnps>0 && "There must be some SNPs for the construct to work with!");
+    // We sort the index for easier management (they are not sorted because of multi threading
+    std::sort(perfectLd.begin(), perfectLd.end());
+    // Remove duplicated index
+    perfectLd.erase( std::unique( perfectLd.begin(), perfectLd.end() ), perfectLd.end() );
 
-        size_t horiStart = (start)? startIndex : (*(boundary.back()));
-        if(numSnps< (signed) m_thread){
-            //very unlikely, but we will consider it anyway
-            for(size_t i = startIndex; i < endBound; ++i){
-                threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), i, i+1, horiStart, endBound, std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
-            }
-        }
-        else{
-            // Divide the jobs
-            int jobBlock = numSnps/m_thread;
-            int remainder =numSnps%m_thread;
-            int currentBlock = startIndex;
-            for(size_t i = 0; i < m_thread; ++i){
-                if(remainder>0){
-                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock+1, horiStart, endBound, std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
-                    currentBlock+= jobBlock+1;
-                    remainder--;
+    // If something are in perfect LD, perform the perfect LD removal
+    if(perfectLd.size()!=0) perfectRemove(perfectLd, genotype, snpLoc, boundary, snpList, boundCheck);
+
+}
+
+
+
+void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &boundary, boost::ptr_vector<Snp> &snpList, bool &boundCheck){
+    // First, update the matrix
+    std::cerr << "Updating perfect" << std::endl;
+    size_t genoSize = genotype.size();
+    size_t cI = 0;
+    size_t perfectIndexI = 0;
+    for(size_t i = 0; i < genoSize; ++i){
+        if(i == perfectLd[perfectIndexI]) perfectIndexI++;// This is perfect LD, we will skip it
+        else{ // The current I is required, go over the remaining
+            size_t cJ = cI, perfectIndexJ = perfectIndexI; // Because of symmetric matrix, we only start adding at cI
+            for(size_t j = i; j < genoSize; ++j){
+                if(j == perfectLd[perfectIndexJ]) perfectIndexJ++;
+                else{ //This is required
+                    m_linkage(cJ,cI) = m_linkage(i,j);
+                    m_linkageSqrt(cJ,cI)= m_linkageSqrt(i,j);;
+                    m_linkage(cI,cJ) = m_linkage(i,j);
+                    m_linkageSqrt(cI,cJ) = m_linkageSqrt(i,j);
+                    cJ++;
                 }
-                else{
-                    threadStore.push_back(std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc), currentBlock, currentBlock+jobBlock, horiStart, endBound, std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
-                    currentBlock+= jobBlock;
-                }
             }
+            cI++;
         }
-        // Join all the results
-        for (size_t i = 0; i < threadStore.size(); ++i) {
-            threadStore[i].join();
+    }
+    std::cerr << "Update completed" << std::endl;
+    size_t numPerfect = perfectLd.size();
+    // Now resize the matrix to remove unwanted stuff
+    m_linkage.resize(genoSize-numPerfect, genoSize-numPerfect);
+    m_linkageSqrt.resize(genoSize-numPerfect, genoSize-numPerfect);
+    std::cerr 
+    // Now update the snpLoc and genotype
+    size_t itemRemoved = 0;
+    for(size_t i = 0; i < numPerfect; ++i){
+        snpLoc.erase(snpLoc.begin()+(perfectLd[i]-itemRemoved));
+        genotype.erase(genotype.begin()+(perfectLd[i]-itemRemoved));
+    }
+    // Now carefully check if the last boundary is in perfect LD
+    if(boundary.size() > 1){
+        size_t snpLocSize = snpLoc.size();
+        size_t smaller = 0;
+        for(size_t i = 0; i < perfectLd.size(); ++i){
+            if(perfectLd[i]==boundary.back()){
+                boundCheck=true;
+                boundary.back()++;
+            }
+            if(perfectLd[i] < boundary.back()) smaller++;
         }
-        threadStore.clear();
+        // Now change the boundary
+        boundary.back()-= smaller;
+    }
+}
+
+void Linkage::clear(){
+    m_linkage.clear();
+    m_linkageSqrt.clear();
+}
+void Linkage::clear(size_t nRemoveElements){
+
+    size_t blockSize = m_linkage.n_cols-1;
+    m_linkage = m_linkage.submat(nRemoveElements, nRemoveElements,blockSize,blockSize);
+    m_linkageSqrt = m_linkageSqrt.submat(nRemoveElements, nRemoveElements,blockSize,blockSize);
+}
+
+void Linkage::decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult, arma::vec &varResult){
+    if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
+    size_t endOfBlock = fStat.n_elem-1;
+    arma::mat rInv=pinv((arma::mat)m_linkage.submat( start, start, endOfBlock,endOfBlock ));
+    heritResult = rInv * fStat;
+    arma::mat error = m_linkage.submat( start, start, endOfBlock, endOfBlock )*heritResult - fStat;
+ 	double oriNorm = norm(fStat);
+    double relative_error = norm(error) / oriNorm;
+    double prev_error = relative_error+1;
+    arma::mat update;
+    int iterCount = 0, maxIter = 100;
+    while(relative_error < prev_error && iterCount < maxIter){
+        prev_error = relative_error;
+        update=rInv*(-error);
+        error= m_linkage.submat( start, start, endOfBlock, endOfBlock )*(heritResult+update) - fStat;
+        relative_error = norm(error) / oriNorm;
+        if(relative_error < 1e-300) relative_error = 0; // 1e-300 is more than enough...
+        heritResult = heritResult+update;
+        iterCount++; // This is to avoid infinite looping
+    }
+    // Now calculate the variance
+    arma::vec effectiveNumber(heritResult.n_elem, arma::fill::ones);
+    varResult = rInv*effectiveNumber;
+    arma::vec errorVec = m_linkage.submat( start, start, endOfBlock, endOfBlock )*varResult - effectiveNumber;
+ 	oriNorm = norm(effectiveNumber);
+    relative_error = norm(errorVec) / oriNorm;
+    prev_error = relative_error+1;
+    arma::vec updateVec;
+    iterCount = 0;
+    while(relative_error < prev_error && iterCount < maxIter){
+        prev_error = relative_error;
+        updateVec=rInv*(-errorVec);
+        errorVec= m_linkage.submat( start, start, endOfBlock, endOfBlock )*(varResult+updateVec) - effectiveNumber;
+        relative_error = norm(errorVec) / oriNorm;
+        if(relative_error < 1e-300) relative_error = 0; // 1e-300 is more than enough...
+        varResult = varResult+updateVec;
+        iterCount++; // This is to avoid infinite looping
     }
 
-    std::sort(perfectLd.begin(), perfectLd.end());
-    // Now we want to remove duplicated index
-    perfectLd.erase( std::unique( perfectLd.begin(), perfectLd.end() ), perfectLd.end() );
-    //Here goes the crazy part
-    for(size_t i = 0; i < perfectLd.size(); ++i) 
-    std::cout << m_linkage << std::endl;
-    exit(-1);
-    // Now we need to handle the perfect LD stuff
+}
+
+void Linkage::decompose(size_t start, const arma::vec &zStat, const arma::vec &fStat, const arma::vec &nSample, arma::vec &heritResult, arma::mat &varResult){
+    if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
+    std::cerr << "Decompose: " << std::endl;
+    std::cerr << m_linkage << std::endl;
+    size_t endOfBlock = start+fStat.n_elem-1;
+    arma::mat rInv=pinv((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ));
+    heritResult = rInv * fStat;
+    arma::mat error = m_linkage.submat( start, start, endOfBlock, endOfBlock )*heritResult - fStat;
+ 	double oriNorm = norm(fStat);
+    double relative_error = norm(error) / oriNorm;
+    double prev_error = relative_error+1;
+    arma::mat update;
+    int iterCount = 0, maxIter = 100;
+    while(relative_error < prev_error && iterCount < maxIter){
+        prev_error = relative_error;
+        update=rInv*(-error);
+        error= m_linkage.submat( start, start, endOfBlock, endOfBlock )*(heritResult+update) - fStat;
+        relative_error = norm(error) / oriNorm;
+        if(relative_error < 1e-300) relative_error = 0; // 1e-300 is more than enough...
+        heritResult = heritResult+update;
+        iterCount++; // This is to avoid infinite looping
+    }
+
+    // Now calculate the varaince, this is for the complicated variance
+    varResult = rInv*arma::diagmat(nSample)*(4*m_linkageSqrt.submat(start,start,endOfBlock,endOfBlock)%(zStat*zStat.t())-2*m_linkage.submat(start,start,endOfBlock, endOfBlock))*arma::diagmat(nSample)*rInv;
+    //This part is here to safe guard any stupid mistakes I made
+    if(isnan(arma::accu(varResult))){
+        std::cout << varResult << std::endl;
+        std::cout << "sample:"  << std::endl;
+        std::cout << arma::diagmat(nSample) << std::endl;
+        std::cout << "R2" << std::endl;
+        std::cout << m_linkage.submat(start,start,endOfBlock, endOfBlock) << std::endl;
+        std::cout << "R" << std::endl;
+        std::cout << m_linkageSqrt.submat(start,start,endOfBlock,endOfBlock) << std::endl;
+        std::cout << "Z" << std::endl;
+        std::cout << (zStat*zStat.t()) << std::endl;
+        std::cout << "Inverse" << std::endl;
+        std::cout << rInv << std::endl;
+        std::cout << "Fstat"<< std::endl;
+        std::cout << fStat << std::endl;
+    }
 }
 
 

@@ -61,12 +61,14 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
             // perfect LD with SNPs in previous blocks. Therefore we need to make sure that
             // when we remove/filter this SNP, the next SNP is still within the acceptable
             // region
-//            fprintf(stderr, "Get Block now\n");
+            fprintf(stderr, "Get Block now\n");
             genotypeFileHandler.getBlock(snpList, genotype, snpLoc, finalizeBuff, completed,boundary);
             // Now calculate the LD
+
             bool boundChange = false;
-//            fprintf(stderr, "Construct\n");
+            fprintf(stderr, "Construct\n");
             linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
+
             // Three possibilities
             // 1. Boundary intact, then we can continue
             // 2. Boundary changed, but still in range. Read more SNPs and continue
@@ -78,7 +80,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
                 // need to check if the blocks are now ok, if not, change finalizeBuff to true
                 // Also, need special
 
-//            fprintf(stderr, "Change bound\n");
+            fprintf(stderr, "Change bound\n");
 //                size_t lastLoc = *(boundary.back());
                 size_t lastLoc = boundary.back();
 //                size_t prevLoc = *std::prev(boundary.back());
@@ -86,7 +88,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
                 if(snpList.at(snpLoc[lastLoc]).getLoc()-snpList.at(snpLoc[prevLoc]).getLoc() > m_blockSize){
                     // this is problematic here
 
-//                    fprintf(stderr, "man...\n");
+                    fprintf(stderr, "man...\n");
                     retainLastBlock = true;
                     finalizeBuff = true;
                 }
@@ -95,7 +97,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
             }
             else if(boundChange){ // this is the abnormal situation where the after removing the perfect LDs, we lost the whole block
 
-//            fprintf(stderr, "bound also changed\n");
+            fprintf(stderr, "bound also changed\n");
                 finalizeBuff = true;
                 boundary.pop_back(); //The last one is just for checking
                 skip = true; // don't bother in padding
@@ -106,21 +108,26 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
             // however, this time, we are certain there will be no boundary change
             if(!skip){
 
-//            fprintf(stderr, "Add SNPs\n");
+            fprintf(stderr, "Add SNPs\n");
                 genotypeFileHandler.getSNP(snpList, genotype, snpLoc, finalizeBuff, completed,boundary);
 
-//            fprintf(stderr, "Construct again\n");
+            for(size_t i = 0; i < boundary.size(); ++i) std::cerr << boundary[i] << " ";
+            std::cerr << std::endl;
+            for(size_t i = 0; i < snpLoc.size(); ++i) std::cerr << snpLoc[i] << " ";
+            std::cerr <<  std::endl;
+            fprintf(stderr, "Construct again\n");
                 linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
 
-//            fprintf(stderr, "nice and done\n");
+            fprintf(stderr, "nice and done\n");
             }
         }
         // Need to check if we need to merge the last block into the one in front
         // Only consider it when we reached the end of the current region
         if(finalizeBuff && boundary.size() > 3){
-
+            fprintf(stderr, "Special\n");
 //            // Now check if we need to merge the last two blocks
 //            size_t lastSnpOfThirdBlock = snpList.at(*std::prev(boundary.back())).getLoc();
+            fprintf(stderr, "Bound back is %lu and size is %lu\n", boundary.back(), snpLoc.size());
             size_t lastSnpOfThirdBlock = snpList.at(snpLoc.at(boundary.back())).getLoc();
             size_t lastSnp = snpLoc.back(); //The last of snpLoc is the last of the last block
             lastSnp = snpList.at(lastSnp).getLoc();
@@ -134,18 +141,24 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
         }
         // When we reach here, we are ready for decomposition
 
-//        fprintf(stderr, "Decomposition\n");
+        linkage.print();
+        exit(-1);
+        fprintf(stderr, "Decomposition\n");
         if(finalizeBuff) decompose.run(linkage, snpLoc, boundary, snpList, finalizeBuff, !retainLastBlock, starting, regionList);
         else decompose.run(linkage, snpLoc, boundary, snpList, false, false, starting, regionList);
-//        fprintf(stderr, "Finish decompose\n");
-
+        fprintf(stderr, "Finish decompose\n");
+        for(size_t i = 0; i < boundary.size(); ++i) std::cerr << boundary[i] << " " ;
+        std::cerr << std::endl;
+        std::cerr << "SnpLoc: ";
+        for(size_t i = 0; i < snpLoc.size(); ++i) std::cerr << snpLoc[i] << " " ;
+        std::cerr << std::endl;
         if(finalizeBuff){
             starting = true;
             // We need to check if we are going to store the last block
             if(retainLastBlock){
 //                std::cerr << "Retain the last block" << std::endl;
 
-                size_t update = boundary.front();
+                size_t update = boundary[1]-1; //We want to retain the SNP at the boundary
                 genotype.erase(genotype.begin(), genotype.begin()+update);
                 snpLoc.erase(snpLoc.begin(), snpLoc.begin()+update);
 //                boost::ptr_list<Genotype>::iterator genoIter = genotype.begin();
@@ -155,7 +168,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
 //                snpLoc.erase(snpLoc.begin(), boundary[1]);
                 boundary.pop_front();
                 size_t boundSize = boundary.size();
-                for(size_t i = 0; i < boundSize; ++i) boundary[i]-= update;
+                for(size_t i = 0; i < boundSize; ++i) boundary[i]-= (update+1);
                 linkage.clear(update);
             }
             else{
@@ -169,9 +182,9 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
             finalizeBuff = false;
         }
         else{
-//                std::cerr << "Cleaning lady" << std::endl;
+//            std::cerr << "Cleaning lady" << std::endl;
             starting = false;
-            size_t update = boundary.front();
+            size_t update = boundary[1]-1;
             genotype.erase(genotype.begin(), genotype.begin()+update);
             snpLoc.erase(snpLoc.begin(), snpLoc.begin()+update);
             //Also clean everything except the last block
@@ -182,7 +195,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
 //            snpLoc.erase(snpLoc.begin(), boundary[1]);
             boundary.pop_front();
             size_t boundSize = boundary.size();
-            for(size_t i = 0; i < boundSize; ++i) boundary[i]-= update;
+            for(size_t i = 0; i < boundSize; ++i) boundary[i]-= (update+1);
             linkage.clear(update);
 
         }
@@ -279,14 +292,18 @@ void SnpEstimation::result(const boost::ptr_vector<Snp> &snpList, const boost::p
     }
     else{
         sumOut << "Region\tHeritability\tVariance" << std::endl;
+        std::cout << "Region\tHeritability\tVariance" << std::endl;
         for(size_t i = 0; i < regionList.size(); ++i){
             sumOut << regionList[i].getName() << "\t" << adjustment*heritability[i] << "\t";
+            std::cout << regionList[i].getName() << "\t" << adjustment*heritability[i] << "\t";
 
             if(variance[i]==0.0){ // We use effective number
                 sumOut << adjustment*(2.0*(effective[i]*adjustment*adjustment+2.0*adjustment*effective[i]*averageSampleSize)/(averageSampleSize*averageSampleSize)) << std::endl;
+                std::cout << adjustment*(2.0*(effective[i]*adjustment*adjustment+2.0*adjustment*effective[i]*averageSampleSize)/(averageSampleSize*averageSampleSize)) << std::endl;
             }
             else{
                 sumOut << adjustment*adjustment*variance[i] << std::endl;
+                std::cout << adjustment*adjustment*variance[i] << std::endl;
             }
         }
         sumOut.close();
