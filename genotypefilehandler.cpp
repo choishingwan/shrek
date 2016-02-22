@@ -159,7 +159,7 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     }
     bimFile.close();
     fprintf(stderr,"\nReference Panel Information:\n");
-    fprintf(stderr,"=================================\n");
+    fprintf(stderr,"==================================\n");
     fprintf(stderr, "%lu samples were found in the reference panel\n", m_nRefSample);
     fprintf(stderr, "%lu discordant SNP(s) identified\n", m_nInvalid);
     if(m_nAmbig!=0)
@@ -258,6 +258,7 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_d
                         boundary.push_back(snpLoc.size()); // If this is the start, put in the snpLoc index
                         starting = false;
                     }
+                    snpList[m_inclusion[m_snpIter]].setStatus('I');
                     genotype.push_back(tempGenotype);
                     snpLoc.push_back(m_inclusion[m_snpIter]); // index of in snpList
                     lastUsedLoc  = currentLoc; // This is for the coordinates
@@ -363,7 +364,8 @@ void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_deq
                 }
                 else{
                     genotype.push_back(tempGenotype);
-                    snpLoc.push_back(m_snpIter);
+                    snpList[m_inclusion[m_snpIter]].setStatus('I');
+                    snpLoc.push_back(m_inclusion[m_snpIter]);
                     lastUsedLoc  = currentLoc;
                 }
             }

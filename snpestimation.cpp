@@ -35,173 +35,131 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
     // Ignore the progress bar just yet
     // Only add it in when everything is completed
     /** Progress Bar related code here **/
-    // The completed flag should be the return from GenotypeFileHandler. When all the SNPs
-    // from the reference panel were used, then the completed flag should change to true
+    // This is use for indicating whether if the whole genome is read
     bool completed = false;
-    // This thing is getting advance...
-//    std::deque<std::list<size_t>::iterator > boundary;
     std::deque<size_t> boundary;
-    //std::deque<size_t> boundary; //The boundary is used to indicate the blocks
     bool starting = true;
+    size_t checking = 0; //DEBUG
     while(!completed){
-        // Get the required genotypes
-        // The concept now is simpler
-        // 1. Get all the required SNPs for the analysis using genotypeFileHandler
-        //    - Remove all SNPs that doesn't pass the threshold or QC
-        // 2. Perform the LD matrix construction
-        // 3. For each window, remove the perfect LD by not including them in the decomposition
-        //    - Remember, if they are in perfect LD, we can just move the row around and they will still be the same
-//        fprintf(stderr, "Get Block\n");
+        // Keep doing this until the whole genome is read
         bool retainLastBlock=false; // only used when the finalizeBuff is true, this indicate whether if the last block is coming from somewhere new
-//        std::cerr << "Conditions: " << boundary.size() << "\t" << completed << "\t" << finalizeBuff <<  std::endl;
         while(boundary.size() < 4 && !completed && !finalizeBuff){
-            // We will continue to get block
-            // When getBlock return, the iterator are always pointing to the next valid SNP
-            // However, it is possible for this SNP to not pass the MAF threshold or are in
-            // perfect LD with SNPs in previous blocks. Therefore we need to make sure that
-            // when we remove/filter this SNP, the next SNP is still within the acceptable
-            // region
-            fprintf(stderr, "Get Block now\n");
+            // We want to get until the end or the end of the current region
+//            fprintf(stderr, "Get Block now\n");
+            // First, we get all the SNPs within the block
             genotypeFileHandler.getBlock(snpList, genotype, snpLoc, finalizeBuff, completed,boundary);
-            // Now calculate the LD
+            size_t snpLocSizeBefore = snpLoc.size();
 
-            bool boundChange = false;
-            fprintf(stderr, "Construct\n");
+            bool boundChange = false; // This is to indicate whether if the bound SNP is in perfect LD
+//            fprintf(stderr, "Construct\n");
+            // Now construct the LD matrix and also remove the perfect LD
             linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
-
-            // Three possibilities
-            // 1. Boundary intact, then we can continue
-            // 2. Boundary changed, but still in range. Read more SNPs and continue
-            // 3. Boundary changed, out of range now, start decomposition
-            // Here we need to check the boundaries
-            bool skip = false;
-//            if(boundChange && boundary.back() != snpLoc.end()){
-            if(boundChange && boundary.back() != snpLoc.back()){
-                // need to check if the blocks are now ok, if not, change finalizeBuff to true
-                // Also, need special
-
-            fprintf(stderr, "Change bound\n");
-//                size_t lastLoc = *(boundary.back());
-                size_t lastLoc = boundary.back();
-//                size_t prevLoc = *std::prev(boundary.back());
-                size_t prevLoc = boundary.back()-1;
-                if(snpList.at(snpLoc[lastLoc]).getLoc()-snpList.at(snpLoc[prevLoc]).getLoc() > m_blockSize){
-                    // this is problematic here
-
-                    fprintf(stderr, "man...\n");
-                    retainLastBlock = true;
-                    finalizeBuff = true;
+//            fprintf(stderr, "Got the linkage\n");
+            if(snpLocSizeBefore == snpLoc.size()){
+                // This mean there is no perfect LD, but we will still assert anyway just in case
+                assert(!boundChange && "Error: Not possible");
+            }
+            else{ // Perfect LD was removed
+                if(boundChange){
+                    if(boundary.back()== snpLoc.size()){
+                        // This mean the last block is in full LD with the previous block (unlikely though)
+                        finalizeBuff=true;
+                        boundary.pop_back();
+                    }
+                    else{
+                        // We have changed the boundary, so we need to check if the new
+                        // block is too far away
+                        size_t lastSnpLocIndex = boundary.back();
+                        size_t prevSnpLocIndex = boundary.back()-1;
+                        if(snpList.at(snpLoc[lastSnpLocIndex]).getLoc()-
+                           snpList.at(snpLoc[prevSnpLocIndex]).getLoc() > m_blockSize){
+                            retainLastBlock = true;
+                            finalizeBuff=true;
+                        }
+                        // We will patch it to make sure we are always starting
+                        // with something correct for each round
+                        genotypeFileHandler.getSNP(snpList, genotype, snpLoc, finalizeBuff, completed,boundary);
+                        linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
+                    }
                 }
-                else{}// everything as normal
-
-            }
-            else if(boundChange){ // this is the abnormal situation where the after removing the perfect LDs, we lost the whole block
-
-            fprintf(stderr, "bound also changed\n");
-                finalizeBuff = true;
-                boundary.pop_back(); //The last one is just for checking
-                skip = true; // don't bother in padding
-            }
-            else{} //everything as normal
-            // now pad the remaining SNPs for the last block
-            // then construct the LD and remove the perfectLD again.
-            // however, this time, we are certain there will be no boundary change
-            if(!skip){
-
-            fprintf(stderr, "Add SNPs\n");
-                genotypeFileHandler.getSNP(snpList, genotype, snpLoc, finalizeBuff, completed,boundary);
-
-            for(size_t i = 0; i < boundary.size(); ++i) std::cerr << boundary[i] << " ";
-            std::cerr << std::endl;
-            for(size_t i = 0; i < snpLoc.size(); ++i) std::cerr << snpLoc[i] << " ";
-            std::cerr <<  std::endl;
-            fprintf(stderr, "Construct again\n");
-                linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
-
-            fprintf(stderr, "nice and done\n");
+                else{
+                    // Bound doesn't change, much easier to handle
+                    // Just patch the blocks and rebuild the LD matrix
+                    // We know that the bound will not change now
+                    genotypeFileHandler.getSNP(snpList, genotype, snpLoc, finalizeBuff, completed,boundary);
+                    linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
+                }
             }
         }
-        // Need to check if we need to merge the last block into the one in front
-        // Only consider it when we reached the end of the current region
-        if(finalizeBuff && boundary.size() > 3){
-            fprintf(stderr, "Special\n");
-//            // Now check if we need to merge the last two blocks
-//            size_t lastSnpOfThirdBlock = snpList.at(*std::prev(boundary.back())).getLoc();
-            fprintf(stderr, "Bound back is %lu and size is %lu\n", boundary.back(), snpLoc.size());
-            size_t lastSnpOfThirdBlock = snpList.at(snpLoc.at(boundary.back())).getLoc();
-            size_t lastSnp = snpLoc.back(); //The last of snpLoc is the last of the last block
-            lastSnp = snpList.at(lastSnp).getLoc();
-            if(lastSnp-lastSnpOfThirdBlock <= m_blockSize){
-                boundary.pop_back(); //Because the boundary changed, we should also update the LD matrix
-                // Mainly, the top right and bottom left corner
-                bool boundChange = false;
-                // Can consider writing a more efficient algorithm for this, however, this should also be rare.
-                linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
+
+        // Check if we need to merge the last two blocks
+        if(finalizeBuff){
+            if(retainLastBlock){
+                // We do nothing here, the reason is that the implementation in linkage construct doesn't
+                // take into consideration of the last block. So although the last block is considered as
+                // too far away in this situation, the LD construction will not take special consideration
+                // in that and might, in unlikely circumstances change the boundary SNP, therefore leading
+                // to a problematic complication that we have not anticipated
+            }
+            else if(boundary.size() > 2){ // normal checking
+                // We have enough blocks to perform merging (it is stupid to merge stuff if there is only two blocks,
+                // but whatever)
+                assert(boundary.back() > 0 && "The boundary is too small..." );
+                size_t indexOfLastSnpSecondLastBlock = snpLoc.at(boundary.back()-1); // just in case
+                size_t lastSnp = snpLoc.back();
+                if(snpList.at(lastSnp).getLoc()-snpList.at(indexOfLastSnpSecondLastBlock).getLoc() <= m_blockSize){
+                    boundary.pop_back();
+                    // Because we change the boundary here, we want to reconstruct the LD such that it fits
+                    bool boundaryChange = false;
+                    linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundaryChange);
+                    assert(!boundaryChange && "Error: Boundary should not change here");
+                }
             }
         }
-        // When we reach here, we are ready for decomposition
 
-        linkage.print();
-        exit(-1);
-        fprintf(stderr, "Decomposition\n");
+//        std::cerr << "Tidy up: " << retainLastBlock << " " << finalizeBuff << " " << starting << " " << boundary.size() << std::endl;
+//        fprintf(stderr, "Decomposition\n");
         if(finalizeBuff) decompose.run(linkage, snpLoc, boundary, snpList, finalizeBuff, !retainLastBlock, starting, regionList);
         else decompose.run(linkage, snpLoc, boundary, snpList, false, false, starting, regionList);
-        fprintf(stderr, "Finish decompose\n");
-        for(size_t i = 0; i < boundary.size(); ++i) std::cerr << boundary[i] << " " ;
-        std::cerr << std::endl;
-        std::cerr << "SnpLoc: ";
-        for(size_t i = 0; i < snpLoc.size(); ++i) std::cerr << snpLoc[i] << " " ;
-        std::cerr << std::endl;
-        if(finalizeBuff){
-            starting = true;
-            // We need to check if we are going to store the last block
-            if(retainLastBlock){
-//                std::cerr << "Retain the last block" << std::endl;
+//        fprintf(stderr, "Finish decompose\n");
 
-                size_t update = boundary[1]-1; //We want to retain the SNP at the boundary
-                genotype.erase(genotype.begin(), genotype.begin()+update);
-                snpLoc.erase(snpLoc.begin(), snpLoc.begin()+update);
-//                boost::ptr_list<Genotype>::iterator genoIter = genotype.begin();
-//                size_t nRemoveElements =std::distance(snpLoc.begin(), boundary[1]);
-//                std::advance(genoIter,nRemoveElements);
-//                genotype.erase(genotype.begin(), genoIter);
-//                snpLoc.erase(snpLoc.begin(), boundary[1]);
-                boundary.pop_front();
-                size_t boundSize = boundary.size();
-                for(size_t i = 0; i < boundSize; ++i) boundary[i]-= (update+1);
-                linkage.clear(update);
-            }
-            else{
-//                std::cerr << "Exterminate!!!" << std::endl;
-                //clean everything
+        if(retainLastBlock){
+            // Then we must remove everything except the last block
+            // because finalizeBuff must be true here
+            size_t update = boundary.back();
+            genotype.erase(genotype.begin(), genotype.begin()+update);
+            snpLoc.erase(snpLoc.begin(), snpLoc.begin()+update);
+            size_t lastIndex =boundary.back();
+            boundary.clear();
+            boundary.push_back(lastIndex);
+            linkage.clear(update);
+            starting = true;
+            finalizeBuff = false;
+            retainLastBlock = false;
+        }
+        else{
+            if(finalizeBuff){
                 snpLoc.clear();
                 boundary.clear();
                 genotype.clear();
                 linkage.clear();
+                starting = true;
+                finalizeBuff = false;
+                retainLastBlock = false;
             }
-            finalizeBuff = false;
+            else{
+                starting = false;
+                size_t update=boundary[1];
+                genotype.erase(genotype.begin(), genotype.begin()+update);
+                snpLoc.erase(snpLoc.begin(), snpLoc.begin()+update);
+                boundary.pop_front();
+                linkage.clear(update);
+            }
         }
-        else{
-//            std::cerr << "Cleaning lady" << std::endl;
-            starting = false;
-            size_t update = boundary[1]-1;
-            genotype.erase(genotype.begin(), genotype.begin()+update);
-            snpLoc.erase(snpLoc.begin(), snpLoc.begin()+update);
-            //Also clean everything except the last block
-//            boost::ptr_list<Genotype>::iterator genoIter = genotype.begin();
-//            size_t nRemoveElements =std::distance(snpLoc.begin(), boundary[1]);
-//            std::advance(genoIter,nRemoveElements);
-//            genotype.erase(genotype.begin(), genoIter);
-//            snpLoc.erase(snpLoc.begin(), boundary[1]);
-            boundary.pop_front();
-            size_t boundSize = boundary.size();
-            for(size_t i = 0; i < boundSize; ++i) boundary[i]-= (update+1);
-            linkage.clear(update);
-
-        }
-//        fprintf(stderr, "Next round\n");
-//        std::cerr << "Completed? " << completed << std::endl;
-
+        // We need to update the boundary to correctly adjust for the changes in the snpLoc
+        size_t updateNum = boundary.front();
+        for(size_t i = 0; i < boundary.size(); ++i) boundary[i]-= updateNum;
+//        linkage.print();
     }
     fprintf(stderr, "Estimated the SNP Heritability, now proceed to output\n");
 }
@@ -242,7 +200,7 @@ void SnpEstimation::result(const boost::ptr_vector<Snp> &snpList, const boost::p
     }
     for(size_t i = 0; i < snpList.size(); ++i){
         if(requireFullOut){
-            fullOutput << snpList[i].getChr() << "\t" << snpList[i].getLoc() << "\t" << snpList[i].getRs() << "\t" << snpList[i].getStat() << "\t" << snpList[i].getHeritability() << "\t" << snpList[i].getStatus() << std::endl;
+            fullOutput << snpList[i].getChr() << "\t" << snpList[i].getLoc() << "\t" << snpList[i].getRs() << "\t" << snpList[i].getStat() << "\t" << snpList[i].getHeritability() << "\t"<< snpList[i].getStatus() << std::endl;
         }
         for(size_t j = 0; j < regionList.size(); ++j){
 //            if(j ==0) std::cerr << snpList[i].flag(j) << std::endl;
@@ -283,7 +241,7 @@ void SnpEstimation::result(const boost::ptr_vector<Snp> &snpList, const boost::p
             std::cout << regionList[i].getName() << "\t" << adjustment*heritability[i] << "\t";
 
             if(variance[i]==0.0){ // We use effective number
-                std::cout << adjustment*(2.0*(effective[i]*adjustment*adjustment+2.0*adjustment*effective[i]*averageSampleSize)/(averageSampleSize*averageSampleSize)) << std::endl;
+                std::cout << adjustment*(2.0*(effective[i]*adjustment*adjustment+2.0*adjustment*heritability[i]*averageSampleSize)/(averageSampleSize*averageSampleSize)) << std::endl;
             }
             else{
                 std::cout << adjustment*adjustment*variance[i] << std::endl;
@@ -298,8 +256,8 @@ void SnpEstimation::result(const boost::ptr_vector<Snp> &snpList, const boost::p
             std::cout << regionList[i].getName() << "\t" << adjustment*heritability[i] << "\t";
 
             if(variance[i]==0.0){ // We use effective number
-                sumOut << adjustment*(2.0*(effective[i]*adjustment*adjustment+2.0*adjustment*effective[i]*averageSampleSize)/(averageSampleSize*averageSampleSize)) << std::endl;
-                std::cout << adjustment*(2.0*(effective[i]*adjustment*adjustment+2.0*adjustment*effective[i]*averageSampleSize)/(averageSampleSize*averageSampleSize)) << std::endl;
+                sumOut << adjustment*(2.0*(effective[i]*adjustment*adjustment+2.0*adjustment*heritability[i]*averageSampleSize)/(averageSampleSize*averageSampleSize)) << std::endl;
+                std::cout << adjustment*(2.0*(effective[i]*adjustment*adjustment+2.0*adjustment*heritability[i]*averageSampleSize)/(averageSampleSize*averageSampleSize)) << std::endl;
             }
             else{
                 sumOut << adjustment*adjustment*variance[i] << std::endl;

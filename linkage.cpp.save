@@ -66,6 +66,7 @@ void Linkage::construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t>
     size_t snpLocSize = snpLoc.size();
     size_t numSnpRequired = snpLocSize - startBoundIndex;
     std::vector<std::thread> threadStore;
+    std::cerr << "Want to get the threads" << std::endl;
     if(numSnpRequired < m_thread){
         // We will use as much threads as possible
         for(size_t i = startBoundIndex; i < snpLocSize; ++i)
@@ -92,7 +93,10 @@ void Linkage::construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t>
         }
     }
     size_t threadSize = threadStore.size();
-    for (size_t i = 0; i < threadSize; ++i) threadStore[i].join();
+    for (size_t i = 0; i < threadSize; ++i){
+        std::cerr << "getting thread: " << i << std::endl
+        threadStore[i].join();
+    }
     threadStore.clear();
 
     // We sort the index for easier management (they are not sorted because of multi threading
@@ -101,6 +105,7 @@ void Linkage::construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t>
     perfectLd.erase( std::unique( perfectLd.begin(), perfectLd.end() ), perfectLd.end() );
 
     // If something are in perfect LD, perform the perfect LD removal
+    std::cerr << "perfect remove now" << std::endl;
     if(perfectLd.size()!=0) perfectRemove(perfectLd, genotype, snpLoc, boundary, snpList, boundCheck);
 
 }
@@ -109,7 +114,6 @@ void Linkage::construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t>
 
 void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &boundary, boost::ptr_vector<Snp> &snpList, bool &boundCheck){
     // First, update the matrix
-    std::cerr << "Updating perfect" << std::endl;
     size_t genoSize = genotype.size();
     size_t cI = 0;
     size_t perfectIndexI = 0;
@@ -130,17 +134,16 @@ void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_deque<Gen
             cI++;
         }
     }
-    std::cerr << "Update completed" << std::endl;
     size_t numPerfect = perfectLd.size();
     // Now resize the matrix to remove unwanted stuff
     m_linkage.resize(genoSize-numPerfect, genoSize-numPerfect);
     m_linkageSqrt.resize(genoSize-numPerfect, genoSize-numPerfect);
-    std::cerr 
     // Now update the snpLoc and genotype
     size_t itemRemoved = 0;
     for(size_t i = 0; i < numPerfect; ++i){
         snpLoc.erase(snpLoc.begin()+(perfectLd[i]-itemRemoved));
         genotype.erase(genotype.begin()+(perfectLd[i]-itemRemoved));
+        itemRemoved++;
     }
     // Now carefully check if the last boundary is in perfect LD
     if(boundary.size() > 1){

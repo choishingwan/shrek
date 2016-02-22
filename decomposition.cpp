@@ -8,247 +8,145 @@ Decomposition::~Decomposition()
     //dtor
 }
 
-//void Decomposition::decompose(Linkage &linkage, std::list<size_t> &snpLoc, std::list<size_t>::iterator startDecompIter, std::list<size_t>::iterator endDecompIter, std::list<size_t>::iterator startCopyIter, std::list<size_t>::iterator endCopyIter, std::list<size_t>::iterator startVarIter, std::list<size_t>::iterator endVarIter, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> &regionList, bool sign, bool start, bool ending){
-void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size_t startDecompIter, size_t endDecompIter, size_t startCopyIter, size_t endCopyIter, size_t startVarIter, size_t endVarIter, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> &regionList, bool sign, bool start, bool ending){
-    // Might want to add a check here to check if the iterators are out of bound
 
-//    size_t sizeOfMatrix = std::distance(startDecompIter, endDecompIter);
+void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size_t startDecompIter, size_t endDecompIter, size_t startVarIter, size_t endVarIter, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> &regionList, bool sign, bool start, bool ending){
     size_t sizeOfMatrix = endDecompIter-startDecompIter;
-//    size_t copyStartCoordinate = std::distance(snpLoc.begin(), startCopyIter);
-    size_t copyStartCoordinate = startCopyIter;
-//    size_t startCoordinate = std::distance(snpLoc.begin(), startDecompIter);
     size_t startCoordinate = startDecompIter;
     arma::vec fStat = arma::vec(sizeOfMatrix, arma::fill::zeros);
-    arma::vec zStat = arma::vec(sizeOfMatrix, arma::fill::zeros);
-    arma::vec nSample = arma::vec(sizeOfMatrix, arma::fill::zeros);
     arma::vec heritResult = arma::vec(sizeOfMatrix, arma::fill::zeros);
-    size_t i = 0;
-//    for(std::list<size_t>::iterator snpLocIter = startDecompIter; snpLocIter != endDecompIter; ++snpLocIter){
-    for(size_t snpLocIter = startDecompIter; snpLocIter < endDecompIter; ++snpLocIter){
-//        double stat = snpList.at(*(snpLocIter)).getStat();
-        double stat = snpList.at(snpLoc[snpLocIter]).getStat();
-//        int sampleSize = snpList.at(*(snpLocIter)).getSampleSize();
-        int sampleSize = snpList.at(snpLoc[snpLocIter]).getSampleSize();
-        zStat(i) = stat;
-        fStat(i) = (stat*stat-1.0)/((double)sampleSize-2.0+stat*stat); // This is the f-statistic
-        nSample(i) = (double)1/(double)sampleSize;
-        ++i;
-    }
-
+    size_t regionSize = regionList.size();
     if(sign){
+        arma::vec zStat = arma::vec(sizeOfMatrix, arma::fill::zeros);
+        arma::vec nSample = arma::vec(sizeOfMatrix, arma::fill::zeros);
         arma::mat varResult = arma::mat(sizeOfMatrix,sizeOfMatrix,arma::fill::eye);
+        size_t i = 0;
+        for(size_t snpLocIndex = startDecompIter; snpLocIndex< endDecompIter; ++snpLocIndex){
+            double stat = snpList.at(snpLoc[snpLocIndex]).getStat();
+            int sampleSize = snpList.at(snpLoc[snpLocIndex]).getSampleSize();
+            zStat(i) = stat;
+            fStat(i) = (stat*stat-1.0)/((double)sampleSize-2.0+stat*stat); // This is the f-statistic
+            nSample(i) = (double)1/(double)sampleSize;
+            ++i;
+        }
         linkage.decompose(startCoordinate,zStat, fStat, nSample, heritResult, varResult);
-        /** Get the heritability **/
-        size_t iter = startCopyIter;
-        for(size_t j = copyStartCoordinate; j < sizeOfMatrix; ++j){
-//            snpList.at(*iter)).setHeritability(heritResult(j));
-            snpList.at(snpLoc[iter]).setHeritability(heritResult(j));
-            iter++;
+        // Update the heritability (we separate it because it is easier)
+        size_t startCopySnpLocIndex=(start)?startDecompIter : startVarIter;
+        size_t startCopyVectorIndex = (start)? 0:startVarIter-startDecompIter;
+        for(size_t j = startCopyVectorIndex; j < sizeOfMatrix; ++j){ // we don't care about the end in this case because they will be over wrote
+            snpList.at(snpLoc[startCopySnpLocIndex]).setHeritability(heritResult(j));
+            startCopySnpLocIndex++;
         }
-//        std::cerr << "Done copying" << std::endl;
-        /** Get the variance **/
-        /** This is where the true problem occurs **/
-        /** We actually need to know if this is the end **/
-        /** Moreover, we need to know about the mid band's location **/
-        // Use three for loop, to minimize the conditioning
-        // Use iterator for the loop for easy checking
-        size_t xCor = 0, yCor = 0;
-
-//        xCor = (start)? 0:std::distance(startDecompIter,endVarIter);
-        xCor = (start)? 0:endVarIter-startDecompIter;
-//        std::cerr << "Copy first part of variance " << std::endl;
-
-
-//        for(std::list<size_t>::iterator iter=startDecompIter; iter != startVarIter; ++iter){
-        size_t regionSize = regionList.size();
-        for(size_t iter=startDecompIter; iter < startVarIter; ++iter){
-            // This is the top part
-            // For this part, we only take the ending
-            size_t currentX = xCor;
-//            for(std::list<size_t>::iterator innerIter=(start)?startDecompIter:endVarIter; innerIter != endDecompIter; ++innerIter){
-            for(size_t innerIter=(start)?startDecompIter:endVarIter; innerIter < endDecompIter; ++innerIter){
-                // Now we need to check if both SNPs belongs to the region
-                // Only add it to the region if both belongs to the same region
-                for(size_t i = 0; i < regionSize; ++i){
-//                    if(snpList.at(*(iter)).flag(i)&&snpList.at(*(innerIter)).flag(i)){
-                    if(snpList.at(snpLoc[iter]).flag(i)&&snpList.at(snpLoc[innerIter]).flag(i)){
-                        regionList[i].addVariance(varResult(currentX,yCor));
-                    }
+        //The top block of the variance
+        size_t horiCopyIndex = (start)? 0:endVarIter-startDecompIter;
+        size_t startBound =startVarIter-startDecompIter;
+        size_t endBound =endDecompIter-startDecompIter;
+        for(size_t i =0; i < startBound; ++i){ // i is the index on the matrix
+            for(size_t j = horiCopyIndex; j < endBound; ++j){ //  Again, j is the index on the matrix
+                 for(size_t k = 0; k < regionSize; ++k){ // Iterate through the region list
+                    if(snpList.at(snpLoc[startDecompIter+i]).flag(k) &&
+                       snpList.at(snpLoc[startDecompIter+j]).flag(k))
+                            regionList[k].addVariance(varResult(i,j));
                 }
-                currentX++;
             }
-            yCor++;
         }
-
-//        for(std::list<size_t>::iterator iter=startVarIter; iter != endVarIter; ++iter){
-        for(size_t iter=startVarIter; iter < endVarIter; ++iter){
-            // This is for the mid band
-            // For this part, we take everything
-            size_t currentX = 0;
-//            for(std::list<size_t>::iterator innerIter=startDecompIter; innerIter != endDecompIter; ++innerIter){
-            for(size_t innerIter=startDecompIter; innerIter < endDecompIter; ++innerIter){
-                // Now we need to check if both SNPs belongs to the region
-                // Only add it to the region if both belongs to the same region
-                for(size_t i = 0; i < regionSize; ++i){
-//                    if(snpList.at(*(iter)).flag(i)&&snpList.at(*(innerIter)).flag(i)){
-                    if(snpList.at(snpLoc[iter]).flag(i)&&snpList.at(snpLoc[innerIter]).flag(i)){
-                        regionList[i].addVariance(varResult(currentX,yCor));
-                    }
+        // Now the mid block of the variance
+        for(size_t i = startBound; i < endVarIter-startDecompIter; ++i){
+            for(size_t j = 0; j < endBound; ++j){
+                for(size_t k = 0; k < regionSize; ++k){ // Iterate through the region list
+                    if(snpList.at(snpLoc[startDecompIter+i]).flag(k) &&
+                       snpList.at(snpLoc[startDecompIter+j]).flag(k))
+                            regionList[k].addVariance(varResult(i,j));
                 }
-                currentX++;
             }
-            yCor++;
         }
-
-
-//        std::list<size_t>::iterator copyEnd = (ending)?endDecompIter:startVarIter;
-        size_t copyEnd = (ending)?endDecompIter:startVarIter;
-//        for(std::list<size_t>::iterator iter=endVarIter; iter != endDecompIter; ++iter){
-        for(size_t iter=endVarIter; iter < endDecompIter; ++iter){
-            // This is the last part
-            // For this part, we only take the beginning stuffs
-            size_t currentX = 0;
-//            for(std::list<size_t>::iterator innerIter=startDecompIter; innerIter != copyEnd; ++innerIter){
-            for(size_t innerIter=startDecompIter; innerIter < copyEnd; ++innerIter){
-                for(size_t i = 0; i < regionSize; ++i){
-//                    if(snpList.at(*(iter)).flag(i)&&snpList.at(*(innerIter)).flag(i)){
-                    if(snpList.at(snpLoc[iter]).flag(i)&&snpList.at(snpLoc[innerIter]).flag(i)){
-                        regionList[i].addVariance(varResult(currentX,yCor));
-                    }
+        // Now the final block of the variance
+        horiCopyIndex = (ending)? endBound: startBound;
+        for(size_t i = endVarIter-startDecompIter; i < endBound; ++i){
+            for(size_t j = 0; j < horiCopyIndex; ++j){
+                for(size_t k = 0; k < regionSize; ++k){
+                    if(snpList.at(snpLoc[startDecompIter+i]).flag(k) &&
+                           snpList.at(snpLoc[startDecompIter+j]).flag(k))
+                                regionList[k].addVariance(varResult(i,j));
                 }
-                currentX++;
             }
-            yCor++;
         }
-//        std::cerr << "Finished all copying stuff" << std::endl;
-
-
     }
     else{
         arma::vec varResult = arma::vec(sizeOfMatrix, arma::fill::zeros);
+        size_t i = 0;
+        for(size_t snpLocIndex = startDecompIter; snpLocIndex< endDecompIter; ++snpLocIndex){
+            double stat = snpList.at(snpLoc[snpLocIndex]).getStat();
+            int sampleSize = snpList.at(snpLoc[snpLocIndex]).getSampleSize();
+            fStat(i) = (stat*stat-1.0)/((double)sampleSize-2.0+stat*stat); // This is the f-statistic
+            ++i;
+        }
         linkage.decompose(startCoordinate,fStat,heritResult, varResult);
-        // In this case, we can just update the effective number
-        /** Get the effective number and heritability **/
-//        std::list<size_t>::iterator iter = startCopyIter;
-        size_t iter = startCopyIter;
-        for(size_t j = copyStartCoordinate; j < sizeOfMatrix; ++j){
-//            snpList.at(*(iter)).setHeritability(heritResult(j));
-            snpList.at(snpLoc[iter]).setHeritability(heritResult(j));
-//            snpList.at(*(iter)).setEffective(varResult(j));
-            snpList.at(snpLoc[iter]).setEffective(varResult(j));
-//            std::advance(iter,1);
-            iter++;
+        size_t startCopySnpLocIndex=(start)?startDecompIter : startVarIter;
+        size_t startCopyVectorIndex = (start)? 0:startVarIter-startDecompIter;
+        for(size_t j = startCopyVectorIndex; j < sizeOfMatrix; ++j){ // we don't care about the end in this case because they will be over wrote
+            snpList.at(snpLoc[startCopySnpLocIndex]).setHeritability(heritResult(j));
+            snpList.at(snpLoc[startCopySnpLocIndex]).setEffective(varResult(j));
+            startCopySnpLocIndex++;
         }
     }
 }
 
-//void Decomposition::run(Linkage &linkage, std::list<size_t> &snpLoc, std::deque<std::list<size_t>::iterator > &boundary, boost::ptr_vector<Snp> &snpList, bool finalizeBuff, bool decomposeAll, bool starting, boost::ptr_vector<Region> &regionList){
+
 void Decomposition::run(Linkage &linkage, std::deque<size_t> &snpLoc, std::deque<size_t> &boundary, boost::ptr_vector<Snp> &snpList, bool finalizeBuff, bool decomposeAll, bool starting, boost::ptr_vector<Region> &regionList){
-    // Here is the meat of the decomposition preprocessing
-    // The decomposition is actually done by the linkage class
-    // First, get the vectors ready
-
-    // There are a number of situations:
-    // 1. Only 1 block is given
-    // 2. Only 2 blocks are given
-    // 3. At least 3 blocks are given
+    // The proper decomposition process
     bool sign = !(snpList.front().getSign()==0); // Check whether if sign is given
-
-    /** KEY POINT HERE: We don't need to know if it is the last one, because if it isn't the last
-     *                  the information will be overwrote in the upcoming round
-     */
     size_t boundSize = boundary.size();
     size_t snpLocSize = snpLoc.size();
-    if(starting){
-        // Check if we decomposeAll, because the situation may differ in that case
-        if(decomposeAll){
-            // Now this depends on the boundary size
-            if(boundSize < 4){
-                // Then we do the decomposition on everything and update everything
-//                decompose(linkage, snpLoc, snpLoc.begin(), snpLoc.end(), snpLoc.begin(), snpLoc.end(), snpLoc.begin(), snpLoc.end(), snpList, regionList, sign, starting, true);
-                decompose(linkage, snpLoc,
-                            0, snpLocSize, // Define the decomposition block
-                            0, snpLocSize, // Define the heritability vector copy range
-                            0, snpLocSize, // Define the mid band region of the variance matrix
-                            snpList, regionList, sign, starting, true);
-            }
-            else if(boundSize ==4){
-                // Then we do the decomposition on the first 3 blocks
-                // After that, we decompose the last block
-//
-//                decompose(linkage, snpLoc, snpLoc.begin(), boundary.back(), snpLoc.begin(), boundary[2],  boundary[1], boundary[2], snpList, regionList, sign, starting, false);
-                decompose(linkage, snpLoc,
-                          0, boundary.back(),  // Define the decomposition block
-                          0, boundary[2],      // Define the heritability vector copy range
-                          boundary[1], boundary[2],      // Define the mid band region of the variance matrix
-                          snpList, regionList, sign, starting, false);
-//
-//                decompose(linkage, snpLoc, boundary[1], snpLoc.end(), boundary[2], snpLoc.end(), boundary[2], boundary.back(), snpList, regionList, sign, starting, true);
-                decompose(linkage, snpLoc,
-                          boundary[1], snpLocSize,    // Define the decomposition block
-                          boundary[2], snpLocSize,    // Define the heritability vector copy range
-                          boundary[2], boundary.back(), // Define the mid band region of the variance matrix
-                          snpList, regionList, sign, starting, true);
-            }
-            else throw std::runtime_error("Undefined condition: check decompose"); //DEBUG message
+    // Perform some basic checking
+
+    assert(!(boundSize>4) && "Why? Not possible...");
+    assert(!(starting && !finalizeBuff && boundSize != 4) && "Must have 4 boundaries if this is the start and not the end");
+    assert(!(decomposeAll && !finalizeBuff) && "DecomposeAll only possible for the end!");
+    assert(!(!starting && boundSize < 3+!finalizeBuff) &&"Insufficient block for decomposition");
+    assert(!(!decomposeAll && finalizeBuff && boundSize==1)&& "Must decompose all if this is the end and only has one bound");
+
+    if(boundSize ==1){
+        assert((!starting || !finalizeBuff )&& "How else is this possible?");
+        decompose(linkage, snpLoc,
+                  0, snpLocSize,
+                  0, snpLocSize,
+                  snpList, regionList, sign, true, true);
+    }
+    else if(boundSize ==2){
+        assert((!starting || !finalizeBuff )&& "How else is this possible?");
+        size_t midEnd = (decomposeAll)? snpLocSize:boundary.back();
+        decompose(linkage, snpLoc,
+                  0, midEnd,
+                  0, midEnd,
+                  snpList, regionList, sign, true, true);
+    }
+    else if(boundSize==3){
+        assert(!(starting&&finalizeBuff) && "For this to happen, this must either be the starting or the end");
+        if(!decomposeAll){
+            assert(starting && finalizeBuff && "Must be the start and the end!");
+            decompose(linkage, snpLoc,
+                  0, boundary[2],
+                  0, boundary[2],
+                  snpList, regionList, sign, starting, finalizeBuff);
         }
         else{
-            // We will always ignore the last block
-            // So decompose everything ignore the last block
-            if(boundSize-1 < 3 && finalizeBuff){
-//                //Decompose everything except the last
-//                decompose(linkage, snpLoc, snpLoc.begin(), boundary.back(), snpLoc.begin(), boundary.back(), snpLoc.begin(), boundary.back(), snpList, regionList, sign, starting, finalizeBuff);
-                decompose(linkage, snpLoc,
-                      0, boundary.back(),  // Define the decomposition block
-                      0, boundary.back(),  // Define the heritability vector copy range
-                      0, boundary.back(),      // Define the mid band region of the variance matrix
-                      snpList, regionList, sign, starting, finalizeBuff);
-            }
-            else if(boundSize-1<3) throw std::runtime_error("Must have 4 boundaries if this is the start and not the end");
-            else if(boundSize==4){
-//                decompose(linkage, snpLoc, snpLoc.begin(), boundary.back(), snpLoc.begin(), boundary.back(), boundary[1], boundary[2], snpList, regionList, sign, starting, finalizeBuff);
-                decompose(linkage, snpLoc,
-                      0, boundary.back(),  // Define the decomposition block
-                      0, boundary.back(),  // Define the heritability vector copy range
-                      boundary[1], boundary[2],      // Define the mid band region of the variance matrix
-                      snpList, regionList, sign, starting, finalizeBuff);
-            }
-            else throw std::runtime_error("Undefined condition!");
+            assert(finalizeBuff && "Must be the end!");
+            decompose(linkage, snpLoc,
+                  0, snpLocSize,
+                  0, boundary[2],
+                  snpList, regionList, sign, starting, finalizeBuff);
         }
     }
-    else{
-        // In this case, we know we will at least have 3 blocks
-        if(boundSize < 3) throw std::runtime_error("For non-starting window(s), there must be at least 3 blocks");
-        if(decomposeAll && boundSize==3){
-//            //In this case, decompose everything
-//            decompose(linkage, snpLoc, snpLoc.begin(), snpLoc.end(), boundary[1], snpLoc.end(), boundary[1], snpLoc.end(), snpList, regionList, sign, starting, true);
+    else if(boundSize==4){
+        decompose(linkage, snpLoc,
+                  0, boundary.back(),
+                  boundary[1], boundary[2],
+                  snpList, regionList, sign, starting, finalizeBuff && !decomposeAll);
+        if(decomposeAll){
             decompose(linkage, snpLoc,
-                      0, snpLocSize, // Define the decomposition block
-                      boundary[1], snpLocSize,    // Define the heritability vector copy range
-                      boundary[1], snpLocSize, // Define the mid band region of the variance matrix
-                      snpList, regionList, sign, starting, true);
+                      boundary[1], snpLocSize,
+                      boundary[2], boundary.back(),
+                      snpList, regionList, sign, starting, finalizeBuff && decomposeAll);
         }
-        else if(boundSize ==3 && !decomposeAll) throw std::runtime_error("This is impossible for non-start region"); // for my debugging
-        else if(boundSize ==4){
-            // This is most common case, decompose everything except the last block, then continue
-//
-//            decompose(linkage, snpLoc, snpLoc.begin(), boundary.back(), boundary[1], boundary.back(), boundary[1], boundary[2], snpList, regionList, sign, starting, finalizeBuff && !decomposeAll);
-            decompose(linkage, snpLoc,
-                        0, boundary.back(),// Define the decomposition block
-                        boundary[1], boundary.back(),   // Define the heritability vector copy range
-                        boundary[1], boundary[2],        // Define the mid band region of the variance matrix
-                        snpList, regionList, sign, starting, finalizeBuff && !decomposeAll);
-            if(decomposeAll){
-                // Then we also decompose the last block
-//                decompose(linkage, snpLoc, boundary[1], snpLoc.end(), boundary[2], snpLoc.end(), boundary[2], boundary.back(), snpList, regionList, sign, starting, true);decompose(linkage, snpLoc,
-                                                                                                                                                                            decompose(linkage, snpLoc,
-                            boundary[1], snpLocSize,  // Define the decomposition block
-                            boundary[2], snpLocSize,  // Define the heritability vector copy range
-                            boundary[2], boundary.back(),
-                            snpList, regionList, sign, starting, true);
-            }
-        }
-
     }
-
 }

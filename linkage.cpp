@@ -11,6 +11,8 @@ void Linkage::print(){ std::cout << m_linkage << std::endl; }
 void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd){
     std::vector<size_t> perfectBuff;
     size_t horiEnd = snpLoc.size();
+
+
     for(size_t i = startIndex; i < verEnd; ++i){
         size_t nextStart = (i>horistart)? i:horistart;
         size_t j = nextStart;
@@ -64,15 +66,17 @@ void Linkage::construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t>
     int boundSize = boundary.size();
     size_t startBoundIndex = (boundSize-3>0)? boundary[boundSize-3]: boundary.front();
     size_t snpLocSize = snpLoc.size();
-    size_t numSnpRequired = snpLocSize - startBoundIndex;
+    int numSnpRequired = snpLocSize - startBoundIndex;
+    assert(numSnpRequired>0 && "Must have non-zero number of SNPs to work on");
     std::vector<std::thread> threadStore;
     if(numSnpRequired < m_thread){
         // We will use as much threads as possible
-        for(size_t i = startBoundIndex; i < snpLocSize; ++i)
+        for(size_t i = startBoundIndex; i < snpLocSize; ++i){
             threadStore.push_back(
                 std::thread(&Linkage::computeLd, this, std::cref(genotype), std::cref(snpLoc),
                 i, i+1, boundary.back(),  // Vertical start, vertical end, horizontal start
                 std::ref(snpList), std::cref(correction), std::ref(perfectLd)));
+        }
     }
     else{
         // We actually need to divide the job
@@ -210,8 +214,6 @@ void Linkage::decompose(size_t start, const arma::vec &fStat, arma::vec &heritRe
 
 void Linkage::decompose(size_t start, const arma::vec &zStat, const arma::vec &fStat, const arma::vec &nSample, arma::vec &heritResult, arma::mat &varResult){
     if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
-    std::cerr << "Decompose: " << std::endl;
-    std::cerr << m_linkage << std::endl;
     size_t endOfBlock = start+fStat.n_elem-1;
     arma::mat rInv=pinv((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ));
     heritResult = rInv * fStat;

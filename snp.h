@@ -82,7 +82,7 @@ class Snp
         // remove due to perfect LD (L)
         // remove due to MAF (F)
         // Need to write these in the manual
-        char m_status='r';
+        char m_status='R';
         /** Special members use for managing the perfect LD stuff **/
         std::shared_ptr<double> m_statistic; //Average of all Snps with perfect LD
         std::shared_ptr<double> m_heritability; //The master heritability

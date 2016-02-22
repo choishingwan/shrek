@@ -1,109 +1,156 @@
 #include "decomposition.h"
 
-//require major revision. There are BUGS here. So we need to make it robust to changes.
 
-std::mutex Decomposition::mtx;
-Decomposition::Decomposition(size_t thread, bool dir):m_thread(thread), m_dir(dir){}
+Decomposition::Decomposition(size_t thread):m_thread(thread){}
 
-void Decomposition::solve(const std::vector<size_t> &boundaries, const size_t index, const Linkage &linkage, const std::deque<size_t> &snpLoc, boost::ptr_vector<Snp> &snpList, const bool &chromosomeStart, const Eigen::MatrixXd &betaEstimate, const Eigen::MatrixXd &sqrtChi){
-    size_t sizeOfWindow = 0;
-    size_t copyStart = boundaries[index+1]; //Default we don't need the first part unless it was a new start
-    size_t copyEnd = copyStart; //This is the bound
-    if(index+3==boundaries.size()){
-        /** So this is the last block where we will do everything**/
-        /** The end is therefore linkage.size **/
-        sizeOfWindow =linkage.size()-boundaries[index];
-        copyEnd = linkage.size();
-    }
-    else{
-        sizeOfWindow = boundaries[index+3]-boundaries[index]+1; //It requires a size but both returns an index, thus +1
-        copyEnd = boundaries[index+2];
-    }
-    /** IMPORTANT: boundaries is exclusive for end **/
-    if(chromosomeStart && index ==0){
-        copyStart = boundaries[index]; //only when it is the first block and the start of chromosome/fragment
-    }
-    Eigen::MatrixXd heritability = Eigen::MatrixXd::Zero(sizeOfWindow, 1);
-    Eigen::MatrixXd effectiveNumber = Eigen::MatrixXd::Zero(sizeOfWindow, 1);
-    Eigen::VectorXd ldScore = Eigen::VectorXd::Zero(sizeOfWindow);
-    if(!m_dir) linkage.solve(boundaries[index], sizeOfWindow,betaEstimate, heritability,effectiveNumber,ldScore);
-    //Now that we have got the results, we need to write them to the SNP
-    for(size_t i = copyStart; i < copyEnd; ++i){
-        snpList.at(snpLoc[i]).setHeritability(heritability(i-boundaries[index],0));
-        snpList.at(snpLoc[i]).setEffectiveNumber(effectiveNumber(i-boundaries[index],0));
-        snpList.at(snpLoc[i]).setLDScore(ldScore(i-boundaries[index]));
-    }
+Decomposition::~Decomposition()
+{
+    //dtor
 }
 
-void Decomposition::run(const Linkage &linkage, const size_t &genotypeIndex, const size_t& remainedLD, const boost::ptr_vector<Interval> &blockInfo, std::deque<size_t> &ldLoc, const std::deque<size_t> &snpLoc, boost::ptr_vector<Snp> &snpList, const bool &chromosomeStart){
-    size_t startRange =  genotypeIndex;
-    size_t endRange=0;
-    size_t range = m_thread;
-    if(remainedLD==0)range +=2;
-    else{
-        //Something was left behind, and they must be 2 blocks before
-        startRange -= 2;//Two steps is only right if I have remove stuffs
-    }
 
-    size_t i = genotypeIndex;
-    bool firstEntry = true;
-    std::string currentChr = blockInfo[startRange].getChr();
-    for(; i< genotypeIndex+range && i < blockInfo.size(); ++i){
-        if(blockInfo[i].getChr().compare(currentChr)!=0) break;
-        else if(!firstEntry&&blockInfo[i].getStart() != blockInfo[endRange].getEnd()){
-            firstEntry=false;
-            break;
+void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size_t startDecompIter, size_t endDecompIter, size_t startVarIter, size_t endVarIter, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> &regionList, bool sign, bool start, bool ending){
+    size_t sizeOfMatrix = endDecompIter-startDecompIter;
+    size_t startCoordinate = startDecompIter;
+    arma::vec fStat = arma::vec(sizeOfMatrix, arma::fill::zeros);
+    arma::vec heritResult = arma::vec(sizeOfMatrix, arma::fill::zeros);
+    size_t regionSize = regionList.size();
+    std::cerr << "Size of matrix: " << sizeOfMatrix << std::endl;
+    if(sign){
+        arma::vec zStat = arma::vec(sizeOfMatrix, arma::fill::zeros);
+        arma::vec nSample = arma::vec(sizeOfMatrix, arma::fill::zeros);
+        arma::mat varResult = arma::mat(sizeOfMatrix,sizeOfMatrix,arma::fill::eye);
+        size_t i = 0;
+        for(size_t snpLocIndex = startDecompIter; snpLocIndex< endDecompIter; ++snpLocIndex){
+            double stat = snpList.at(snpLoc[snpLocIndex]).getStat();
+            int sampleSize = snpList.at(snpLoc[snpLocIndex]).getSampleSize();
+            zStat(i) = stat;
+            fStat(i) = (stat*stat-1.0)/((double)sampleSize-2.0+stat*stat); // This is the f-statistic
+            nSample(i) = (double)1/(double)sampleSize;
+            ++i;
         }
-        else{
-            endRange = i;
+        linkage.decompose(startCoordinate,zStat, fStat, nSample, heritResult, varResult);
+        //The top block of the variance
+        size_t horiCopyIndex = (start)? 0:endVarIter-startDecompIter;
+        size_t startBound =startVarIter-startDecompIter;
+        size_t endBound =endDecompIter-startDecompIter;
+        std::cerr << "Top block: " << 0 << " " << startBound << " "<< horiCopyIndex << " " << endBound << std::endl;
+        for(size_t i =0; i < startBound; ++i){ // i is the index on the matrix
+            snpList.at(snpLoc[startDecompIter+i]).setHeritability(heritResult(i)); // need to add back startDecompIter to get the correct index for snpLoc
+            for(size_t j = horiCopyIndex; j < endBound; ++j){ //  Again, j is the index on the matrix
+                 for(size_t k = 0; k < regionSize; ++k){ // Iterate through the region list
+                    if(snpList.at(snpLoc[startDecompIter+i]).flag(k) &&
+                       snpList.at(snpLoc[startDecompIter+j]).flag(k))
+                            regionList[k].addVariance(varResult(i,j));
+                }
+            }
         }
-    }
-    endRange++; //Now endRange is the index of last block + 1;
-
-    std::vector<std::thread> threadStore;
-    //Now every 3 blocks will be one window for decomposition
-    //Launch a group of threads
-    //Need start, end and mid bound
-    //Now get all the boundaries
-    std::vector<size_t> boundaries;
-    size_t lastIndex =0;
-    for(size_t i = startRange; i < endRange; ++i){
-        for(; lastIndex < ldLoc.size(); ++lastIndex){
-            if(ldLoc[lastIndex]==blockInfo[i].getStart()){
-                boundaries.push_back(lastIndex);
-                break;
+        // Now the mid block of the variance
+        std::cerr << "Mid block: " << startBound << " " << endVarIter-startDecompIter << " "<< 0 << " " << endBound << std::endl;
+        for(size_t i = startBound; i < endVarIter-startDecompIter; ++i){
+            snpList.at(snpLoc[startDecompIter+i]).setHeritability(heritResult(i));
+            for(size_t j = 0; j < endBound; ++j){
+                for(size_t k = 0; k < regionSize; ++k){ // Iterate through the region list
+                    if(snpList.at(snpLoc[startDecompIter+i]).flag(k) &&
+                       snpList.at(snpLoc[startDecompIter+j]).flag(k))
+                            regionList[k].addVariance(varResult(i,j));
+                }
+            }
+        }
+        // Now the final block of the variance
+        horiCopyIndex = (ending)? endBound: startBound;
+        std::cerr << "End block: " << endVarIter-startDecompIter << " " << endBound << " "<< 0 << " " << horiCopyIndex << std::endl;
+        for(size_t i = endVarIter-startDecompIter; i < endBound; ++i){
+            snpList.at(snpLoc[startDecompIter+i]).setHeritability(heritResult(i));
+            for(size_t j = 0; j < horiCopyIndex; ++j){
+                for(size_t k = 0; k < regionSize; ++k){
+                    if(snpList.at(snpLoc[startDecompIter+i]).flag(k) &&
+                           snpList.at(snpLoc[startDecompIter+j]).flag(k))
+                                regionList[k].addVariance(varResult(i,j));
+                }
             }
         }
     }
-    //So now the boundaries contains the beginning SNP location
-    //Don't bother with the end as we will definitely know about it
-    Eigen::MatrixXd betaEstimate = Eigen::MatrixXd::Zero(ldLoc.size(),1);
-    for(size_t i = 0; i < snpLoc.size(); ++i){
-        betaEstimate(i)  = snpList.at(snpLoc[i]).getBeta();
-    }
-    Eigen::MatrixXd sqrtChi = Eigen::MatrixXd::Zero(ldLoc.size(), 1);
-    if(m_dir){
-        for(size_t i = 0; i < snpLoc.size(); ++i){
-            sqrtChi(i) = sqrt(snpList.at(snpLoc[i]).getBeta())*snpList.at(snpLoc[i]).getDirection();
+    else{
+        arma::vec varResult = arma::vec(sizeOfMatrix, arma::fill::zeros);
+        size_t i = 0;
+        for(size_t snpLocIndex = startDecompIter; snpLocIndex< endDecompIter; ++snpLocIndex){
+            double stat = snpList.at(snpLoc[snpLocIndex]).getStat();
+            int sampleSize = snpList.at(snpLoc[snpLocIndex]).getSampleSize();
+            fStat(i) = (stat*stat-1.0)/((double)sampleSize-2.0+stat*stat); // This is the f-statistic
+            ++i;
+        }
+        linkage.decompose(startCoordinate,fStat,heritResult, varResult);
+        size_t startCopySnpLocIndex=(start)?startDecompIter : startVarIter;
+        size_t startCopyVectorIndex = startVarIter-startDecompIter;
+        std::cerr << "Full check: " << startCopyVectorIndex << " " << sizeOfMatrix << std::endl;
+        for(size_t j = startCopyVectorIndex; j < sizeOfMatrix; ++j){ // we don't care about the end in this case because they will be over wrote
+            snpList.at(snpLoc[startCopySnpLocIndex]).setHeritability(heritResult(j));
+            snpList.at(snpLoc[startCopySnpLocIndex]).setEffective(varResult(j));
+            startCopySnpLocIndex++;
         }
     }
-    //Now the boundaries should be representative of the location on the ld matrix
-    /** We need to consider situation where the chromosome only has two or one blocks **/
-    if(boundaries.size() -2 < 0){
-        //Very small chromosome
-        solve(boundaries, 0, linkage, snpLoc, snpList, chromosomeStart, betaEstimate, sqrtChi);
-    }
-    size_t threadRunCounter =0;
-    while(threadRunCounter < boundaries.size()-2){
-        while(threadStore.size() < m_thread && threadRunCounter < boundaries.size()-2){ //On purposely leave 1 thread out for the main
-            /** Thread counter is basically the index for the boundary vector **/
-            threadStore.push_back(std::thread(&Decomposition::solve, this, std::cref(boundaries), threadRunCounter, std::cref(linkage), std::cref(snpLoc), std::ref(snpList),chromosomeStart, std::cref(betaEstimate), std::cref(sqrtChi)));
-            threadRunCounter++;
-        }
+}
 
-        for (size_t j = 0; j < threadStore.size(); ++j) {
-            threadStore[j].join();
+
+void Decomposition::run(Linkage &linkage, std::deque<size_t> &snpLoc, std::deque<size_t> &boundary, boost::ptr_vector<Snp> &snpList, bool finalizeBuff, bool decomposeAll, bool starting, boost::ptr_vector<Region> &regionList){
+    // The proper decomposition process
+    bool sign = !(snpList.front().getSign()==0); // Check whether if sign is given
+    size_t boundSize = boundary.size();
+    size_t snpLocSize = snpLoc.size();
+    // Perform some basic checking
+
+    assert(!(boundSize>4) && "Why? Not possible...");
+    assert(!(starting && !finalizeBuff && boundSize != 4) && "Must have 4 boundaries if this is the start and not the end");
+    assert(!(decomposeAll && !finalizeBuff) && "DecomposeAll only possible for the end!");
+    assert(!(!starting && boundSize < 3+!finalizeBuff) &&"Insufficient block for decomposition");
+    assert(!(!decomposeAll && finalizeBuff && boundSize==1)&& "Must decompose all if this is the end and only has one bound");
+
+    if(boundSize ==1){
+        assert((!starting || !finalizeBuff )&& "How else is this possible?");
+        std::cerr << "Bound 1: " << 0 << ","<< snpLocSize << "," << 0 << "," << snpLocSize << std::endl;
+        decompose(linkage, snpLoc,
+                  0, snpLocSize,
+                  0, snpLocSize,
+                  snpList, regionList, sign, true, true);
+    }
+    else if(boundSize ==2){
+        assert((!starting || !finalizeBuff )&& "How else is this possible?");
+        size_t midEnd = (decomposeAll)? snpLocSize:boundary.back();
+        std::cerr << "Bound 2: " << 0 << ","<< midEnd << "," << 0 << "," << midEnd << std::endl;
+        decompose(linkage, snpLoc,
+                  0, midEnd,
+                  0, midEnd,
+                  snpList, regionList, sign, true, true);
+    }
+    else if(boundSize==3){
+        assert(!(starting&&finalizeBuff) && "For this to happen, this must either be the starting or the end");
+        if(!decomposeAll){
+            assert(starting && finalizeBuff && "Must be the start and the end!");
+            std::cerr << "Bound 3 : " << 0 << ","<< midEnd << "," << 0 << "," << midEnd << std::endl;    
+            decompose(linkage, snpLoc,
+                  0, boundary[2],
+                  0, boundary[2],
+                  snpList, regionList, sign, starting, finalizeBuff);
         }
-        threadStore.clear();
+        else{
+            assert(finalizeBuff && "Must be the end!");
+            decompose(linkage, snpLoc,
+                  0, snpLocSize,
+                  0, boundary[2],
+                  snpList, regionList, sign, starting, finalizeBuff);
+        }
+    }
+    else if(boundSize==4){
+        decompose(linkage, snpLoc,
+                  0, boundary.back(),
+                  boundary[1], boundary[2],
+                  snpList, regionList, sign, starting, finalizeBuff && !decomposeAll);
+        if(decomposeAll){
+            decompose(linkage, snpLoc,
+                      boundary[1], snpLocSize,
+                      boundary[2], boundary.back(),
+                      snpList, regionList, sign, starting, finalizeBuff && decomposeAll);
+        }
     }
 }
