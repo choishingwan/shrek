@@ -7,6 +7,7 @@
 #include <boost/ptr_container/ptr_list.hpp>
 #include <stdio.h>
 #include <fstream>
+#include <complex>
 #include <iostream>
 #include "genotypefilehandler.h"
 #include "genotype.h"

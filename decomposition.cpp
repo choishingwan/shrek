@@ -19,6 +19,7 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
         arma::vec zStat = arma::vec(sizeOfMatrix, arma::fill::zeros);
         arma::vec nSample = arma::vec(sizeOfMatrix, arma::fill::zeros);
         arma::mat varResult = arma::mat(sizeOfMatrix,sizeOfMatrix,arma::fill::eye);
+        arma::mat addVarResult = arma::mat(sizeOfMatrix,sizeOfMatrix,arma::fill::eye);
         size_t i = 0;
         for(size_t snpLocIndex = startDecompIter; snpLocIndex< endDecompIter; ++snpLocIndex){
             double stat = snpList.at(snpLoc[snpLocIndex]).getStat();
@@ -26,9 +27,11 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
             zStat(i) = stat;
             fStat(i) = (stat*stat-1.0)/((double)sampleSize-2.0+stat*stat); // This is the f-statistic
             nSample(i) = (double)1/(double)sampleSize;
+//            nSample(i) = (double)sampleSize;
             ++i;
         }
         linkage.decompose(startCoordinate,zStat, fStat, nSample, heritResult, varResult);
+//        linkage.decompose(startCoordinate,zStat, fStat, nSample, heritResult, varResult, addVarResult);
         // Update the heritability (we separate it because it is easier)
         size_t startCopySnpLocIndex=(start)?startDecompIter : startVarIter;
         size_t startCopyVectorIndex = (start)? 0:startVarIter-startDecompIter;
@@ -46,6 +49,7 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
                     if(snpList.at(snpLoc[startDecompIter+i]).flag(k) &&
                        snpList.at(snpLoc[startDecompIter+j]).flag(k))
                             regionList[k].addVariance(varResult(i,j));
+//                            regionList[k].addVariance(varResult(i,j), addVarResult(i,j));
                 }
             }
         }
@@ -56,6 +60,7 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
                     if(snpList.at(snpLoc[startDecompIter+i]).flag(k) &&
                        snpList.at(snpLoc[startDecompIter+j]).flag(k))
                             regionList[k].addVariance(varResult(i,j));
+//                            regionList[k].addVariance(varResult(i,j), addVarResult(i,j));
                 }
             }
         }
@@ -67,6 +72,7 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
                     if(snpList.at(snpLoc[startDecompIter+i]).flag(k) &&
                            snpList.at(snpLoc[startDecompIter+j]).flag(k))
                                 regionList[k].addVariance(varResult(i,j));
+//                                regionList[k].addVariance(varResult(i,j), addVarResult(i,j));
                 }
             }
         }

@@ -98,6 +98,11 @@ bool Command::processCode(int argc,char *argv[]){
     if(argc==2){
         if(mode.compare("quant")==0) qtUsage();
         else if(mode.compare("binary")==0) btUsage();
+        else{
+            //Incorrect mode
+            fprintf(stderr, "Undefined mode %s\n\n", mode.c_str());
+            usage();
+        }
         return false;
     }
     if(mode.compare("quant")==0) m_qt=true;

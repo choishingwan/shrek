@@ -78,6 +78,13 @@ bool Snp::concordant(const std::string chr, const size_t loc, const std::string 
     }
     return false;
 }
+
+//This make sure we will always store the z-statistic in m_statistic, not the chisq
+void Snp::adjustSummaryStatistic(){
+    (*m_statistic) = sqrt(fabs(*m_statistic));
+    if(m_sign!=0) (*m_statistic) = m_sign*(*m_statistic);
+}
+
 void Snp::computeSummaryStatistc(){
     double beta = 0.0;
     if((*m_statistic) < 1.0){ //Direct transform p-value of 1 to summary statistics of 0
@@ -90,6 +97,7 @@ void Snp::computeSummaryStatistc(){
     if(m_nSample != 0) (*m_statistic) = fabs(beta); //Because we want to keep the statistic as the summary stat instead of p-value
     else (*m_statistic) = sqrt(fabs(beta)); //Because we want to keep the statistic as the summary stat instead of p-value
     if(m_sign!=0) (*m_statistic) = m_sign*(*m_statistic); // Give the value a sign if it is provided
+
 }
 
 Snp::~Snp()
@@ -218,7 +226,10 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
                         if(statistic == 0.0 && isP ) nOverSig++; //This is not a safe comparison as double == is always a problem
                         else{
                             snpList.push_back(new Snp(chr,rsId, bp, sizeOfSample, sizeOfCase, sizeOfControl, refAllele, altAllele, statistic, imputeScore, signOfStat));
+
                             if(isP) snpList.back().computeSummaryStatistc(); //Otherwise, we have already got the required summary statistics
+                            else if(bt) snpList.back().adjustSummaryStatistic(); // need to process the summarystatistic if it is binary case
+
                             duplication[rsId] = true;
                         }
                     }

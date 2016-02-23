@@ -24,8 +24,10 @@ class Region
         size_t getStart(size_t i) const {return m_intervalList.at(i).getStart();};
         size_t getEnd(size_t i) const {return m_intervalList.at(i).getEnd();};
         double getVariance() const{return m_variance;};
+        double getVariance(double i) const{return i*m_variance+i*i*m_addVar;};
         std::string getName() const{return m_name;};
         void addVariance(double i){m_variance+=i;};
+        void addVariance(double i, double j){m_variance+=i; m_addVar+=j;};
         virtual ~Region();
         // The aim of this function is to generate the required region list, each region item
         // should contain its corresponding intervals
@@ -35,6 +37,7 @@ class Region
         boost::ptr_vector<Interval> m_intervalList;
         std::string m_name;
         double m_variance=0.0;
+        double m_addVar=0.0;
         //double m_varianceBuff=0.0;
 };
 

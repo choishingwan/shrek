@@ -9,6 +9,7 @@
 #include <vector>
 #include <map> //This is to check for duplicated columns
 #include <stdio.h>
+#include <iostream>
 #include "usefulTools.h"
 
 class Command

@@ -179,7 +179,7 @@ void SnpEstimation::result(const boost::ptr_vector<Snp> &snpList, const boost::p
     for(size_t i = 0; i < regionList.size(); ++i){
         // add stuff
         heritability.push_back(0.0);
-        variance.push_back(regionList[i].getVariance());
+//        variance.push_back(regionList[i].getVariance());
         effective.push_back(0.0);
     }
     std::ofstream fullOutput;
@@ -221,7 +221,10 @@ void SnpEstimation::result(const boost::ptr_vector<Snp> &snpList, const boost::p
     double adjustment = adjust/(double)count; // we use the average adjustment value here
     if(!m_bt) adjustment = m_extreme;
     double averageSampleSize = sampleSize/(double)count;
-//    std::cerr << "Adjustment is: " << adjustment << std::endl;
+    for(size_t i = 0; i < regionList.size(); ++i)
+//        variance.push_back(regionList[i].getVariance((1.0-sqrt(std::complex<double>(adjustment*heritability[i])).real())));
+        variance.push_back(regionList[i].getVariance());
+
     if(!m_output.empty()) requireFullOut =true;
     std::ofstream sumOut;
     if(requireFullOut){
@@ -234,6 +237,7 @@ void SnpEstimation::result(const boost::ptr_vector<Snp> &snpList, const boost::p
             requireFullOut=false;
         }
     }
+    // We separate it, because it is possible for the previous if to change the requireFullOut flag
     if(!requireFullOut){
         // Only output to the stdout
         std::cout << "Region\tHeritability\tVariance" << std::endl;

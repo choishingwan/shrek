@@ -281,9 +281,28 @@
 	\section{February 19,2016}
 	The use of List is very smart in a way that it preserves the iterator, however, using the profiling, it was found that the List operations are taking up most time. 
 	Therefore, I will now have to change all the List usage back to deque, hopefully make things a bit faster
+	
+	\section{February 22, 2016}
+	We have finished some basic debugging in the past few days.
+	The heritability estimation now work as planned.
+	However, the variance is still rather problematic.
+	The original equation:
+	\begin{equation}
+	\mathrm{Var}(h^2)=\boldsymbol{R_{sq}}^{-1}\frac{4\boldsymbol{R}\circ\boldsymbol{zz}^t}{n^2}\boldsymbol{R_{sq}}^{-1}
+	\end{equation}
+	Seems to return negative results. 
+	We need to keep working on it.
+	
+	\begin{align}
+	\mathrm{Var}(H) = \boldsymbol{1^tR_{sq}^{-1}}\frac{4\boldsymbol{R}\circ\boldsymbol{\mu\mu^t}+2\boldsymbol{R_{sq}}}{n^2}\boldsymbol{R_{sq}^{-1}1}
+	\end{align}
+	\section{February 23, 2016}
+	The main problem with our simulation is the speed required. 
+	From what we saw, the main bottle neck for the simulation is hapgen.
+	So we might have to figure out a way to make it faster.
 	\newpage
 	\section{Useful Resources}
-	\begin{table}[H]
+	\begin{table}[t]
 		\centering
 		\begin{tabular}{rr}
 			\toprule

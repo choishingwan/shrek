@@ -235,6 +235,8 @@ void Linkage::decompose(size_t start, const arma::vec &zStat, const arma::vec &f
 
     // Now calculate the varaince, this is for the complicated variance
     varResult = rInv*arma::diagmat(nSample)*(4*m_linkageSqrt.submat(start,start,endOfBlock,endOfBlock)%(zStat*zStat.t())-2*m_linkage.submat(start,start,endOfBlock, endOfBlock))*arma::diagmat(nSample)*rInv;
+
+
     //This part is here to safe guard any stupid mistakes I made
     if(isnan(arma::accu(varResult))){
         std::cout << varResult << std::endl;
@@ -253,5 +255,35 @@ void Linkage::decompose(size_t start, const arma::vec &zStat, const arma::vec &f
     }
 }
 
+void Linkage::decompose(size_t start, const arma::vec &zStat, const arma::vec &fStat, const arma::vec &nSample, arma::vec &heritResult, arma::mat &varResult, arma::mat &addVarResult){
+    if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
+    size_t endOfBlock = start+fStat.n_elem-1;
+    arma::mat rInv=pinv((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ));
+    heritResult = rInv * fStat;
+    arma::mat error = m_linkage.submat( start, start, endOfBlock, endOfBlock )*heritResult - fStat;
+ 	double oriNorm = norm(fStat);
+    double relative_error = norm(error) / oriNorm;
+    double prev_error = relative_error+1;
+    arma::mat update;
+    int iterCount = 0, maxIter = 100;
+    while(relative_error < prev_error && iterCount < maxIter){
+        prev_error = relative_error;
+        update=rInv*(-error);
+        error= m_linkage.submat( start, start, endOfBlock, endOfBlock )*(heritResult+update) - fStat;
+        relative_error = norm(error) / oriNorm;
+        if(relative_error < 1e-300) relative_error = 0; // 1e-300 is more than enough...
+        heritResult = heritResult+update;
+        iterCount++; // This is to avoid infinite looping
+    }
+    arma::vec minusF = 1-fStat;
+    for(size_t i = 0; i < fStat.n_elem; ++i){
+        minusF(i) /= nSample(i)-2.0+zStat(i)*zStat(i);
+    }
+    // Now calculate the varaince, this is for the complicated variance
+    varResult = rInv*arma::diagmat(minusF)*(4.0*m_linkageSqrt.submat(start,start,endOfBlock,endOfBlock)%(zStat*zStat.t()))*arma::diagmat(minusF)*rInv;
+//    varResult = rInv*arma::diagmat(nSample)*(4.0*m_linkageSqrt.submat(start,start,endOfBlock,endOfBlock)%(zStat*zStat.t()))*arma::diagmat(nSample)*rInv;
+    addVarResult = rInv*arma::diagmat(minusF)*(-2.0*m_linkage.submat(start,start,endOfBlock, endOfBlock))*arma::diagmat(minusF)*rInv;
+//    addVarResult = rInv*arma::diagmat(nSample)*(-2.0*m_linkage.submat(start,start,endOfBlock, endOfBlock))*arma::diagmat(nSample)*rInv;
+}
 
 

@@ -92,6 +92,7 @@ class Snp
 
         static bool sortSnp(const Snp& i, const Snp& j);
         void computeSummaryStatistc();
+        void adjustSummaryStatistic();
         void flip(); // Flip the sign of the SNP, and also the reference and alternative
 
 };
