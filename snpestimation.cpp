@@ -36,8 +36,8 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
     // Only add it in when everything is completed
     /** Progress Bar related code here **/
     double progress = 0.0;
-    size_t barWidth = 80;
-    size_t doneItems = 80;
+    size_t barWidth = 60;
+    size_t doneItems = 0;
     size_t totalSnp = snpList.size();
 
     // This is use for indicating whether if the whole genome is read
@@ -139,7 +139,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
         if(finalizeBuff) decompose.run(linkage, snpLoc, boundary, snpList, finalizeBuff, !retainLastBlock, starting, regionList);
         else decompose.run(linkage, snpLoc, boundary, snpList, false, false, starting, regionList);
 //        fprintf(stderr, "Finish decompose\n");
-        doneItems+= snpLoc.at(boundary.back());
+        doneItems= snpLoc.at(boundary.back());
 
         if(retainLastBlock){
             // Then we must remove everything except the last block
