@@ -165,7 +165,6 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
     //We have got all the required information, now read the file and start processing
     size_t nSkipped = 0, nDuplicate=0, nInvalid=0, nFilter=0, nOverSig = 0;
     std::map<std::string, bool> duplication;
-
     while(getline(pValue, line)){
         line = usefulTools::trim(line);
         if(!line.empty()){ //Only process lines with information
@@ -244,7 +243,6 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
     }
     pValue.close();
     snpList.sort(Snp::sortSnp);
-
     std::cerr << std::endl;
     fprintf(stderr, "\nP-Value File Information:\n");
     fprintf(stderr, "==================================\n");

@@ -1,0 +1,41 @@
+\contentsline {section}{\numberline {1}Assumption in implementation}{4}{section.1}
+\contentsline {section}{\numberline {2}To Do}{4}{section.2}
+\contentsline {section}{\numberline {3}January 25, 2016}{5}{section.3}
+\contentsline {subsection}{\numberline {3.1}Finished Today}{5}{subsection.3.1}
+\contentsline {section}{\numberline {4}January 26, 2016}{6}{section.4}
+\contentsline {subsection}{\numberline {4.1}Finished Today}{6}{subsection.4.1}
+\contentsline {section}{\numberline {5}January 27, 2016}{6}{section.5}
+\contentsline {subsection}{\numberline {5.1}Aim}{6}{subsection.5.1}
+\contentsline {subsection}{\numberline {5.2}Finished Today}{6}{subsection.5.2}
+\contentsline {section}{\numberline {6}January 28, 2016}{7}{section.6}
+\contentsline {subsection}{\numberline {6.1}Finished Today}{7}{subsection.6.1}
+\contentsline {section}{\numberline {7}January 29, 2016}{7}{section.7}
+\contentsline {section}{\numberline {8}February 1, 2016}{8}{section.8}
+\contentsline {section}{\numberline {9}February 2, 2016}{8}{section.9}
+\contentsline {subsection}{\numberline {9.1}Finished Today}{8}{subsection.9.1}
+\contentsline {section}{\numberline {10}February 3, 2016}{8}{section.10}
+\contentsline {subsection}{\numberline {10.1}Finished Today}{8}{subsection.10.1}
+\contentsline {subsection}{\numberline {10.2}Problem identified today}{9}{subsection.10.2}
+\contentsline {section}{\numberline {11}February 4, 2016}{9}{section.11}
+\contentsline {section}{\numberline {12}February 5, 2016}{9}{section.12}
+\contentsline {subsection}{\numberline {12.1}Finished Today}{9}{subsection.12.1}
+\contentsline {subsection}{\numberline {12.2}Special Note}{10}{subsection.12.2}
+\contentsline {section}{\numberline {13}February 11, 2016}{10}{section.13}
+\contentsline {subsection}{\numberline {13.1}Finished Today}{10}{subsection.13.1}
+\contentsline {section}{\numberline {14}February 12, 2016}{10}{section.14}
+\contentsline {subsection}{\numberline {14.1}Finished Today}{11}{subsection.14.1}
+\contentsline {subsection}{\numberline {14.2}Note}{11}{subsection.14.2}
+\contentsline {section}{\numberline {15}February 15, 2016}{11}{section.15}
+\contentsline {section}{\numberline {16}February 16, 2016}{12}{section.16}
+\contentsline {subsection}{\numberline {16.1}Finished Today}{12}{subsection.16.1}
+\contentsline {section}{\numberline {17}February 17, 2016}{12}{section.17}
+\contentsline {subsection}{\numberline {17.1}Today's work}{12}{subsection.17.1}
+\contentsline {section}{\numberline {18}February 18, 2016}{12}{section.18}
+\contentsline {subsection}{\numberline {18.1}Note}{13}{subsection.18.1}
+\contentsline {subsection}{\numberline {18.2}Finished Today}{13}{subsection.18.2}
+\contentsline {section}{\numberline {19}February 19,2016}{13}{section.19}
+\contentsline {section}{\numberline {20}February 22, 2016}{13}{section.20}
+\contentsline {section}{\numberline {21}February 23, 2016}{14}{section.21}
+\contentsline {section}{\numberline {22}February 24, 2016}{14}{section.22}
+\contentsline {section}{\numberline {23}February 25, 2016}{14}{section.23}
+\contentsline {section}{\numberline {24}Useful Resources}{15}{section.24}

@@ -215,6 +215,7 @@ void Linkage::decompose(size_t start, const arma::vec &fStat, arma::vec &heritRe
 void Linkage::decompose(size_t start, const arma::vec &zStat, const arma::vec &fStat, const arma::vec &nSample, arma::vec &heritResult, arma::mat &varResult){
     if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
     size_t endOfBlock = start+fStat.n_elem-1;
+//    std::cout << "Rank: " << rank((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock )) << "\t" << endOfBlock-start << "\t" << cond((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock )) << std::endl;
     arma::mat rInv=pinv((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ));
     heritResult = rInv * fStat;
     arma::mat error = m_linkage.submat( start, start, endOfBlock, endOfBlock )*heritResult - fStat;

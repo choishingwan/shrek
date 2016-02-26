@@ -570,6 +570,17 @@ bool Command::processCode(int argc,char *argv[]){
 
     }
 
+    //Check if the imputation filtering is ok
+    if(m_imputeInfoIndex!=0){
+        if(m_infoThreshold==1.0){
+            fprintf(stderr, "All SNPs will be filtered as maximum INFO score can only be 1\n");
+            error=true;
+        }
+        else if(m_infoThreshold==0.0){
+            fprintf(stderr, "INFO threshold not provided (-I), will not filter by INFO\n");
+            m_imputeInfoIndex=0;
+        }
+    }
     // If there is no error then everything is ok
     if(error){
         throw "Problem with parameter input(s)";

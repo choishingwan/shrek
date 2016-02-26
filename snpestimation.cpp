@@ -35,6 +35,11 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
     // Ignore the progress bar just yet
     // Only add it in when everything is completed
     /** Progress Bar related code here **/
+    double progress = 0.0;
+    size_t barWidth = 80;
+    size_t doneItems = 80;
+    size_t totalSnp = snpList.size();
+
     // This is use for indicating whether if the whole genome is read
     bool completed = false;
     std::deque<size_t> boundary;
@@ -42,6 +47,18 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
     size_t checking = 0; //DEBUG
     while(!completed){
         // Keep doing this until the whole genome is read
+        progress =(double)(doneItems)/(double)totalSnp;
+        //std::cerr << doneItems << std::endl;
+        fprintf(stderr,"[");
+        size_t pos=barWidth*progress;
+        for(size_t i = 0; i < barWidth;++i){
+            if(i < pos) fprintf(stderr,"=");
+            else if(i==pos) fprintf(stderr,">");
+            else fprintf(stderr," ");
+        }
+        fprintf(stderr, "]%u%\r", int(progress*100.0));
+        fflush(stderr);
+
         bool retainLastBlock=false; // only used when the finalizeBuff is true, this indicate whether if the last block is coming from somewhere new
         while(boundary.size() < 4 && !completed && !finalizeBuff){
             // We want to get until the end or the end of the current region
@@ -122,6 +139,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
         if(finalizeBuff) decompose.run(linkage, snpLoc, boundary, snpList, finalizeBuff, !retainLastBlock, starting, regionList);
         else decompose.run(linkage, snpLoc, boundary, snpList, false, false, starting, regionList);
 //        fprintf(stderr, "Finish decompose\n");
+        doneItems+= snpLoc.at(boundary.back());
 
         if(retainLastBlock){
             // Then we must remove everything except the last block
@@ -161,6 +179,20 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
         for(size_t i = 0; i < boundary.size(); ++i) boundary[i]-= updateNum;
 //        linkage.print();
     }
+    progress =1;
+        //std::cerr << doneItems << std::endl;
+
+    fprintf(stderr,"[");
+    size_t pos=barWidth*progress;
+    for(size_t i = 0; i < barWidth;++i){
+        if(i < pos) fprintf(stderr,"=");
+        else if(i==pos) fprintf(stderr,">");
+        else fprintf(stderr," ");
+    }
+    fprintf(stderr, "]%u%\r", int(progress*100.0));
+    fflush(stderr);
+    fprintf(stderr, "\n");
+
     fprintf(stderr, "Estimated the SNP Heritability, now proceed to output\n");
 }
 
@@ -179,7 +211,7 @@ void SnpEstimation::result(const boost::ptr_vector<Snp> &snpList, const boost::p
     for(size_t i = 0; i < regionList.size(); ++i){
         // add stuff
         heritability.push_back(0.0);
-//        variance.push_back(regionList[i].getVariance());
+        variance.push_back(regionList[i].getVariance());
         effective.push_back(0.0);
     }
     std::ofstream fullOutput;
@@ -221,9 +253,9 @@ void SnpEstimation::result(const boost::ptr_vector<Snp> &snpList, const boost::p
     double adjustment = adjust/(double)count; // we use the average adjustment value here
     if(!m_bt) adjustment = m_extreme;
     double averageSampleSize = sampleSize/(double)count;
-    for(size_t i = 0; i < regionList.size(); ++i)
+//    for(size_t i = 0; i < regionList.size(); ++i)
 //        variance.push_back(regionList[i].getVariance((1.0-sqrt(std::complex<double>(adjustment*heritability[i])).real())));
-        variance.push_back(regionList[i].getVariance());
+//        variance.push_back(regionList[i].getVariance());
 
     if(!m_output.empty()) requireFullOut =true;
     std::ofstream sumOut;

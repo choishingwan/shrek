@@ -112,7 +112,8 @@ void Decomposition::run(Linkage &linkage, std::deque<size_t> &snpLoc, std::deque
     assert(!(!decomposeAll && finalizeBuff && boundSize==1)&& "Must decompose all if this is the end and only has one bound");
 
     if(boundSize ==1){
-        assert((!starting || !finalizeBuff )&& "How else is this possible?");
+        // Check here
+        assert((starting || finalizeBuff) && "How else is this possible?");
         decompose(linkage, snpLoc,
                   0, snpLocSize,
                   0, snpLocSize,
@@ -127,7 +128,7 @@ void Decomposition::run(Linkage &linkage, std::deque<size_t> &snpLoc, std::deque
                   snpList, regionList, sign, true, true);
     }
     else if(boundSize==3){
-        assert(!(starting&&finalizeBuff) && "For this to happen, this must either be the starting or the end");
+        assert((starting||finalizeBuff) && "For this to happen, this must either be the starting or the end");
         if(!decomposeAll){
             assert(starting && finalizeBuff && "Must be the start and the end!");
             decompose(linkage, snpLoc,
