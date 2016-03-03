@@ -4,6 +4,35 @@
 \usepackage[hidelinks,colorlinks=false,urlcolor=blue]{hyperref}
 \usepackage{booktabs}
 \usepackage[section]{placeins}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{cmap}
+\usepackage[framemethod=TikZ]{mdframed}
+\usepackage{caption}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+	backgroundcolor=\color{backcolour},   
+	commentstyle=\color{codegreen},
+	keywordstyle=\color{magenta},
+	numberstyle=\tiny\color{codegray},
+	stringstyle=\color{codepurple},
+	basicstyle=\footnotesize,
+	breakatwhitespace=false,         
+	breaklines=true,                 
+	captionpos=b,                    
+	keepspaces=true,                   
+	showspaces=false,                
+	showstringspaces=false,
+	showtabs=false,                  
+	tabsize=2
+}
+
+\lstset{style=mystyle}
 
 \title{Snp HeRitability Estimation Kit (SHREK) Development Log}
 \date{\today}
@@ -311,6 +340,211 @@
 	Still trying to figure out the problem of the variance estimation. 
 	One thing we found is that our current simulation method actually violates the assumption of fixed X in Tim's formular of phenotype simulation.
 	Therefore, we now try to use a large reference panel (e.g. 10000+) samples to calculate the $\mathrm{Var}(X\beta)$ and use this for the calculation of phenotype.
+	\section{February 29, 2016}
+	When working on the ASD samples, we found a segmentation fault, now dealing with it.
+	
+	We have fixed the segmentation fault, it was actually an old bug that was corrected before in the other function.
+	
+	We found that the samples simulated from HapGen are actually highly related, therefore we need to figure out a method to properly perform the simulation.
+	Lesson learn: \emph{NEVER ASSUME ANYTHING WITHOUT FIRST TESTING IT!}
+	
+	So I am now checking on the relationship matrix of the samples, it seems like most of the samples are related. 
+	Therefore we need to figure out a way to quickly remove all the related samples and retain the maximum number of independent samples.
+	An idea is the mean distance with others.
+	
+	\section{March 1, 2016}
+	Now trying to use genomeSimla. 
+	The installation isn't easy as we will first need to install the boost library and libpng.
+	Both can easily be done as long as we set the prefix when configure.
+	However, when compiling the genomeSimla, we need to first perform configure (specifying the location of boost just in case), then most importantly, go into:
+	/src/pngwriter and /src/genomesim and change their make file such that all instance of libpng are pointing to the libpng we installed. 
+	Also, make sure to change the -lpng12 flag into the correct version of libpng we are using (referring to the libpng include directory), for example, in my current build, I've used -lpng16. 
+	Then we can make and make install successfully.
+	
+	Ok, I have absolutely no idea what genomeSimla is doing, their results ain't comprehensible either... 
+	Just a bunch of binary files and htmls...
+	
+	On the other hand, when dealing with the ASD sample, we found yet another segmentation fault.
+	Also, the final output for some reason only contain things on chromosome 6. 
+	Currently debugging the programme.
+	
+	We have now decided that we should use the WTCCC samples for the simulation.
+	By performing QC (\-\-geno 0.01 \-\-mind 0.95 \-\-hwe 0.0000001 \-\-genome \-\-min 0.125), we have 15929 samples left.
+
+	\section{March 2, 2016}
+	We need to perform detail QC on the samples. 
+	First, we need to check the individual batch of samples (by different WTCCC diseases).
+	The following QCs are required:
+	\begin{enumerate}
+		\item Genotyping rate
+		\item Sample Genotyping rate
+		\item MAF filtering
+		\item Heterozygousity check
+		\item PCA for population stratification
+		\item Hardy Weinberg
+	\end{enumerate}
+	
+	The script of QC are as followed (hardcoded though...)
+	
+	\lstset{tabsize=4,breaklines=true}
+	
+	\begin{lstlisting}[language=bash]
+for i in `ls ~/workspace/inheritance_estimate/rawData/*.fam | grep -v CC`;
+do
+	arrIN=(${i//\// });
+	fileName=(${arrIN[5]});
+	disease=(${fileName//./ });
+	diseaseName=${disease[0]};
+	echo "Working on $diseaseName";
+	#Prune samples (Better for heterozygousity check and PCA)
+	#We also perform the hwe with 1e-5 as the threshold as suggested by Clara
+	plink --bfile WTCCC17000 --geno 0.01 --mind 0.95 --maf 0.05 --make-bed --out WTCCC17000.temp.$diseaseName --threads 10 --indep 50 5 2 --keep $i >/dev/null 2>&1; 
+	#Extract the Pruned SNPs and also calculate the heterozygousity rate
+	plink --bfile WTCCC17000.temp.$diseaseName --extract WTCCC17000.temp.$diseaseName.prune.in --ibc --out WTCCC17000.temp.$diseaseName --threads 10 >/dev/null 2>&1;
+	#Identify problematic samples (Heterozygousity check)
+	Rscript heteroCheck.R WTCCC17000.temp.$diseaseName.ibc WTCCC17000.temp.$diseaseName.remove >/dev/null 2>&1;
+	temp=$(wc -l WTCCC17000.temp.$diseaseName.remove | cut -f 1 -d " ");
+	echo "${temp[0]} samples failed heterozygousity test";
+	#Now perform the filtering and find all related samples
+	plink --bfile WTCCC17000.temp.$diseaseName --remove WTCCC17000.temp.$diseaseName.remove --extract WTCCC17000.temp.$diseaseName.prune.in --genome --min 0.125 --threads 10 --out WTCCC17000.temp.$diseaseName>/dev/null 2>&1;
+	awk 'NR!=1 {print $1" "$2; print $3" "$4}' WTCCC17000.temp.$diseaseName.genome | sort | uniq >> WTCCC17000.temp.$diseaseName.remove;
+	temp=$(wc -l WTCCC17000.temp.$diseaseName.remove | cut -f 1 -d " ");
+	echo "Total of ${temp[0]} samples removed after considering the relationship";
+	#Now try performing PCA with all related samples removed
+	plink --bfile WTCCC17000.temp.$diseaseName --remove WTCCC17000.temp.$diseaseName.remove --extract WTCCC17000.temp.$diseaseName.prune.in --genome --min 0.125 --threads 10 --pca --out WTCCC17000.temp.$diseaseName >/dev/null 2>&1;
+	Rscript plotPCA.R WTCCC17000.temp.$diseaseName.eigenvec WTCCC17000.temp.$diseaseName >/dev/null 2>&1;
+	temp=$(wc -l WTCCC17000.temp.$diseaseName.pc | cut -f 1 -d " ");
+	echo "${temp[0]} samples seems to be outlier considering PCA plot";
+	#Now we will try to also remove the samples from the PCA plot
+	#It is important to note that we should always check the PCA plot beforehand
+	#Cannot be too automatic with this
+	temp=$(wc -l WTCCC17000.temp.$diseaseName.pc | cut -f 1 -d " ");
+	NUMOFLINES=${temp[0]};
+	while [ $NUMOFLINES -gt 0 ]
+	do
+	cat WTCCC17000.temp.$diseaseName.remove WTCCC17000.temp.$diseaseName.pc > WTCCC17000.temp.$diseaseName.remove.temp;
+	mv WTCCC17000.temp.$diseaseName.remove.temp WTCCC17000.temp.$diseaseName.remove;
+	rm WTCCC17000.temp.$diseaseName.pc;
+	plink --bfile WTCCC17000.temp.$diseaseName --remove WTCCC17000.temp.$diseaseName.remove --extract WTCCC17000.temp.$diseaseName.prune.in --genome --min 0.125 --threads 10 --pca --out WTCCC17000.temp.$diseaseName>/dev/null 2>&1;
+	Rscript plotPCA.R WTCCC17000.temp.$diseaseName.eigenvec WTCCC17000.temp.$diseaseName>/dev/null 2>&1;
+	temp=$(wc -l WTCCC17000.temp.$diseaseName.pc | cut -f 1 -d " ");
+	NUMOFLINES=${temp[0]};
+	echo "$NUMOFLINES samples seems to be outlier considering PCA plot";
+	done		
+	#Finally, we want to re-examine the hardy weinberg equilibrium
+	plink --bfile WTCCC17000.temp.$diseaseName --remove WTCCC17000.temp.$diseaseName.remove --geno 0.01 --mind 0.95 --maf 0.05 --hardy --out WTCCC17000.temp.$diseaseName.filter --make-bed >/dev/null 2>&1;
+	wc -l WTCCC17000.temp.$diseaseName.filter.fam
+done
+	\end{lstlisting}
+
+	After running all these scripts, we will now have the PCA plot for each samples. 
+	We should also have the information as to what samples should we exclude from the final data set (stored in WTCCC17000.temp.\$diseaseName.remove).
+	
+	\begin{lstlisting}[language=bash]
+	count=1;
+for i in `ls *.temp*.fam`;
+do
+	disease=(${i//./ });
+	diseaseName=${disease[2]};
+	if [ $count -eq 1 ] 
+	then
+	cat WTCCC17000.temp.$diseaseName.bim | cut -f 1,2 -d " " > WTCCC17000.temp.retainSnp;
+	cat WTCCC17000.temp.$diseaseName.filter.fam > WTCCC17000.temp.retainSample;
+	else
+	cat WTCCC17000.temp.$diseaseName.bim | cut -f 1,2 -d " " >> WTCCC17000.temp.retainSnp;
+	sort WTCCC17000.temp.retainSnp | uniq -d > temp;
+	mv temp WTCCC17000.temp.retainSnp;
+	cat WTCCC17000.temp.$diseaseName.filter.fam>> WTCCC17000.temp.retainSample;
+	fi
+	count=$((count+1));
+done
+	plink --bfile WTCCC17000 --geno 0.01 --mind 0.95 --maf 0.05 --hwe 1e-5 --keep WTCCC17000.temp.retainSample --extract WTCCC17000.temp.retainSnp --make-bed --out WTCCC17000.filter --indep 50 5 2 --threads 10
+	#We also want to lable the sample by batch so that we can see if there is any batch problem
+	ls *temp*.fam | awk -F "." '{print "awk \x27{print \""$3" \"\$2}\x27 "$0}' | bash |  awk 'NR==FNR{a[$2]=$1} NR!=FNR{print a[$2]" "$2" "$3" "$4" "$5" "$6}' - WTCCC17000.filter.fam > temp
+	mv temp WTCCC17000.filter.fam
+	rm *temp*
+	#To avoid cross batch relatedness, we will again check the relationship between the samlpes
+	plink --bfile WTCCC17000.filter --extract WTCCC17000.filter.prune.in --genome --min 0.125 --out WTCCC17000.filter --threads 10 
+	awk 'NR!=1 {print $1" "$2; print $3" "$4}' WTCCC17000.filter.genome | sort | uniq > WTCCC17000.filter.remove;
+	# Remove related sample and get the final result
+	plink --bfile WTCCC17000.filter --remove WTCCC17000.filter.remove --threads 10 --geno 0.01 --mind 0.95 --maf 0.05 --hwe 1e-5 --make-bed --out WTCCC17000.final
+	# We then generate the PCA to check that everything is indeed ok
+	plink --bfile WTCCC17000.final --pca --extract WTCCC17000.filter.prune.in --out WTCCC17000.final --threads 10
+	Rscript plotPCA.R WTCCC17000.final.eigenvec
+	cp WTCCC17000.final.fam WTCCC17000.final.bk.fam
+	\end{lstlisting}
+
+	
+	And the R script for heterozygousity check is
+	\begin{lstlisting}[language=R]
+	args = commandArgs(trailingOnly=TRUE)
+	data=read.table(args[1])
+	meanData=mean(data$Fhat2);
+	sdData = sd(data$Fhat2);
+	write.table(data[data$Fhat2 > (meanData+3*sdData), | data$Fhat2 <(meanData-3*sdData) ], args[2], quote=F, row.names=F, col.names=F)
+	\end{lstlisting}
+	
+	This is the plotPCA Rscript:
+	\begin{lstlisting}[language=R]
+	args = commandArgs(trailingOnly=TRUE)
+	require(ggplot2)
+	data=read.table(args[1])
+	png(paste(args[2],".png", sep=""))
+	if(length(unique(data$V1))<5){
+	ggplot(data, aes(x=V3, y=V4, color=V1))+geom_point()+theme(plot.title = element_text(lineheight=.8, face="bold",size=24),axis.text=element_text(size=16),axis.title=element_text(size=16,face="bold"))+labs(x="PC1",y="PC2")+ggtitle(args[2]);
+	}else{
+	ggplot(data, aes(x=V3, y=V4))+geom_point()+theme(plot.title = element_text(lineheight=.8, face="bold",size=24),axis.text=element_text(size=16),axis.title=element_text(size=16,face="bold"))+labs(x="PC1",y="PC2")+ggtitle(args[2]);
+	}
+	dev.off()
+	#Here we will also output samples with problem
+	pc1Mean = mean(data$V3)
+	pc1SD = sd(data$V3)
+	pc2Mean = mean(data$V4)
+	pc2SD = sd(data$V4)
+	problemSample = data[data$V3>pc1Mean+6*pc1SD|data$V3<pc1Mean-6*pc1SD |data$V4>pc2Mean+6*pc2SD|data$V4<pc2Mean-6*pc2SD,]
+	write.table(problemSample[,c(1,2)], paste(args[2], ".pc", sep=""),quote=F, col.names=F, row.names=F)
+	\end{lstlisting}
+
+	\section{March 3, 2016}
+	First, we should check that our samples are alright indeed ok and will not introduce any bias into our results.
+	Therefore we need to first simulate a bunch of null traits and see if the resulting QQ plots follows the NULL
+	\begin{lstlisting}[language=R]
+	data=read.table("WTCCC17000.final.fam")
+	
+	emilyQQ<-function(pvector, main=NULL,...){
+		m=main
+		observed <- sort(pvector)   #column name of the p-value column is "p"
+		lobs <- -(log10(observed))
+		n <- length(observed)
+		j <- 1:n
+		x <- (j-0.5)/n
+		# We don't want the x-axis be too far
+		plot(c(1), c(1), c(0,max(-log10(x)))+0.1, c(0,max(-log10(x),lobs))+0.1, col="white", lwd=1, type="p", xlab=expression(Expected~~ -log[10](italic(p))), ylab=expression(Observed~~-log[10](italic(p))),xaxs="i", yaxs="i", bty="l",cex.lab=1.2, cex.axis=1.2, font.lab=2,las=1,main=m)
+		abline(0,1)
+		points(-log10(x), lobs, col="red", cex=0.5, lwd=1.5, pc=16)
+		lines(-log10(x), -log10(qbeta( 0.05 , j , ( n - j + 1 ), ncp=observed) ),col="black",lty=2)
+		lines(-log10(x), -log10(qbeta( 0.95 , j , ( n - j + 1 ), ncp=observed) ),col="black",lty=2)
+	}
+		
+	for(i in 1:20){
+		data$V6 = rnorm(nrow(data),mean=0, sd=1)
+		write.table(data, "WTCCC17000.final.fam", row.names=F, col.names=F, quote=F)
+		system("plink --bfile WTCCC17000.final --assoc --out WTCCC17000.final")
+		res = read.table("WTCCC17000.final.qassoc", header=T);
+		png(paste("NullCheck_",i,".png",sep=""))
+		emilyQQ(res$P)
+		dev.off()
+	}
+	\end{lstlisting}
+	
+	Now once we have the correct NULL, we can start preparing the samples for simulation. 
+	The core concept is that because we have the whole population their GRM will not change, we can precompute the GRM for simulation.
+	Therefore we can first calculate the GRM by running:
+	\begin{lstlisting}[language=bash]
+	# We try to reduce the simulation size by using only chromosome 1
+	plink --bfile WTCCC17000.final --chr 1 --make-bed --out WTCCC17000.chr1
+	gcta64 --bfile WTCCC17000.chr1 --autosome --maf 0.05 --make-grm --out WTCCC17000.chr1.gcta --make-grm-gz --thread-num 10
+	\end{lstlisting}
 	\newpage
 	\section{Useful Resources}
 	\begin{table}[t]

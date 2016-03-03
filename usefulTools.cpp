@@ -40,14 +40,13 @@ void usefulTools::tokenizer(const std::string seq, const std::string separators,
 
 bool usefulTools::fileExists(const std::string fileName){
     std::ifstream file(fileName.c_str());
-    return file;
+    return file.is_open();
 }
 
 bool usefulTools::isNumeric(const std::string seq) {
     //Need to handle scientific notation
     double number;
-    std::string s = trim(seq);
-    std::istringstream ss(s);
+    std::istringstream ss(trim(seq));
     if (!(ss >> number))  return false;
     return true;
 }

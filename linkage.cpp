@@ -173,7 +173,8 @@ void Linkage::clear(size_t nRemoveElements){
 
 void Linkage::decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult, arma::vec &varResult){
     if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
-    size_t endOfBlock = fStat.n_elem-1;
+    size_t endOfBlock = start+fStat.n_elem-1;
+
     arma::mat rInv=pinv((arma::mat)m_linkage.submat( start, start, endOfBlock,endOfBlock ));
     heritResult = rInv * fStat;
     arma::mat error = m_linkage.submat( start, start, endOfBlock, endOfBlock )*heritResult - fStat;

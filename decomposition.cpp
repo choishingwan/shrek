@@ -30,7 +30,7 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
 //            nSample(i) = (double)sampleSize;
             ++i;
         }
-        linkage.decompose(startCoordinate,zStat, fStat, nSample, heritResult, varResult);
+        linkage.decompose(startDecompIter,zStat, fStat, nSample, heritResult, varResult);
 //        linkage.decompose(startCoordinate,zStat, fStat, nSample, heritResult, varResult, addVarResult);
         // Update the heritability (we separate it because it is easier)
         size_t startCopySnpLocIndex=(start)?startDecompIter : startVarIter;
@@ -86,7 +86,7 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
             fStat(i) = (stat*stat-1.0)/((double)sampleSize-2.0+stat*stat); // This is the f-statistic
             ++i;
         }
-        linkage.decompose(startCoordinate,fStat,heritResult, varResult);
+        linkage.decompose(startDecompIter,fStat,heritResult, varResult);
         size_t startCopySnpLocIndex=(start)?startDecompIter : startVarIter;
         size_t startCopyVectorIndex = (start)? 0:startVarIter-startDecompIter;
         for(size_t j = startCopyVectorIndex; j < sizeOfMatrix; ++j){ // we don't care about the end in this case because they will be over wrote
@@ -120,7 +120,7 @@ void Decomposition::run(Linkage &linkage, std::deque<size_t> &snpLoc, std::deque
                   snpList, regionList, sign, true, true);
     }
     else if(boundSize ==2){
-        assert((!starting || !finalizeBuff )&& "How else is this possible?");
+        assert((starting || finalizeBuff )&& "How else is this possible?");
         size_t midEnd = (decomposeAll)? snpLocSize:boundary.back();
         decompose(linkage, snpLoc,
                   0, midEnd,
@@ -149,7 +149,7 @@ void Decomposition::run(Linkage &linkage, std::deque<size_t> &snpLoc, std::deque
                   0, boundary.back(),
                   boundary[1], boundary[2],
                   snpList, regionList, sign, starting, finalizeBuff && !decomposeAll);
-        if(decomposeAll){
+        if(decomposeAll && finalizeBuff){ //Only if this is finalizeBuff, otherwise, don't bother doing this
             decompose(linkage, snpLoc,
                       boundary[1], snpLocSize,
                       boundary[2], boundary.back(),

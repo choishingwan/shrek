@@ -39,8 +39,10 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
     size_t barWidth = 60;
     size_t doneItems = 0;
     size_t totalSnp = snpList.size();
+    std::string chr = "";
 
     // This is use for indicating whether if the whole genome is read
+    fprintf(stderr, "\n");
     bool completed = false;
     std::deque<size_t> boundary;
     bool starting = true;
@@ -49,14 +51,14 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
         // Keep doing this until the whole genome is read
         progress =(double)(doneItems)/(double)totalSnp;
         //std::cerr << doneItems << std::endl;
-        fprintf(stderr,"[");
+        fprintf(stderr,"\r[");
         size_t pos=barWidth*progress;
         for(size_t i = 0; i < barWidth;++i){
             if(i < pos) fprintf(stderr,"=");
             else if(i==pos) fprintf(stderr,">");
             else fprintf(stderr," ");
         }
-        fprintf(stderr, "]%u%\r", int(progress*100.0));
+        fprintf(stderr, "]%u%% %s ", int(progress*100.0), chr.c_str() );
         fflush(stderr);
 
         bool retainLastBlock=false; // only used when the finalizeBuff is true, this indicate whether if the last block is coming from somewhere new
@@ -66,7 +68,6 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
             // First, we get all the SNPs within the block
             genotypeFileHandler.getBlock(snpList, genotype, snpLoc, finalizeBuff, completed,boundary);
             size_t snpLocSizeBefore = snpLoc.size();
-
             bool boundChange = false; // This is to indicate whether if the bound SNP is in perfect LD
 //            fprintf(stderr, "Construct\n");
             // Now construct the LD matrix and also remove the perfect LD
@@ -118,7 +119,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
                 // in that and might, in unlikely circumstances change the boundary SNP, therefore leading
                 // to a problematic complication that we have not anticipated
             }
-            else if(boundary.size() > 2){ // normal checking
+            else if(boundary.size() > 2){ // normal checkings
                 // We have enough blocks to perform merging (it is stupid to merge stuff if there is only two blocks,
                 // but whatever)
                 assert(boundary.back() > 0 && "The boundary is too small..." );
@@ -134,13 +135,17 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
             }
         }
 
+//        for(size_t i = 0; i < boundary.size(); ++i){
+//            std::cerr << snpList[snpLoc[boundary[i]]].getRs() << " ";
+//        }
+//        std::cerr << std::endl;
 //        std::cerr << "Tidy up: " << retainLastBlock << " " << finalizeBuff << " " << starting << " " << boundary.size() << std::endl;
 //        fprintf(stderr, "Decomposition\n");
         if(finalizeBuff) decompose.run(linkage, snpLoc, boundary, snpList, finalizeBuff, !retainLastBlock, starting, regionList);
         else decompose.run(linkage, snpLoc, boundary, snpList, false, false, starting, regionList);
 //        fprintf(stderr, "Finish decompose\n");
         doneItems= snpLoc.at(boundary.back());
-
+        chr = snpList[snpLoc[boundary.back()]].getChr();
         if(retainLastBlock){
             // Then we must remove everything except the last block
             // because finalizeBuff must be true here
@@ -182,14 +187,14 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler,const std:
     progress =1;
         //std::cerr << doneItems << std::endl;
 
-    fprintf(stderr,"[");
+    fprintf(stderr,"\r[");
     size_t pos=barWidth*progress;
     for(size_t i = 0; i < barWidth;++i){
         if(i < pos) fprintf(stderr,"=");
         else if(i==pos) fprintf(stderr,">");
         else fprintf(stderr," ");
     }
-    fprintf(stderr, "]%u%\r", int(progress*100.0));
+    fprintf(stderr, "]%u%           ", int(progress*100.0));
     fflush(stderr);
     fprintf(stderr, "\n");
 
@@ -203,7 +208,7 @@ void SnpEstimation::result(const boost::ptr_vector<Snp> &snpList, const boost::p
     double i2 = (m_bt)? usefulTools::dnorm(usefulTools::qnorm(m_prevalence))/(m_prevalence): 0;
     i2 = i2*i2;
     double adjust = 0.0;
-    size_t count  = 0;
+    size_t countNum  = 0;
     double sampleSize = 0.0;
     std::vector<double> heritability;
     std::vector<double> variance;
@@ -240,7 +245,7 @@ void SnpEstimation::result(const boost::ptr_vector<Snp> &snpList, const boost::p
             if(snpList[i].flag(j)) effective[j] += snpList[i].getEffective();
         }
         sampleSize +=(double)(snpList[i].getSampleSize());
-        count++;
+        countNum++;
         if(m_bt){
             double portionCase = (double)(snpList[i].getNCase()) / (double)(snpList[i].getSampleSize());
             adjust+= ((1.0-m_prevalence)*(1.0-m_prevalence))/(i2*portionCase*(1-portionCase));
@@ -250,9 +255,9 @@ void SnpEstimation::result(const boost::ptr_vector<Snp> &snpList, const boost::p
 
     if(requireFullOut) fullOutput.close();
 
-    double adjustment = adjust/(double)count; // we use the average adjustment value here
+    double adjustment = adjust/(double)countNum; // we use the average adjustment value here
     if(!m_bt) adjustment = m_extreme;
-    double averageSampleSize = sampleSize/(double)count;
+    double averageSampleSize = sampleSize/(double)countNum;
 //    for(size_t i = 0; i < regionList.size(); ++i)
 //        variance.push_back(regionList[i].getVariance((1.0-sqrt(std::complex<double>(adjustment*heritability[i])).real())));
 //        variance.push_back(regionList[i].getVariance());

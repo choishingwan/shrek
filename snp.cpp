@@ -242,7 +242,7 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
 
     }
     pValue.close();
-    snpList.sort(Snp::sortSnp);
+
     std::cerr << std::endl;
     fprintf(stderr, "\nP-Value File Information:\n");
     fprintf(stderr, "==================================\n");
