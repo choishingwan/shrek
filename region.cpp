@@ -1,6 +1,7 @@
 #include "region.h"
 
 Region::Region(const std::string name):m_name(name){}
+
 Region::Region(const std::string name,const std::string bedFileName):m_name(name){
     std::ifstream regionFile;
     regionFile.open(bedFileName);

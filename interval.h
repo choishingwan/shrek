@@ -10,21 +10,21 @@ class Interval
 {
     public:
         /** Default constructor */
-        Interval(std::string chr, size_t start, size_t end);
+        Interval(std::string chr, size_t start, size_t end):m_chr(chr), m_start(start), m_end(end){};
         /** Default destructor */
-        virtual ~Interval();
+        virtual ~Interval(){ };
         /** Return the chromosome information of this interval */
-        inline std::string getChr() const {return m_chr; };
+        std::string getChr() const {return m_chr; };
         /** Return the starting loc of this interval */
-        inline size_t getStart() const {return m_start; };
+        size_t getStart() const {return m_start; };
         /** Return the last loc of this interval */
-        inline size_t getEnd() const { return m_end; };
-        inline void setEnd(size_t i ){ m_end = i;};
+        size_t getEnd() const { return m_end; };
+        void setEnd(size_t i ){ m_end = i;};
     protected:
     private:
-        std::string m_chr;
-        size_t m_start;
-        size_t m_end;
+        std::string m_chr="";
+        size_t m_start=0;
+        size_t m_end=0;
 };
 
 #endif // INTERVAL_H

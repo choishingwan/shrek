@@ -1,7 +1,8 @@
 #include "snp.h"
 
-Snp::Snp(std::string chr, std::string rsId, size_t loc, size_t nSample, size_t nCase, size_t nControl, std::string refAllele, std::string altAllele, double statistic, double info, int sign):m_chr(chr),m_rsId(rsId), m_loc(loc),m_nSample(nSample),m_nCase(nCase),m_nControl(nControl),m_ref(refAllele),m_alt(altAllele),m_infoScore(info),m_sign(sign){
+Snp::Snp(std::string chr, std::string rsId, size_t loc, size_t nSample, size_t nCase, size_t nControl, std::string refAllele, std::string altAllele, bool binary, bool quantitative, double statistic, double info, int sign):m_chr(chr),m_rsId(rsId), m_loc(loc),m_nSample(nSample),m_nCase(nCase),m_nControl(nControl),m_ref(refAllele),m_alt(altAllele),m_binary(binary), m_quantitative(quantitative), m_infoScore(info),m_sign(sign){
 	m_statistic = std::make_shared<double>(statistic);
+	m_fstat = std::make_shared<double>(statistic);
 	m_heritability = std::make_shared<double>(0.0);
 	m_ldScore = std::make_shared<double>(0.0);
 }
@@ -18,11 +19,13 @@ void Snp::flip(){
  void Snp::shareHeritability( Snp& i ){
  	if(i.m_statistic == m_statistic) return;
     (*i.m_statistic) += (*m_statistic); //Add up the beta to get an average
+    (*i.m_fstat) += (*m_fstat); //Add up the fstat to get an average
     (*i.m_heritability) += (*m_heritability);
  	//i is the one who buy
  	//this is the one who sell
     //For this's family, all of them should point to the same location
     m_statistic = (i.m_statistic); //They now share the same beta
+    m_fstat = (i.m_fstat); //They now share the same beta
     m_heritability = (i.m_heritability);
 //    std::cerr << "Snp checking here: " << m_statistic << "\t" << i.m_statistic << "\t" << i.m_statistic.use_count() << std::endl;
     m_status = 'L';
@@ -32,6 +35,7 @@ void Snp::flip(){
     Snp* prevClass = this;
     while(currentClass != this){
         currentClass->m_statistic = i.m_statistic; //The subsequent stuff are also pointing here
+        currentClass->m_fstat = i.m_fstat; //The subsequent stuff are also pointing here
         currentClass->m_heritability = i.m_heritability;
         currentClass->m_ldScore = i.m_ldScore;
         currentClass->m_status = 'L';
@@ -79,25 +83,31 @@ bool Snp::concordant(const std::string chr, const size_t loc, const std::string 
     return false;
 }
 
-//This make sure we will always store the z-statistic in m_statistic, not the chisq
-void Snp::adjustSummaryStatistic(){
-    (*m_statistic) = sqrt(fabs(*m_statistic));
-    if(m_sign!=0) (*m_statistic) = m_sign*(*m_statistic);
-}
 
-void Snp::computeSummaryStatistc(){
-    double beta = 0.0;
-    if((*m_statistic) < 1.0){ //Direct transform p-value of 1 to summary statistics of 0
-        beta = fabs(usefulTools::qnorm(1.0-(((*m_statistic)+0.0)/2.0)));
-        if(isnan(beta)){ //It means we cannot get the result from it
+void Snp::computeSummaryStatistic(bool isP){
+    if(isP){
+        double beta = 0.0;
+        if((*m_statistic) < 1.0){ //Direct transform p-value of 1 to summary statistics of 0
             beta = fabs(usefulTools::qnorm((*m_statistic)/2.0));
-            assert(!isnan(beta)&& "I don't know what is the problem");
+            if(isnan(beta)){ //It means we cannot get the result from it
+                beta = fabs(usefulTools::qnorm(1.0-(((*m_statistic)+0.0)/2.0)));
+                assert(!isnan(beta)&& "I don't know what is the problem");
+            }
         }
+        if(m_quantitative) (*m_statistic) = fabs(beta); //Because we want to keep the statistic as the summary stat instead of p-value
+        else (*m_statistic) = sqrt(fabs(beta)); //Because we want to keep the statistic as the summary stat instead of p-value
+        if(m_sign!=0) (*m_statistic) = m_sign*(*m_statistic); // Give the value a sign if it is provided
     }
-    if(m_nSample != 0) (*m_statistic) = fabs(beta); //Because we want to keep the statistic as the summary stat instead of p-value
-    else (*m_statistic) = sqrt(fabs(beta)); //Because we want to keep the statistic as the summary stat instead of p-value
-    if(m_sign!=0) (*m_statistic) = m_sign*(*m_statistic); // Give the value a sign if it is provided
-
+    else if(m_binary){ //This is the ChiSQ from a binary trait
+        (*m_statistic) = sqrt(fabs((*m_statistic)));
+    }
+    //Now also calculate the F-Statistic
+    double t2 = (*m_statistic)*(*m_statistic);
+    double sampleSize = 0.0;
+    if(m_binary) sampleSize += (double)(m_nCase+m_nControl);
+    else if(m_quantitative) sampleSize+= (double)m_nSample;
+    else throw std::runtime_error("Unknown mode, cannot proceed");
+    (*m_fstat) = (t2-1.0)/(t2+sampleSize-2.0);
 }
 
 Snp::~Snp()
@@ -106,13 +116,11 @@ Snp::~Snp()
 }
 void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> const &regionList){
     std::vector<size_t> regionIncrementationIndex(regionList.size(), 0); // The current index of all regions are set to 0
-
     for(size_t i = 0; i < snpList.size(); ++i){
-
         snpIndex[snpList[i].getRs()] = i;
         // Now perform the flag setting
         std::vector<bool> padding(regionList.size(), false);
-        snpList[i].m_regionFlag.insert(snpList[i].m_regionFlag.end(), padding.begin(), padding.end()); //Initialize all the flags
+        for(size_t j = 0; j < regionList.size(); ++j) snpList[i].m_regionFlag.push_back(false);
         for(size_t j = 1; j < regionList.size(); ++j){
             // Doesn't have to bother with the base region
             for(size_t k = regionIncrementationIndex.at(j); k < regionList.at(j).getIntervalSize(); ++k){
@@ -172,10 +180,8 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
             usefulTools::tokenizer(line, " \t", &token);
             if(token.size() >= maxIndex){
                 std::string rsId = token[rsIndex-1];
-                if(duplication.find(rsId) !=duplication.end()){
-                    // Check if the same rs ID has been used
-                    nDuplicate++;
-                }
+                //We only use the first occurrence of a duplicated SNP
+                if(duplication.find(rsId) !=duplication.end())  nDuplicate++;
                 else{ //If not duplicated, we start reading in the information
                     std::string chr = token[chrIndex-1];
                     size_t bp = atoi(token[locIndex-1].c_str());
@@ -185,11 +191,14 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
                     bool invalid =false;
                     double imputeScore = 0.0;
                     if(imputeIndex!=0){
+                        //We need the imputation filtering, but we must make sure it is a valid input
+                        //if the input is invalid, we will invalidate the whole SNP
                         if(usefulTools::isNumeric(token[imputeIndex-1])) imputeScore = atof(token[imputeIndex-1].c_str());
                         else invalid = true;
                     }
                     int signOfStat = 0;
                     if(signIndex!=0){
+                        // same thing apply for the sign of effect, if it is not a valid input, we will invalidate the whole SNP
                         if(usefulTools::isNumeric(token[signIndex-1])) signOfStat = ((atof(token[signIndex-1].c_str())< signNull)? -1: 1);
                         else invalid = true;
                     }
@@ -213,61 +222,44 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
                         else invalid = true;
                     }
                     else if(bt) sizeOfControl = nControl;
-
                     if(!usefulTools::isNumeric(token[sumStatIndex-1])) invalid = true;
 
                     if(invalid) nInvalid++; //This line is invalid because some of the numerical information are not numeric
-                    else if(imputeIndex!=0 && imputeScore < infoThreshold) nFilter ++;
+                    else if(imputeIndex!=0 && imputeScore < infoThreshold) nFilter ++; // we will filter this SNP based on imputation score
                     else{
                         double statistic = atof(token[sumStatIndex-1].c_str());
                         // We cannot convert a p-value of 0 to a valid summary statistic
                         // So we need to remove it
                         if(statistic == 0.0 && isP ) nOverSig++; //This is not a safe comparison as double == is always a problem
                         else{
-                            snpList.push_back(new Snp(chr,rsId, bp, sizeOfSample, sizeOfCase, sizeOfControl, refAllele, altAllele, statistic, imputeScore, signOfStat));
-
-                            if(isP) snpList.back().computeSummaryStatistc(); //Otherwise, we have already got the required summary statistics
-                            else if(bt) snpList.back().adjustSummaryStatistic(); // need to process the summarystatistic if it is binary case
-
+                            snpList.push_back(new Snp(chr,rsId, bp, sizeOfSample, sizeOfCase, sizeOfControl, refAllele, altAllele, bt, qt, statistic, imputeScore, signOfStat));
+                            snpList.back().computeSummaryStatistic(isP); //Otherwise, we have already got the required summary statistics
                             duplication[rsId] = true;
                         }
                     }
                 }
             }
-            else{
-                //This mean the current line is malformed
-                nSkipped++;
-            }
+            else nSkipped++; //Malformed line
         }
-
     }
     pValue.close();
 
-    std::cerr << std::endl;
-    fprintf(stderr, "\nP-Value File Information:\n");
+    fprintf(stderr, "\n\nP-Value File Information:\n");
     fprintf(stderr, "==================================\n");
-    if(nSkipped != 0)
-        fprintf(stderr, "%lu line(s) with insufficient columns\n", nSkipped);
-    if(nDuplicate!=0)
-        fprintf(stderr, "%lu duplicated SNPs\n", nDuplicate);
-    if(nInvalid!=0)
-        fprintf(stderr, "%lu invalid SNPs\n", nInvalid);
-    if(nFilter!=0)
-        fprintf(stderr, "%lu SNPs have info score < %f\n", nFilter, infoThreshold);
-    if(nOverSig != 0)
-        fprintf(stderr, "%lu SNPs have p-value of 0 and are filtered", nOverSig);
+    if(nSkipped != 0)   fprintf(stderr, "%lu line(s) with insufficient columns\n", nSkipped);
+    if(nDuplicate!=0)   fprintf(stderr, "%lu duplicated SNPs\n", nDuplicate);
+    if(nInvalid!=0)     fprintf(stderr, "%lu invalid SNPs\n", nInvalid);
+    if(nFilter!=0)      fprintf(stderr, "%lu SNPs have info score < %f\n", nFilter, infoThreshold);
+    if(nOverSig != 0)   fprintf(stderr, "%lu SNPs have p-value of 0 and are filtered", nOverSig);
     fprintf(stderr, "%lu SNPs are included from the file\n", snpList.size());
     if(snpList.size() ==0) throw std::runtime_error("ERROR: No SNP is provided");
-
 }
 
 
 bool Snp::sortSnp (const Snp& i, const Snp& j){
     if(i.getChr().compare(j.getChr()) == 0)
-		if(i.getLoc() == j.getLoc())
-			return i.getRs().compare(j.getRs()) < 0;
-		else
-			return i.getLoc() < j.getLoc();
+		if(i.getLoc() == j.getLoc()) return i.getRs().compare(j.getRs()) < 0;
+		else return i.getLoc() < j.getLoc();
 	else return (i.getChr().compare(j.getChr()) < 0);
 }
 

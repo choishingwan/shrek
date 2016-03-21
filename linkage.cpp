@@ -2,17 +2,15 @@
 
 std::mutex Linkage::linkageMtx;
 
-Linkage::Linkage(size_t thread, size_t blockSize):m_thread(thread), m_blockSize(blockSize){}
+Linkage::Linkage(size_t thread):m_thread(thread){}
 Linkage::~Linkage(){}
 
 void Linkage::print(){ std::cout << m_linkage << std::endl; }
 
-//void Linkage::computeLd(const boost::ptr_list<Genotype> &genotype, const std::list<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, size_t horiEnd, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd){
 void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd){
     std::vector<size_t> perfectBuff;
+    std::vector<size_t> perfectOri;
     size_t horiEnd = snpLoc.size();
-
-
     for(size_t i = startIndex; i < verEnd; ++i){
         size_t nextStart = (i>horistart)? i:horistart;
         size_t j = nextStart;
@@ -34,7 +32,7 @@ void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::d
                         // Store the index j into perfectBuff
                         if(std::fabs(r-1.0) < 1e-6 || r > 1.0 || r < -1.0){
                             perfectBuff.push_back(j);
-                            snpList.at(snpLoc.at(i)).shareHeritability(snpList.at(snpLoc.at(j)));
+                            perfectOri.push_back(i);
                         }
                     }
                 }
@@ -42,12 +40,13 @@ void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::d
     }
     // Now we can insert the buff back to the result
     linkageMtx.lock();
+        for(size_t i = 0; i < perfectBuff.size(); ++i) snpList[snpLoc[perfectOri[i]]].shareHeritability(snpList[snpLoc[perfectBuff[i]]]);
         perfectLd.insert(perfectLd.end(), perfectBuff.begin(), perfectBuff.end());
     linkageMtx.unlock();
 
 }
 
-void Linkage::construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &boundary, boost::ptr_vector<Snp> &snpList, const bool correction,bool &boundCheck){
+void Linkage::construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::vector<size_t> &boundary, boost::ptr_vector<Snp> &snpList, const bool correction,bool &boundCheck){
     // Here we try to prepare for the calculation of LD
     // This function is mainly responsible for the thread distribution
     if(genotype.empty()) throw std::runtime_error("Cannot build LD without genotypes");
@@ -98,7 +97,6 @@ void Linkage::construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t>
     size_t threadSize = threadStore.size();
     for (size_t i = 0; i < threadSize; ++i) threadStore[i].join();
     threadStore.clear();
-
     // We sort the index for easier management (they are not sorted because of multi threading
     std::sort(perfectLd.begin(), perfectLd.end());
     // Remove duplicated index
@@ -110,8 +108,7 @@ void Linkage::construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t>
 }
 
 
-
-void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::deque<size_t> &boundary, boost::ptr_vector<Snp> &snpList, bool &boundCheck){
+void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::vector<size_t> &boundary, boost::ptr_vector<Snp> &snpList, bool &boundCheck){
     // First, update the matrix
     size_t genoSize = genotype.size();
     size_t cI = 0;
@@ -165,16 +162,16 @@ void Linkage::clear(){
     m_linkageSqrt.clear();
 }
 void Linkage::clear(size_t nRemoveElements){
-
-    size_t blockSize = m_linkage.n_cols-1;
-    m_linkage = m_linkage.submat(nRemoveElements, nRemoveElements,blockSize,blockSize);
-    m_linkageSqrt = m_linkageSqrt.submat(nRemoveElements, nRemoveElements,blockSize,blockSize);
+    size_t lastIndex = m_linkage.n_cols-1;
+    m_linkage = m_linkage.submat(nRemoveElements, nRemoveElements,lastIndex,lastIndex);
+    m_linkageSqrt = m_linkageSqrt.submat(nRemoveElements, nRemoveElements,lastIndex,lastIndex);
 }
 
 void Linkage::decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult, arma::vec &varResult){
     if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
     size_t endOfBlock = start+fStat.n_elem-1;
 
+//    arma::mat test= (arma::mat)m_linkage.submat( start, start, endOfBlock,endOfBlock );
     arma::mat rInv=pinv((arma::mat)m_linkage.submat( start, start, endOfBlock,endOfBlock ));
     heritResult = rInv * fStat;
     arma::mat error = m_linkage.submat( start, start, endOfBlock, endOfBlock )*heritResult - fStat;
@@ -192,8 +189,9 @@ void Linkage::decompose(size_t start, const arma::vec &fStat, arma::vec &heritRe
         heritResult = heritResult+update;
         iterCount++; // This is to avoid infinite looping
     }
-    // Now calculate the variance
+//    // Now calculate the variance
     arma::vec effectiveNumber(heritResult.n_elem, arma::fill::ones);
+//    varResult=test*effectiveNumber; //this is just testing
     varResult = rInv*effectiveNumber;
     arma::vec errorVec = m_linkage.submat( start, start, endOfBlock, endOfBlock )*varResult - effectiveNumber;
  	oriNorm = norm(effectiveNumber);
@@ -256,36 +254,4 @@ void Linkage::decompose(size_t start, const arma::vec &zStat, const arma::vec &f
         std::cout << fStat << std::endl;
     }
 }
-
-void Linkage::decompose(size_t start, const arma::vec &zStat, const arma::vec &fStat, const arma::vec &nSample, arma::vec &heritResult, arma::mat &varResult, arma::mat &addVarResult){
-    if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
-    size_t endOfBlock = start+fStat.n_elem-1;
-    arma::mat rInv=pinv((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ));
-    heritResult = rInv * fStat;
-    arma::mat error = m_linkage.submat( start, start, endOfBlock, endOfBlock )*heritResult - fStat;
- 	double oriNorm = norm(fStat);
-    double relative_error = norm(error) / oriNorm;
-    double prev_error = relative_error+1;
-    arma::mat update;
-    int iterCount = 0, maxIter = 100;
-    while(relative_error < prev_error && iterCount < maxIter){
-        prev_error = relative_error;
-        update=rInv*(-error);
-        error= m_linkage.submat( start, start, endOfBlock, endOfBlock )*(heritResult+update) - fStat;
-        relative_error = norm(error) / oriNorm;
-        if(relative_error < 1e-300) relative_error = 0; // 1e-300 is more than enough...
-        heritResult = heritResult+update;
-        iterCount++; // This is to avoid infinite looping
-    }
-    arma::vec minusF = 1-fStat;
-    for(size_t i = 0; i < fStat.n_elem; ++i){
-        minusF(i) /= nSample(i)-2.0+zStat(i)*zStat(i);
-    }
-    // Now calculate the varaince, this is for the complicated variance
-    varResult = rInv*arma::diagmat(minusF)*(4.0*m_linkageSqrt.submat(start,start,endOfBlock,endOfBlock)%(zStat*zStat.t()))*arma::diagmat(minusF)*rInv;
-//    varResult = rInv*arma::diagmat(nSample)*(4.0*m_linkageSqrt.submat(start,start,endOfBlock,endOfBlock)%(zStat*zStat.t()))*arma::diagmat(nSample)*rInv;
-    addVarResult = rInv*arma::diagmat(minusF)*(-2.0*m_linkage.submat(start,start,endOfBlock, endOfBlock))*arma::diagmat(minusF)*rInv;
-//    addVarResult = rInv*arma::diagmat(nSample)*(-2.0*m_linkage.submat(start,start,endOfBlock, endOfBlock))*arma::diagmat(nSample)*rInv;
-}
-
 

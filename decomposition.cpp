@@ -22,10 +22,10 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
         arma::mat addVarResult = arma::mat(sizeOfMatrix,sizeOfMatrix,arma::fill::eye);
         size_t i = 0;
         for(size_t snpLocIndex = startDecompIter; snpLocIndex< endDecompIter; ++snpLocIndex){
-            double stat = snpList.at(snpLoc[snpLocIndex]).getStat();
-            int sampleSize = snpList.at(snpLoc[snpLocIndex]).getSampleSize();
+            double stat = snpList[snpLoc[snpLocIndex]].getStat();
+            int sampleSize = snpList[snpLoc[snpLocIndex]].getSampleSize();
             zStat(i) = stat;
-            fStat(i) = (stat*stat-1.0)/((double)sampleSize-2.0+stat*stat); // This is the f-statistic
+            fStat(i) = snpList[snpLoc[snpLocIndex]].getFStat(); // This is the f-statistic
             nSample(i) = (double)1/(double)sampleSize;
 //            nSample(i) = (double)sampleSize;
             ++i;
@@ -36,7 +36,7 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
         size_t startCopySnpLocIndex=(start)?startDecompIter : startVarIter;
         size_t startCopyVectorIndex = (start)? 0:startVarIter-startDecompIter;
         for(size_t j = startCopyVectorIndex; j < sizeOfMatrix; ++j){ // we don't care about the end in this case because they will be over wrote
-            snpList.at(snpLoc[startCopySnpLocIndex]).setHeritability(heritResult(j));
+            snpList[snpLoc[startCopySnpLocIndex]].setHeritability(heritResult(j));
             startCopySnpLocIndex++;
         }
         //The top block of the variance
@@ -46,8 +46,8 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
         for(size_t i =0; i < startBound; ++i){ // i is the index on the matrix
             for(size_t j = horiCopyIndex; j < endBound; ++j){ //  Again, j is the index on the matrix
                  for(size_t k = 0; k < regionSize; ++k){ // Iterate through the region list
-                    if(snpList.at(snpLoc[startDecompIter+i]).flag(k) &&
-                       snpList.at(snpLoc[startDecompIter+j]).flag(k))
+                    if(snpList[snpLoc[startDecompIter+i]].flag(k) &&
+                       snpList[snpLoc[startDecompIter+j]].flag(k))
                             regionList[k].addVariance(varResult(i,j));
 //                            regionList[k].addVariance(varResult(i,j), addVarResult(i,j));
                 }
@@ -57,8 +57,8 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
         for(size_t i = startBound; i < endVarIter-startDecompIter; ++i){
             for(size_t j = 0; j < endBound; ++j){
                 for(size_t k = 0; k < regionSize; ++k){ // Iterate through the region list
-                    if(snpList.at(snpLoc[startDecompIter+i]).flag(k) &&
-                       snpList.at(snpLoc[startDecompIter+j]).flag(k))
+                    if(snpList[snpLoc[startDecompIter+i]].flag(k) &&
+                       snpList[snpLoc[startDecompIter+j]].flag(k))
                             regionList[k].addVariance(varResult(i,j));
 //                            regionList[k].addVariance(varResult(i,j), addVarResult(i,j));
                 }
@@ -69,8 +69,8 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
         for(size_t i = endVarIter-startDecompIter; i < endBound; ++i){
             for(size_t j = 0; j < horiCopyIndex; ++j){
                 for(size_t k = 0; k < regionSize; ++k){
-                    if(snpList.at(snpLoc[startDecompIter+i]).flag(k) &&
-                           snpList.at(snpLoc[startDecompIter+j]).flag(k))
+                    if(snpList[snpLoc[startDecompIter+i]].flag(k) &&
+                           snpList[snpLoc[startDecompIter+j]].flag(k))
                                 regionList[k].addVariance(varResult(i,j));
 //                                regionList[k].addVariance(varResult(i,j), addVarResult(i,j));
                 }
@@ -81,24 +81,25 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
         arma::vec varResult = arma::vec(sizeOfMatrix, arma::fill::zeros);
         size_t i = 0;
         for(size_t snpLocIndex = startDecompIter; snpLocIndex< endDecompIter; ++snpLocIndex){
-            double stat = snpList.at(snpLoc[snpLocIndex]).getStat();
-            int sampleSize = snpList.at(snpLoc[snpLocIndex]).getSampleSize();
-            fStat(i) = (stat*stat-1.0)/((double)sampleSize-2.0+stat*stat); // This is the f-statistic
+            double stat = snpList[snpLoc[snpLocIndex]].getStat();
+            fStat(i) = snpList[snpLoc[snpLocIndex]].getFStat();; // This is the f-statistic
             ++i;
         }
         linkage.decompose(startDecompIter,fStat,heritResult, varResult);
         size_t startCopySnpLocIndex=(start)?startDecompIter : startVarIter;
         size_t startCopyVectorIndex = (start)? 0:startVarIter-startDecompIter;
+//        std::cerr << "Start copying: " << start << " " << startVarIter << " " << startDecompIter << std::endl;
         for(size_t j = startCopyVectorIndex; j < sizeOfMatrix; ++j){ // we don't care about the end in this case because they will be over wrote
-            snpList.at(snpLoc[startCopySnpLocIndex]).setHeritability(heritResult(j));
-            snpList.at(snpLoc[startCopySnpLocIndex]).setEffective(varResult(j));
+            snpList[snpLoc[startCopySnpLocIndex]].setHeritability(heritResult(j));
+            snpList[snpLoc[startCopySnpLocIndex]].setEffective(varResult(j));
             startCopySnpLocIndex++;
         }
+//        std::cerr << "Finished copying" << std::endl;
     }
 }
 
 
-void Decomposition::run(Linkage &linkage, std::deque<size_t> &snpLoc, std::deque<size_t> &boundary, boost::ptr_vector<Snp> &snpList, bool finalizeBuff, bool decomposeAll, bool starting, boost::ptr_vector<Region> &regionList){
+void Decomposition::run(Linkage &linkage, std::deque<size_t> &snpLoc, std::vector<size_t> &boundary, boost::ptr_vector<Snp> &snpList, bool finalizeBuff, bool decomposeAll, bool starting, boost::ptr_vector<Region> &regionList){
     // The proper decomposition process
     bool sign = !(snpList.front().getSign()==0); // Check whether if sign is given
     size_t boundSize = boundary.size();

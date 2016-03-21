@@ -9,7 +9,8 @@
 \usepackage{cmap}
 \usepackage[framemethod=TikZ]{mdframed}
 \usepackage{caption}
-
+\usepackage{cleveref}
+\usepackage[margin=1in]{geometry}
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
@@ -72,7 +73,21 @@
 			\boldsymbol{R_{sq}}^{-1}\boldsymbol{n}(4\boldsymbol{R}\circ(\boldsymbol{zz}^t)-2\boldsymbol{R_{sq}}^{-1})\boldsymbol{n}\boldsymbol{R_{sq}}^{-1}
 		\end{math}
 		where $\boldsymbol{n}$ is a square diagonal matrix with diagonal as the sample size and $\boldsymbol{z}$ is the vector of z-statistics.
+		\item Apparently, we also assume that the bed file for the region is non-overlapping
 	\end{enumerate}
+	
+	\section{Simulation Information}
+		It is important to record whatever version we are using for the simulation. 
+		Here are the informations:
+		\begin{table}
+			\centering
+			\caption{Version of programmes used for simulation}
+			\begin{tabular}{rrr}
+				Programme & version & Download date\\
+				LDSC & 1.0.0 & 2016-3-3 \\
+				GCTA & 1.25.2 & 2016-3-3
+			\end{tabular}
+		\end{table}
 	
 	\section{To Do}
 	\begin{enumerate}
@@ -389,6 +404,7 @@
 	\lstset{tabsize=4,breaklines=true}
 	
 	\begin{lstlisting}[language=bash]
+	related=0.05;
 for i in `ls ~/workspace/inheritance_estimate/rawData/*.fam | grep -v CC`;
 do
 	arrIN=(${i//\// });
@@ -406,12 +422,13 @@ do
 	temp=$(wc -l WTCCC17000.temp.$diseaseName.remove | cut -f 1 -d " ");
 	echo "${temp[0]} samples failed heterozygousity test";
 	#Now perform the filtering and find all related samples
-	plink --bfile WTCCC17000.temp.$diseaseName --remove WTCCC17000.temp.$diseaseName.remove --extract WTCCC17000.temp.$diseaseName.prune.in --genome --min 0.125 --threads 10 --out WTCCC17000.temp.$diseaseName>/dev/null 2>&1;
-	awk 'NR!=1 {print $1" "$2; print $3" "$4}' WTCCC17000.temp.$diseaseName.genome | sort | uniq >> WTCCC17000.temp.$diseaseName.remove;
+	plink --bfile WTCCC17000.temp.$diseaseName --remove WTCCC17000.temp.$diseaseName.remove --extract WTCCC17000.temp.$diseaseName.prune.in --genome --min $related --threads 10 --out WTCCC17000.temp.$diseaseName>/dev/null 2>&1;
+	~/workspace/inheritance_estimate/programme/GreedyRelativeness WTCCC17000.temp.$diseaseName.genome >> WTCCC17000.temp.$diseaseName.remove;
+	#awk 'NR!=1 {print $1" "$2; print $3" "$4}' WTCCC17000.temp.$diseaseName.genome | sort | uniq >> WTCCC17000.temp.$diseaseName.remove;
 	temp=$(wc -l WTCCC17000.temp.$diseaseName.remove | cut -f 1 -d " ");
 	echo "Total of ${temp[0]} samples removed after considering the relationship";
 	#Now try performing PCA with all related samples removed
-	plink --bfile WTCCC17000.temp.$diseaseName --remove WTCCC17000.temp.$diseaseName.remove --extract WTCCC17000.temp.$diseaseName.prune.in --genome --min 0.125 --threads 10 --pca --out WTCCC17000.temp.$diseaseName >/dev/null 2>&1;
+	plink --bfile WTCCC17000.temp.$diseaseName --remove WTCCC17000.temp.$diseaseName.remove --extract WTCCC17000.temp.$diseaseName.prune.in --threads 10 --pca --out WTCCC17000.temp.$diseaseName >/dev/null 2>&1;
 	Rscript plotPCA.R WTCCC17000.temp.$diseaseName.eigenvec WTCCC17000.temp.$diseaseName >/dev/null 2>&1;
 	temp=$(wc -l WTCCC17000.temp.$diseaseName.pc | cut -f 1 -d " ");
 	echo "${temp[0]} samples seems to be outlier considering PCA plot";
@@ -425,8 +442,8 @@ do
 	cat WTCCC17000.temp.$diseaseName.remove WTCCC17000.temp.$diseaseName.pc > WTCCC17000.temp.$diseaseName.remove.temp;
 	mv WTCCC17000.temp.$diseaseName.remove.temp WTCCC17000.temp.$diseaseName.remove;
 	rm WTCCC17000.temp.$diseaseName.pc;
-	plink --bfile WTCCC17000.temp.$diseaseName --remove WTCCC17000.temp.$diseaseName.remove --extract WTCCC17000.temp.$diseaseName.prune.in --genome --min 0.125 --threads 10 --pca --out WTCCC17000.temp.$diseaseName>/dev/null 2>&1;
-	Rscript plotPCA.R WTCCC17000.temp.$diseaseName.eigenvec WTCCC17000.temp.$diseaseName>/dev/null 2>&1;
+	plink --bfile WTCCC17000.temp.$diseaseName --remove WTCCC17000.temp.$diseaseName.remove --extract WTCCC17000.temp.$diseaseName.prune.in --threads 10 --pca --out WTCCC17000.temp.$diseaseName>/dev/null 2>&1;
+	Rscript plotPCA.R WTCCC17000.temp.$diseaseName.eigenvec WTCCC17000.temp.$diseaseName WTCCC17000.temp.$diseaseName>/dev/null 2>&1;
 	temp=$(wc -l WTCCC17000.temp.$diseaseName.pc | cut -f 1 -d " ");
 	NUMOFLINES=${temp[0]};
 	echo "$NUMOFLINES samples seems to be outlier considering PCA plot";
@@ -438,10 +455,11 @@ done
 	\end{lstlisting}
 
 	After running all these scripts, we will now have the PCA plot for each samples. 
-	We should also have the information as to what samples should we exclude from the final data set (stored in WTCCC17000.temp.\$diseaseName.remove).
+	We should also have the information as to what samples should we exclude from the final data set.
 	
 	\begin{lstlisting}[language=bash]
 	count=1;
+	related=0.05;
 for i in `ls *.temp*.fam`;
 do
 	disease=(${i//./ });
@@ -462,15 +480,16 @@ done
 	#We also want to lable the sample by batch so that we can see if there is any batch problem
 	ls *temp*.fam | awk -F "." '{print "awk \x27{print \""$3" \"\$2}\x27 "$0}' | bash |  awk 'NR==FNR{a[$2]=$1} NR!=FNR{print a[$2]" "$2" "$3" "$4" "$5" "$6}' - WTCCC17000.filter.fam > temp
 	mv temp WTCCC17000.filter.fam
-	rm *temp*
+	rm -f *temp*
 	#To avoid cross batch relatedness, we will again check the relationship between the samlpes
-	plink --bfile WTCCC17000.filter --extract WTCCC17000.filter.prune.in --genome --min 0.125 --out WTCCC17000.filter --threads 10 
-	awk 'NR!=1 {print $1" "$2; print $3" "$4}' WTCCC17000.filter.genome | sort | uniq > WTCCC17000.filter.remove;
+	plink --bfile WTCCC17000.filter --extract WTCCC17000.filter.prune.in --genome --min $related --out WTCCC17000.filter --threads 10 
+	~/workspace/inheritance_estimate/programme/GreedyRelativeness  WTCCC17000.filter.genome > WTCCC17000.filter.remove;
+	#awk 'NR!=1 {print $1" "$2; print $3" "$4}' WTCCC17000.filter.genome | sort | uniq > WTCCC17000.filter.remove;
 	# Remove related sample and get the final result
 	plink --bfile WTCCC17000.filter --remove WTCCC17000.filter.remove --threads 10 --geno 0.01 --mind 0.95 --maf 0.05 --hwe 1e-5 --make-bed --out WTCCC17000.final
 	# We then generate the PCA to check that everything is indeed ok
 	plink --bfile WTCCC17000.final --pca --extract WTCCC17000.filter.prune.in --out WTCCC17000.final --threads 10
-	Rscript plotPCA.R WTCCC17000.final.eigenvec
+	Rscript plotPCA.R WTCCC17000.final.eigenvec  WTCCC17000.final
 	cp WTCCC17000.final.fam WTCCC17000.final.bk.fam
 	\end{lstlisting}
 
@@ -545,6 +564,65 @@ done
 	plink --bfile WTCCC17000.final --chr 1 --make-bed --out WTCCC17000.chr1
 	gcta64 --bfile WTCCC17000.chr1 --autosome --maf 0.05 --make-grm --out WTCCC17000.chr1.gcta --make-grm-gz --thread-num 10
 	\end{lstlisting}
+	
+	Now the simulation script \cref{simulationCode}. 
+	I want to be a bit greedy here where I will perform test on \emph{all} condition together.
+	The basic concept of this simulation will be ``draw from population''. 
+	So, we first simulate a population given a number of information (e.g. causal SNPs and effect Size), then from this population, we randomly draw $N$ samples for the simulation and repeat this procedure 100 times.
+	\newpage
+	\begin{lstlisting}[label=simulationCode,language=R]
+	# This will likely be a very long code...
+	# First, we need to get the required programmes
+	shrek="~/workspace/inheritance_estimate/programme/Shrek/shrek";
+	gcta="gcta64";
+	ldsc="~/programmes/genotype/ldsc/";
+	
+	# Now the simulation meta information
+	nSituation = 10; # Number of different causal SNP set
+	repeats = 100; # Number of repeats for each causal SNP set
+	nRef = 500; # Number of reference use for LDSC and SHREK
+	nSample =1000;
+	causalSnps = c(10,50,100,1000);
+	heritability = seq(0,0.9,0.1);
+	prevalence = c(0.5,0.25,0.1);
+	observedPrevalence=0.5;
+	
+	# Now the required fam file
+	fam = read.table("WTCCC17000.chr1.fam");
+	
+	# Now the simulation code:
+	for(situation in 1:nSituation){
+		#First simulate the reference
+		ref=sort(sample(1:nrow(fam),size=nRef,replace = FALSE));
+	}
+	# Just keep it here as it seems like GCTA can also calculate the LDSC
+	# gcta64 --bfile test --ld-score --ld-wind 1000 --ld-score-adj --out test
+	\end{lstlisting}
+	
+	\section{March 4, 2016}
+		Johnny wants us to use 0.05 as relationship cutoff. 
+		This will lead to a large amount of samples being removed, therefore it is better if we use the greedy approach (Try to retain one of the sample in relationship pair).
+		
+		I wrote a C++ programme for it and it works nicely
+		\lstinputlisting[language=C++]{"C:/Users/swchoi/Desktop/Programme/GWAS/greedyRelativeness.cpp"}
+	
+	\section{March 8, 2016}
+	As we have moved the codes to a makefile which contain most of the commenting.
+	Therefore, from now on, codes will not be stored here. 
+	
+	Completed the simulation script, now need to check whether if the output is correct.
+	
+	For SHREK, the random stopping problem is still here, yet we fail to identify the reason behind the problem...
+	
+	\section{March 14, 2016}
+	A note to myself: if we are going to build another server account in the future, put all the libraries in the same folder instead of putting them into their own sub folders for easy linking (can use soft link).
+	e.g. libblas.so in LIB instead of in LIB/BLAS
+	
+	When installing LAPACK, make sure we use the cmake function:
+	\begin{lstlisting}
+	cmake -DCMAKE_INSTALL_PREFIX=/home/sam/programmes/lib/lapack-3.6.0 -DCMAKE_BUILD_TYPE=RELEASE -DBUILD_SHARED_LIBS=ON ../
+	\end{lstlisting}
+	
 	\newpage
 	\section{Useful Resources}
 	\begin{table}[t]

@@ -24,7 +24,7 @@ class SnpEstimation
         SnpEstimation(const Command &commander);
         /** Default destructor */
         virtual ~SnpEstimation();
-        void estimate(GenotypeFileHandler &genotypeFileHandler,const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> &regionList);
+        void estimate(GenotypeFileHandler &genotypeFileHandler, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> &regionList);
         void result(const boost::ptr_vector<Snp> &snpList, const boost::ptr_vector<Region> &regionList);
     protected:
     private:

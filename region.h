@@ -35,7 +35,7 @@ class Region
     protected:
     private:
         boost::ptr_vector<Interval> m_intervalList;
-        std::string m_name;
+        std::string m_name="";
         double m_variance=0.0;
         double m_addVar=0.0;
         //double m_varianceBuff=0.0;

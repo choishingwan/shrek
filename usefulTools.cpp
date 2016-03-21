@@ -68,8 +68,11 @@ int usefulTools::NumberOfSetBits(uint32_t i){
 
 
 double usefulTools::qnorm(const double p){
-    double r, val;
-    double q = p - 0.5;
+    if (isnan(p)) return p + 1;
+    double r,p_, q,val;
+    p_=(0.5 - (p) + 0.5);
+    q = p_ - 0.5;
+
     if (fabs(q) <= .425){/* 0.075 <= p <= 0.925 */
         r = .180625 - q * q;
         val =	q * (((((((r * 2509.0809287301226727 +
@@ -83,8 +86,10 @@ double usefulTools::qnorm(const double p){
                     687.1870074920579083) * r + 42.313330701600911252) * r + 1.);
     }
     else{
-        if(q>0) r=0.5 - (p) + 0.5;
-        else r=p;
+
+//        if(q>0) r=0.5 - (p) + 0.5;
+        if(q>0) r=p;
+        else r=p_;
         r = sqrt(- log(r));
         if (r <= 5.) { /* <==> min(p,1-p) >= exp(-25) ~= 1.3888e-11 */
             r += -1.6;

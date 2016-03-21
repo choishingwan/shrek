@@ -26,12 +26,8 @@ class GenotypeFileHandler
         /** Default destructor */
         virtual ~GenotypeFileHandler();
         void initialize(const Command &commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList);
-//
-//        void getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary);
-//        void getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary);
-
-        void getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary);
-        void getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary);
+        void getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &windowEnd, bool &completed, std::vector<size_t> &boundary);
+        void getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &windowEnd, bool &completed, std::vector<size_t> &boundary);
 
     protected:
     private:
@@ -42,16 +38,11 @@ class GenotypeFileHandler
 
         // This is the file handler for the bed and bim file
         std::ifstream m_bedFile;
-//        std::ifstream m_bimFile;
         // Only used for log
-        size_t m_nDuplicated= 0; //Check for duplication within the REFERENCE
-        size_t m_nInvalid=0; // SNPs that have different information as the p-value file
         size_t m_nFilter = 0;
-        size_t m_nAmbig=0; // Number of SNPs that are ambiguous
         size_t m_blockSize=0;
         bool m_keepAmbiguous = false;
         bool openPlinkBinaryFile(const std::string s, std::ifstream & BIT);
-        std::map<std::string, bool> m_duplicateCheck;
 
 
         // These are indicating the last USED SNP
@@ -62,13 +53,6 @@ class GenotypeFileHandler
         std::vector<int> m_inclusion;
         size_t m_snpIter=0; //This is for the iteration of inclusion
         size_t m_nSnp=0;
-
-
-        // Crazy functions
-        // This function is responsible for obtaining the first ever SNP that can be used for the analysis,
-        // taking into consideration of the MAF and validation of SNP
-
-
 };
 
 #endif // GENOTYPEFILEHANDLER_H

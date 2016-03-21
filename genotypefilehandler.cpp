@@ -90,6 +90,12 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     m_genotypeFilePrefix = commander.getReferenceFilePrefix();
     m_mafThreshold = commander.getMAF();
     m_blockSize = commander.getSizeOfBlock();
+
+    //First check if the bed file format is correct, if not, we just stop
+    std::string bedFileName = m_genotypeFilePrefix+".bed";
+    bool bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_bedFile); //We will try to open the connection to bedFile
+    if(!bfile_SNP_major) throw std::runtime_error("We currently have no plan of implementing the individual-major mode. Please use the snp-major format");
+
     // First, we need to know the number of samples such that we can read the plink binary file correctly
     std::string famFileName = m_genotypeFilePrefix+".fam";
     std::ifstream famFile;
@@ -112,24 +118,14 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
 
     // However, I should still initialize the bed file
 
-    std::string bedFileName = m_genotypeFilePrefix+".bed";
-
-    bool bfile_SNP_major = openPlinkBinaryFile(bedFileName, m_bedFile); //We will try to open the connection to bedFile
-    if(!bfile_SNP_major)
-        throw std::runtime_error("We currently have no plan of implementing the individual-major mode. Please use the snp-major format");
     std::string bimFileName = m_genotypeFilePrefix+".bim";
     std::ifstream bimFile;
     bimFile.open(bimFileName.c_str());
     if(!bimFile.is_open())  throw std::runtime_error("Cannot open bim file");
-//    m_bimFile.open(bimFileName.c_str());
-//    if(!m_bimFile.is_open()){
-//        throw std::runtime_error("Cannot open bim file");
-//    }
-//    fprintf(stderr, "Start reading the first SNP\n");
-//    initializeSNP(snpIndex, snpList);
-//    fprintf(stderr, "Finished initializing the first SNP\n");
 
     size_t emptyLineCheck = 0; // Only use for checking for empty line, consider this as a safeguard
+    std::map<std::string, bool> duplicateCheck;
+    size_t nDuplicated=0,nInvalid=0, nAmbig=0;
     while(std::getline(bimFile, line)){
         line = usefulTools::trim(line);
         //The only thing I cannot filter beforehand is the MAF
@@ -139,18 +135,18 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
             m_inclusion.push_back(-1);
             if(token.size()>=6){
                 std::string rs = token[1];
-                if(m_duplicateCheck.find(rs)!=m_duplicateCheck.end())   m_nDuplicated++; // Don't want it if it is duplicated (impossible here actually)
+                if(duplicateCheck.find(rs)!=duplicateCheck.end())   nDuplicated++; // Don't want it if it is duplicated (impossible here actually)
                 else if(snpIndex.find(rs)!=snpIndex.end()){
                     size_t location = snpIndex.at(rs);
                     bool ambig = false;
                     if(snpList.at(location).concordant(token[0], atoi(token[3].c_str()), rs, token[4], token[5], ambig )){
-                        if(!m_keepAmbiguous && ambig) m_nAmbig ++; // We don't want to keep ambiguous SNPs and this is an ambiguous SNP
+                        if(!m_keepAmbiguous && ambig) nAmbig ++; // We don't want to keep ambiguous SNPs and this is an ambiguous SNP
                         else{
                             m_inclusion.back()=location;
-                            snpList.at(location).setFlag(0,true);
+                            snpList[location].setFlag(0,true);
                         }
                     }
-                    else m_nInvalid++;
+                    else nInvalid++;
                 }
             }
             else throw "Malformed bim file, does not contain all necessary information";
@@ -161,11 +157,11 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     fprintf(stderr,"\nReference Panel Information:\n");
     fprintf(stderr,"==================================\n");
     fprintf(stderr, "%lu samples were found in the reference panel\n", m_nRefSample);
-    fprintf(stderr, "%lu discordant SNP(s) identified\n", m_nInvalid);
-    if(m_nAmbig!=0)
-        fprintf(stderr, "%lu ambiguous SNP(s) filtered\n", m_nAmbig);
-    if(m_nDuplicated)
-        fprintf(stderr, "%lu duplicated SNP(s) found in reference panel\n", m_nInvalid);
+    fprintf(stderr, "%lu discordant SNP(s) identified\n", nInvalid);
+    if(nAmbig!=0)
+        fprintf(stderr, "%lu ambiguous SNP(s) filtered\n", nAmbig);
+    if(nDuplicated)
+        fprintf(stderr, "%lu duplicated SNP(s) found in reference panel\n", nDuplicated);
     m_snpIter=0;
     m_nSnp = m_inclusion.size(); //reduce the number of time required for accessing the size
 }
@@ -175,10 +171,7 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
 // Find the first SNP that for us to include.
 // Then read all the SNPs within the region
 
-//void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary){
-void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary){
-
-
+void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &windowEnd, bool &completed, std::vector<size_t> &boundary){
     bool starting  = true;// Indicate that we are trying to identify the start of the current block
     // Simple declaration
     int blockStartIndex = 0; // This is index for the start SNP of this block
@@ -188,25 +181,24 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_d
 
     for(; m_snpIter < m_nSnp; ++m_snpIter){ // iterate through the whole bed file (# of SNPs)
         bool snp = false;
-		if(m_inclusion[m_snpIter] != -1) snp=true; // If not -1, then this is a SNP we want
+        int snpIndex = m_inclusion[m_snpIter];
+		if(snpIndex != -1) snp=true; // If not -1, then this is a SNP we want
         if(starting ){ // If we are starting, we need to mark the current SNP as the start of the block
-            blockStartIndex = m_inclusion[m_snpIter]; // Get the index of the SNP in snpList
             if(snp){
-                blockChr = snpList.at(blockStartIndex).getChr();
-                blockStartLoc = snpList.at(blockStartIndex).getLoc();
+                blockChr = snpList[snpIndex].getChr();
+                blockStartLoc = snpList[snpIndex].getLoc();
                 lastUsedLoc = blockStartLoc;
             }
         }
 		if(snp){
-            size_t currentLoc = snpList.at(m_inclusion[m_snpIter]).getLoc(); // Get the current location
-            std::string currentChr = snpList.at(m_inclusion[m_snpIter]).getChr(); // Get the current chromosome
+            size_t currentLoc = snpList[snpIndex].getLoc(); // Get the current location
+            std::string currentChr = snpList[snpIndex].getChr(); // Get the current chromosome
             if(currentChr.compare(blockChr)!=0 ||  // if the chromosome doesn't match, it is from a new chromosome
                 currentLoc - lastUsedLoc > m_blockSize){ // Otherwise, if the current SNP is just too far away from the last used SNP (not the start of the block)
-                finalizeBuff=true; // It means we will decompose everything left and start brand new afterwards
+                windowEnd=true; // It means we will decompose everything left and start brand new afterwards
                 return;
             }
-            // This means we then next SNP is too far from the first SNP but not from the last SNP
-            // So we will have a normal exit without setting finalizeBuff
+            // This means we then next SNP is too far from the first SNP but not from the last SNP (normal exit)
             else if(currentLoc - blockStartLoc > m_blockSize) return;
             else{ // This SNP is within our required region, therefore we will start reading it
                 Genotype *tempGenotype = new Genotype(); // This is served as a temporary holder, if the MAF doesn't pass, we will delete it
@@ -260,14 +252,14 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_d
                     }
                     snpList[m_inclusion[m_snpIter]].setStatus('I');
                     genotype.push_back(tempGenotype);
-                    snpLoc.push_back(m_inclusion[m_snpIter]); // index of in snpList
+                    snpLoc.push_back(snpIndex); // index of in snpList
                     lastUsedLoc  = currentLoc; // This is for the coordinates
-//                    if(starting) boundary.push_back(std::prev(snpLoc.end()));
                 }
             }
 		}
 		else{
             //Doesn't matter, just read the thing and proceed
+            // can speed this up if we use seekg
             size_t indx = 0; //The iterative count
             while ( indx < m_nRefSample ){
                 std::bitset<8> b; //Initiate the bit array
@@ -284,32 +276,29 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_d
             }
 		}
     }
-
-    finalizeBuff = true;
+    windowEnd = true;
     completed = true;
     m_bedFile.close();
-
 }
 
-//void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_list<Genotype> &genotype, std::list<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<std::list<size_t>::iterator > &boundary){
-void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &finalizeBuff, bool &completed, std::deque<size_t> &boundary){
- /** I have updated the functions, now getSnp should just get more SNPs to fill in the last block **/
+void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &windowEnd, bool &completed, std::vector<size_t> &boundary){
+    // Get more SNPs to fill in the last block
     if(!m_bedFile.is_open())return; // nothing to read anymore
-//    size_t lastStartIndex = *(boundary.back());
     size_t lastStartIndex = snpLoc[boundary.back()]; // This is the index of the first SNP of the last block on snpList
-    std::string blockChr = snpList.at(lastStartIndex).getChr(); // The block chromosome
-    size_t blockStartLoc = snpList.at(lastStartIndex).getLoc(); // The start BP of the block
-    size_t lastUsedLoc = snpList.at(snpLoc.back()).getLoc(); // The last BP of the current block
+    std::string blockChr = snpList[lastStartIndex].getChr(); // The block chromosome
+    size_t blockStartLoc = snpList[lastStartIndex].getLoc(); // The start BP of the block
+    size_t lastUsedLoc = snpList[snpLoc.back()].getLoc(); // The last BP of the current block
     for(; m_snpIter < m_nSnp; ++m_snpIter){
         bool snp = false;
         //indicate whether if we need this snp
-		if(m_inclusion[m_snpIter] != -1) snp=true;
+        int snpIndex = m_inclusion[m_snpIter];
+		if(snpIndex != -1) snp=true;
 		if(snp){
-            size_t currentLoc = snpList.at(m_inclusion[m_snpIter]).getLoc();
-            std::string currentChr = snpList.at(m_inclusion[m_snpIter]).getChr();
+            size_t currentLoc = snpList[snpIndex].getLoc();
+            std::string currentChr = snpList[snpIndex].getChr();
             if(currentChr.compare(blockChr)!=0 ||
                 currentLoc - lastUsedLoc > m_blockSize){
-                finalizeBuff=true;
+                windowEnd=true;
                 return;
             }
             else if(currentLoc - blockStartLoc > m_blockSize) return;
@@ -331,7 +320,6 @@ void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_deq
                         ++indx; //so that we only need to modify the indx when adding samples but not in the mean and variance calculation
                         int first = b[c++];
                         int second = b[c++];
-
                         if(first == 1 && second == 0){
                             first = 3; //Missing value should be 3
                         }
@@ -364,8 +352,8 @@ void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_deq
                 }
                 else{
                     genotype.push_back(tempGenotype);
-                    snpList[m_inclusion[m_snpIter]].setStatus('I');
-                    snpLoc.push_back(m_inclusion[m_snpIter]);
+                    snpList[snpIndex].setStatus('I');
+                    snpLoc.push_back(snpIndex);
                     lastUsedLoc  = currentLoc;
                 }
             }
@@ -389,8 +377,9 @@ void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_deq
 		}
     }
 
-    finalizeBuff = true;
+    windowEnd = true;
     completed = true;
+    m_bedFile.close();
 }
 
 
