@@ -39,10 +39,11 @@ void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::d
         }
     }
     // Now we can insert the buff back to the result
-    linkageMtx.lock();
-        for(size_t i = 0; i < perfectBuff.size(); ++i) snpList[snpLoc[perfectOri[i]]].shareHeritability(snpList[snpLoc[perfectBuff[i]]]);
-        perfectLd.insert(perfectLd.end(), perfectBuff.begin(), perfectBuff.end());
-    linkageMtx.unlock();
+//
+//    linkageMtx.lock();
+//        for(size_t i = 0; i < perfectBuff.size(); ++i) snpList[snpLoc[perfectOri[i]]].shareHeritability(snpList[snpLoc[perfectBuff[i]]]);
+//        perfectLd.insert(perfectLd.end(), perfectBuff.begin(), perfectBuff.end());
+//    linkageMtx.unlock();
 
 }
 
