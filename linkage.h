@@ -21,7 +21,8 @@
 #include <assert.h>
 
 #include <armadillo>
-
+#include <Eigen/Dense>
+#include <limits>
 #include <mutex>
 #include <thread>
 

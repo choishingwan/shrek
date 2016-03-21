@@ -216,43 +216,60 @@ void Linkage::decompose(size_t start, const arma::vec &zStat, const arma::vec &f
     if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
     size_t endOfBlock = start+fStat.n_elem-1;
 //    std::cout << "Rank: " << rank((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock )) << "\t" << endOfBlock-start << "\t" << cond((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock )) << std::endl;
-    arma::mat rInv=pinv((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ));
-    heritResult = rInv * fStat;
-    arma::mat error = m_linkage.submat( start, start, endOfBlock, endOfBlock )*heritResult - fStat;
- 	double oriNorm = norm(fStat);
-    double relative_error = norm(error) / oriNorm;
-    double prev_error = relative_error+1;
-    arma::mat update;
-    int iterCount = 0, maxIter = 100;
-    while(relative_error < prev_error && iterCount < maxIter){
-        prev_error = relative_error;
-        update=rInv*(-error);
-        error= m_linkage.submat( start, start, endOfBlock, endOfBlock )*(heritResult+update) - fStat;
-        relative_error = norm(error) / oriNorm;
-        if(relative_error < 1e-300) relative_error = 0; // 1e-300 is more than enough...
-        heritResult = heritResult+update;
-        iterCount++; // This is to avoid infinite looping
+Eigen::MatrixXd check = Eigen::MatrixXd::Zero(fStat.n_elem, fStat.n_elem);
+Eigen::VectorXd beta = Eigen::VectorXd::Zero(fStat.n_elem);
+for(size_t i = 0; i < fStat.n_elem; ++i){
+    beta(i)=fStat(i);
+    for(size_t j = i; j < fStat.n_elem; ++j){
+        check(i,j) = ((arma::mat)m_linkage.submat(start,start,endOfBlock,endOfBlock))(i,j);
+        check(j,i) = check(i,j);
     }
+}
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(check);
+    double tolerance = std::numeric_limits<double>::epsilon() * fStat.n_elem * es.eigenvalues().array().maxCoeff();
+    Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
+    /** Calculate the h vector here **/
+    Eigen::VectorXd herit = rInverse*beta;
+    for(size_t i = 0; i < fStat.n_elem; ++i){
+        heritResult(i) = herit(i);
+    }
+//    arma::mat rInv=pinv((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ));
+//    heritResult = rInv * fStat;
+//    arma::mat error = m_linkage.submat( start, start, endOfBlock, endOfBlock )*heritResult - fStat;
+// 	double oriNorm = norm(fStat);
+//    double relative_error = norm(error) / oriNorm;
+//    double prev_error = relative_error+1;
+//    arma::mat update;
+//    int iterCount = 0, maxIter = 100;
+//    while(relative_error < prev_error && iterCount < maxIter){
+//        prev_error = relative_error;
+//        update=rInv*(-error);
+//        error= m_linkage.submat( start, start, endOfBlock, endOfBlock )*(heritResult+update) - fStat;
+//        relative_error = norm(error) / oriNorm;
+//        if(relative_error < 1e-300) relative_error = 0; // 1e-300 is more than enough...
+//        heritResult = heritResult+update;
+//        iterCount++; // This is to avoid infinite looping
+//    }
 
     // Now calculate the varaince, this is for the complicated variance
-    varResult = rInv*arma::diagmat(nSample)*(4*m_linkageSqrt.submat(start,start,endOfBlock,endOfBlock)%(zStat*zStat.t())-2*m_linkage.submat(start,start,endOfBlock, endOfBlock))*arma::diagmat(nSample)*rInv;
+//    varResult = rInv*arma::diagmat(nSample)*(4*m_linkageSqrt.submat(start,start,endOfBlock,endOfBlock)%(zStat*zStat.t())-2*m_linkage.submat(start,start,endOfBlock, endOfBlock))*arma::diagmat(nSample)*rInv;
 
 
     //This part is here to safe guard any stupid mistakes I made
-    if(isnan(arma::accu(varResult))){
-        std::cout << varResult << std::endl;
-        std::cout << "sample:"  << std::endl;
-        std::cout << arma::diagmat(nSample) << std::endl;
-        std::cout << "R2" << std::endl;
-        std::cout << m_linkage.submat(start,start,endOfBlock, endOfBlock) << std::endl;
-        std::cout << "R" << std::endl;
-        std::cout << m_linkageSqrt.submat(start,start,endOfBlock,endOfBlock) << std::endl;
-        std::cout << "Z" << std::endl;
-        std::cout << (zStat*zStat.t()) << std::endl;
-        std::cout << "Inverse" << std::endl;
-        std::cout << rInv << std::endl;
-        std::cout << "Fstat"<< std::endl;
-        std::cout << fStat << std::endl;
-    }
+//    if(isnan(arma::accu(varResult))){
+//        std::cout << varResult << std::endl;
+//        std::cout << "sample:"  << std::endl;
+//        std::cout << arma::diagmat(nSample) << std::endl;
+//        std::cout << "R2" << std::endl;
+//        std::cout << m_linkage.submat(start,start,endOfBlock, endOfBlock) << std::endl;
+//        std::cout << "R" << std::endl;
+//        std::cout << m_linkageSqrt.submat(start,start,endOfBlock,endOfBlock) << std::endl;
+//        std::cout << "Z" << std::endl;
+//        std::cout << (zStat*zStat.t()) << std::endl;
+//        std::cout << "Inverse" << std::endl;
+//        std::cout << rInv << std::endl;
+//        std::cout << "Fstat"<< std::endl;
+//        std::cout << fStat << std::endl;
+//    }
 }
 
