@@ -94,8 +94,8 @@ void Snp::computeSummaryStatistic(bool isP){
                 assert(!isnan(beta)&& "I don't know what is the problem");
             }
         }
-        if(m_quantitative) (*m_statistic) = fabs(beta); //Because we want to keep the statistic as the summary stat instead of p-value
-        else (*m_statistic) = sqrt(fabs(beta)); //Because we want to keep the statistic as the summary stat instead of p-value
+        beta=fabs(beta);
+        (*m_statistic)=(m_quantitative)? beta : sqrt(beta);
         if(m_sign!=0) (*m_statistic) = m_sign*(*m_statistic); // Give the value a sign if it is provided
     }
     else if(m_binary){ //This is the ChiSQ from a binary trait
@@ -103,9 +103,9 @@ void Snp::computeSummaryStatistic(bool isP){
     }
     //Now also calculate the F-Statistic
     double t2 = (*m_statistic)*(*m_statistic);
-    double sampleSize = 0.0;
-    if(m_binary) sampleSize += (double)(m_nCase+m_nControl);
-    else if(m_quantitative) sampleSize+= (double)m_nSample;
+    double sampleSize = 0;
+    if(m_binary) sampleSize = (double)(m_nCase+m_nControl);
+    else if(m_quantitative) sampleSize= (double)m_nSample;
     else throw std::runtime_error("Unknown mode, cannot proceed");
     (*m_fstat) = (t2-1.0)/(t2+sampleSize-2.0);
 }
@@ -143,11 +143,9 @@ void Snp::generateSnpIndex(std::map<std::string, size_t> &snpIndex, boost::ptr_v
 void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &commander){
     std::ifstream pValue;
     pValue.open(commander.getPValueFileName().c_str());
-    if(!pValue.is_open()){
-        throw std::runtime_error("Cannot read the p-value file");
-    }
+    if(!pValue.is_open()) throw std::runtime_error("Cannot read the p-value file");
     std::string line;
-    //Assume the p-value file has a header
+    //The p-value file must have header
     std::getline(pValue, line);
     bool qt = commander.quantitative();
     bool bt = commander.binary();
@@ -175,7 +173,7 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
     std::map<std::string, bool> duplication;
     while(getline(pValue, line)){
         line = usefulTools::trim(line);
-        if(!line.empty()){ //Only process lines with information
+        if(!line.empty()){
             std::vector<std::string> token;
             usefulTools::tokenizer(line, " \t", &token);
             if(token.size() >= maxIndex){
@@ -199,7 +197,7 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
                     int signOfStat = 0;
                     if(signIndex!=0){
                         // same thing apply for the sign of effect, if it is not a valid input, we will invalidate the whole SNP
-                        if(usefulTools::isNumeric(token[signIndex-1])) signOfStat = ((atof(token[signIndex-1].c_str())< signNull)? -1: 1);
+                        if(usefulTools::isNumeric(token[signIndex-1])) signOfStat = (atof(token[signIndex-1].c_str())< signNull)? -1: 1;
                         else invalid = true;
                     }
                     int sizeOfSample = 0;
@@ -222,14 +220,13 @@ void Snp::generateSnpList(boost::ptr_vector<Snp> &snpList, const Command &comman
                         else invalid = true;
                     }
                     else if(bt) sizeOfControl = nControl;
-                    if(!usefulTools::isNumeric(token[sumStatIndex-1])) invalid = true;
 
+                    if(!usefulTools::isNumeric(token[sumStatIndex-1])) invalid = true;
                     if(invalid) nInvalid++; //This line is invalid because some of the numerical information are not numeric
                     else if(imputeIndex!=0 && imputeScore < infoThreshold) nFilter ++; // we will filter this SNP based on imputation score
                     else{
                         double statistic = atof(token[sumStatIndex-1].c_str());
                         // We cannot convert a p-value of 0 to a valid summary statistic
-                        // So we need to remove it
                         if(statistic == 0.0 && isP ) nOverSig++; //This is not a safe comparison as double == is always a problem
                         else{
                             snpList.push_back(new Snp(chr,rsId, bp, sizeOfSample, sizeOfCase, sizeOfControl, refAllele, altAllele, bt, qt, statistic, imputeScore, signOfStat));

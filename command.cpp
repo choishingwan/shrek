@@ -498,7 +498,52 @@ bool Command::processCode(int argc,char *argv[]){
                 fprintf(stderr, "Cannot find column: %s\n", columnName[i].c_str());
             }
             identified = false;
-
+        }
+        //Add the default
+        for(size_t i=0; i < token.size(); ++i){
+            if(duplication.find(token[i])==duplication.end()){
+                if(token[i].compare("A1")==0){
+                    fprintf(stderr, "Reference allele set to default: A1\n");
+                    m_refIndex=i+1;
+                    m_maxIndex= (i+1 > m_maxIndex)? i+1: m_maxIndex;
+                }
+                else if (token[i].compare("A2")==0){
+                    fprintf(stderr, "Alternative allele set to default: A2\n");
+                    m_altIndex=i+1;
+                    m_maxIndex= (i+1 > m_maxIndex)? i+1: m_maxIndex;
+                }
+                else if (token[i].compare("T")==0 && m_summaryStatisticIndex==0 && m_qt){
+                    fprintf(stderr, "Test statistic detected: T\n");
+                    m_summaryStatisticIndex=i+1;
+                    m_maxIndex= (i+1 > m_maxIndex)? i+1: m_maxIndex;
+                    if(m_signIndex==0){
+                        fprintf(stderr, "Will also use as sign\n");
+                        m_signIndex = i+1;
+                    }
+                }
+                else if(token[i].compare("CHR")==0){
+                    fprintf(stderr, "Chromosome header set to default: CHR\n");
+                    m_chrIndex= i+1;
+                    m_maxIndex= (i+1 > m_maxIndex)? i+1: m_maxIndex;
+                }
+                else if (token[i].compare("BP")==0){
+                    fprintf(stderr, "Coordinate header set to default: BP\n");
+                    m_bpIndex = i+1;
+                    m_maxIndex= (i+1 > m_maxIndex)? i+1: m_maxIndex;
+                }
+                else if (token[i].compare("SNP")==0){
+                    fprintf(stderr, "SNP ID header set to default: SNP\n");
+                    m_rsIndex = i+1;
+                    m_maxIndex= (i+1 > m_maxIndex)? i+1: m_maxIndex;
+                }
+                else if(m_qt && m_summaryStatisticIndex==0  && token[i].compare("P")==0 ){
+                    fprintf(stderr, "P-value detected but not provided: P\n");
+                    fprintf(stderr, "Will use default value\n");
+                    m_summaryStatisticIndex= i+1;
+                    m_maxIndex= (i+1 > m_maxIndex)? i+1: m_maxIndex;
+                    m_isPvalue=true;
+                }
+            }
         }
     }
     // Check whether if all the required inputs are provided
@@ -577,8 +622,8 @@ bool Command::processCode(int argc,char *argv[]){
             error=true;
         }
         else if(m_infoThreshold==0.0){
-            fprintf(stderr, "INFO threshold not provided (-I), will not filter by INFO\n");
-            m_imputeInfoIndex=0;
+            fprintf(stderr, "INFO threshold not provided (-I), will set to default: 0.8\n");
+            m_imputeInfoIndex=0.8;
         }
     }
     // If there is no error then everything is ok

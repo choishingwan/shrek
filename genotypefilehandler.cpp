@@ -86,7 +86,6 @@ bool GenotypeFileHandler::openPlinkBinaryFile(const std::string s, std::ifstream
 
 void GenotypeFileHandler::initialize(const Command &commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList){
     m_keepAmbiguous = commander.keepAmbiguous();
-    m_thread = commander.getNThread();
     m_genotypeFilePrefix = commander.getReferenceFilePrefix();
     m_mafThreshold = commander.getMAF();
     m_blockSize = commander.getSizeOfBlock();
@@ -112,11 +111,6 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     // We need to tell Genotype what is the maximum number of samples that can present in the reference panel
     // therefore we must do
     Genotype::SetsampleNum(m_nRefSample);
-    // End up realized that if I want to have a dynamic block construction
-    // when I read the SNPs, I will still need to read both the bim and bed
-    // files together, so don't bother with reading the file now
-
-    // However, I should still initialize the bed file
 
     std::string bimFileName = m_genotypeFilePrefix+".bim";
     std::ifstream bimFile;
@@ -133,6 +127,7 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
             std::vector<std::string> token;
             usefulTools::tokenizer(line, "\t", &token);
             m_inclusion.push_back(-1);
+            m_nSnp++;
             if(token.size()>=6){
                 std::string rs = token[1];
                 if(duplicateCheck.find(rs)!=duplicateCheck.end())   nDuplicated++; // Don't want it if it is duplicated (impossible here actually)
@@ -163,7 +158,6 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     if(nDuplicated)
         fprintf(stderr, "%lu duplicated SNP(s) found in reference panel\n", nDuplicated);
     m_snpIter=0;
-    m_nSnp = m_inclusion.size(); //reduce the number of time required for accessing the size
 }
 
 
@@ -171,24 +165,22 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
 // Find the first SNP that for us to include.
 // Then read all the SNPs within the region
 
-void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &windowEnd, bool &completed, std::vector<size_t> &boundary){
-    bool starting  = true;// Indicate that we are trying to identify the start of the current block
+void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &windowEnd, bool &completed, std::vector<size_t> &boundary, bool addition){
+    bool starting  = !addition;// Indicate that we are trying to identify the start of the current block
     // Simple declaration
-    int blockStartIndex = 0; // This is index for the start SNP of this block
-    std::string blockChr=""; // Checking if there is any chromosome change
-    size_t blockStartLoc=0; // The bp of the first SNP included in this block
-    size_t lastUsedLoc =0; // The bp of the last SNP included in this block
+    int blockStartIndex = (addition)? snpLoc[boundary.back()] : 0; // This is index for the start SNP of this block
+    std::string blockChr= (addition)? snpList[blockStartIndex].getChr(): ""; // Checking if there is any chromosome change
+    size_t blockStartLoc= (addition)? snpList[blockStartIndex].getLoc(): 0; // The bp of the first SNP included in this block
+    size_t lastUsedLoc = (addition)? snpList[snpLoc.back()].getLoc() : 0; // The bp of the last SNP included in this block
 
     for(; m_snpIter < m_nSnp; ++m_snpIter){ // iterate through the whole bed file (# of SNPs)
         bool snp = false;
         int snpIndex = m_inclusion[m_snpIter];
 		if(snpIndex != -1) snp=true; // If not -1, then this is a SNP we want
-        if(starting ){ // If we are starting, we need to mark the current SNP as the start of the block
-            if(snp){
-                blockChr = snpList[snpIndex].getChr();
-                blockStartLoc = snpList[snpIndex].getLoc();
-                lastUsedLoc = blockStartLoc;
-            }
+        if(starting && snp){ // If we are starting, we need to mark the current SNP as the start of the block
+            blockChr = snpList[snpIndex].getChr();
+            blockStartLoc = snpList[snpIndex].getLoc();
+            lastUsedLoc = blockStartLoc;
         }
 		if(snp){
             size_t currentLoc = snpList[snpIndex].getLoc(); // Get the current location
@@ -221,7 +213,7 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_d
                         else{
                             validSample++;
                             alleleCount += first+second;
-                            double value = first+second+0.0;
+                            double value = (double)(first+second);
                             if(validSample==1){
                                 oldM = newM = value;
                                 oldS = 0.0;
@@ -280,106 +272,3 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_d
     completed = true;
     m_bedFile.close();
 }
-
-void GenotypeFileHandler::getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &windowEnd, bool &completed, std::vector<size_t> &boundary){
-    // Get more SNPs to fill in the last block
-    if(!m_bedFile.is_open())return; // nothing to read anymore
-    size_t lastStartIndex = snpLoc[boundary.back()]; // This is the index of the first SNP of the last block on snpList
-    std::string blockChr = snpList[lastStartIndex].getChr(); // The block chromosome
-    size_t blockStartLoc = snpList[lastStartIndex].getLoc(); // The start BP of the block
-    size_t lastUsedLoc = snpList[snpLoc.back()].getLoc(); // The last BP of the current block
-    for(; m_snpIter < m_nSnp; ++m_snpIter){
-        bool snp = false;
-        //indicate whether if we need this snp
-        int snpIndex = m_inclusion[m_snpIter];
-		if(snpIndex != -1) snp=true;
-		if(snp){
-            size_t currentLoc = snpList[snpIndex].getLoc();
-            std::string currentChr = snpList[snpIndex].getChr();
-            if(currentChr.compare(blockChr)!=0 ||
-                currentLoc - lastUsedLoc > m_blockSize){
-                windowEnd=true;
-                return;
-            }
-            else if(currentLoc - blockStartLoc > m_blockSize) return;
-            else{
-                // This is something we need
-                Genotype *tempGenotype = new Genotype();
-                size_t indx = 0; //The iterative count
-                double oldM=0.0, newM=0.0,oldS=0.0, newS=0.0;
-                size_t alleleCount=0, validSample=0;
-                while ( indx < m_nRefSample ){
-                    std::bitset<8> b; //Initiate the bit array
-                    char ch[1];
-                    m_bedFile.read(ch,1); //Read the information
-                    if (!m_bedFile) throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
-                    b = ch[0];
-                    int c=0;
-                    while (c<7 && indx < m_nRefSample ){ //Going through the bit flag. Stop when it have read all the samples as the end == NULL
-                        //As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
-                        ++indx; //so that we only need to modify the indx when adding samples but not in the mean and variance calculation
-                        int first = b[c++];
-                        int second = b[c++];
-                        if(first == 1 && second == 0){
-                            first = 3; //Missing value should be 3
-                        }
-                        else{
-                            validSample++;
-                            alleleCount += first+second;
-                            double value = first+second+0.0;
-                            if(validSample==1){
-                                oldM = newM = value;
-                                oldS = 0.0;
-                            }
-                            else{
-                                newM = oldM + (value-oldM)/(validSample);
-                                newS = oldS + (value-oldM)*(value-newM);
-                                oldM = newM;
-                                oldS = newS;
-                            }
-                        }
-                        tempGenotype->AddsampleGenotype(first+second, indx-1); //0 1 2 or 3 where 3 is missing
-                    }
-                }
-                validSample > 0 ? tempGenotype->Setmean(newM) : tempGenotype->Setmean(0.0);
-                validSample > 1 ? tempGenotype->SetstandardDeviation(std::sqrt(newS/(validSample - 1.0))) : tempGenotype->SetstandardDeviation(0.0);
-                double currentMaf = (validSample>0)?(alleleCount+0.0)/(2.0*validSample*1.0):-1.0;
-                currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
-                if(m_mafThreshold > currentMaf && currentMaf!=-1.0){
-                    m_inclusion[m_snpIter]=-1;
-                    m_nFilter++;
-                    delete tempGenotype;
-                }
-                else{
-                    genotype.push_back(tempGenotype);
-                    snpList[snpIndex].setStatus('I');
-                    snpLoc.push_back(snpIndex);
-                    lastUsedLoc  = currentLoc;
-                }
-            }
-		}
-		else{
-            //Doesn't matter, just read the thing and proceed
-            size_t indx = 0; //The iterative count
-            while ( indx < m_nRefSample ){
-                std::bitset<8> b; //Initiate the bit array
-                char ch[1];
-                m_bedFile.read(ch,1); //Read the information
-                if (!m_bedFile) throw std::runtime_error("Problem with the BED file...has the FAM/BIM file been changed?");
-                b = ch[0];
-                int c=0;
-                while (c<7 && indx < m_nRefSample ){ //Going through the bit flag. Stop when it have read all the samples as the end == NULL
-                        //As each bit flag can only have 8 numbers, we need to move to the next bit flag to continue
-                    ++indx; //so that we only need to modify the indx when adding samples but not in the mean and variance calculation
-                    c+=2;
-                }
-            }
-		}
-    }
-
-    windowEnd = true;
-    completed = true;
-    m_bedFile.close();
-}
-
-

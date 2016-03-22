@@ -54,76 +54,38 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler, boost::pt
 
         bool retainLastBlock=false; // only used when the finalizeBuff is true, this indicate whether if the last block is coming from somewhere new
         while(boundary.size() < 4 && !completed && !windowEnd){
-            // We want to get until the end or the end of the current region
-//            fprintf(stderr, "Get Block now\n");
-            // First, we get all the SNPs within the block
-            genotypeFileHandler.getBlock(snpList, genotype, snpLoc, windowEnd, completed,boundary);
+            genotypeFileHandler.getBlock(snpList, genotype, snpLoc, windowEnd, completed,boundary, false);
             size_t snpLocSizeBefore = snpLoc.size();
-            bool boundChange = false; // This is to indicate whether if the bound SNP is in perfect LD
-//            fprintf(stderr, "Construct\n");
-            // Now construct the LD matrix and also remove the perfect LD
+            bool boundChange = false;
             linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
-//            fprintf(stderr, "Got the linkage\n");
-            if(snpLocSizeBefore == snpLoc.size()){
-                // This mean there is no perfect LD, but we will still assert anyway just in case
-                assert(!boundChange && "Error: Not possible");
-            }
-            else{ // Perfect LD was removed
-                if(boundChange){
-                    if(boundary.back()== snpLoc.size()){
-                        // This mean the last block is in full LD with the previous block (unlikely though)
-                        windowEnd=true;
-                        boundary.pop_back();
-                    }
-                    else{
-                        // We have changed the boundary, so we need to check if the new
-                        // block is too far away
-                        size_t lastSnpLocIndex = boundary.back();
-                        size_t prevSnpLocIndex = boundary.back()-1;
-                        if(snpList.at(snpLoc[lastSnpLocIndex]).getLoc()-
-                           snpList.at(snpLoc[prevSnpLocIndex]).getLoc() > m_blockSize){
-                            retainLastBlock = true;
-                            windowEnd=true;
-                        }
-                        // We will patch it to make sure we are always starting
-                        // with something correct for each round
-                        genotypeFileHandler.getSNP(snpList, genotype, snpLoc, windowEnd, completed,boundary);
-                        linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
-                    }
+            if(snpLocSizeBefore == snpLoc.size()) assert(!boundChange && "Error: Not possible");
+            else if(boundChange){
+                if(boundary.back()== snpLoc.size()){
+                    windowEnd=true;
+                    boundary.pop_back();
                 }
                 else{
-                    // Bound doesn't change, much easier to handle
-                    // Just patch the blocks and rebuild the LD matrix
-                    // We know that the bound will not change now
-                    genotypeFileHandler.getSNP(snpList, genotype, snpLoc, windowEnd, completed,boundary);
-                    linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
+                    size_t lastSnpLocIndex = boundary.back();
+                    size_t prevSnpLocIndex = boundary.back()-1;
+                    if(snpList.at(snpLoc[lastSnpLocIndex]).getLoc()- snpList.at(snpLoc[prevSnpLocIndex]).getLoc() > m_blockSize){
+                        retainLastBlock = true;
+                        windowEnd=true;
+                    }
                 }
             }
+            genotypeFileHandler.getBlock(snpList, genotype, snpLoc, windowEnd, completed,boundary, true);
+            linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
         }
 
-        // Check if we need to merge the last two blocks
-        if(windowEnd){
-            if(retainLastBlock){
-                // We do nothing here, the reason is that the implementation in linkage construct doesn't
-                // take into consideration of the last block. So although the last block is considered as
-                // too far away in this situation, the LD construction will not take special consideration
-                // in that and might, in unlikely circumstances change the boundary SNP, therefore leading
-                // to a problematic complication that we have not anticipated
-            }
-            else if(boundary.size() > 2){ // normal checkings
-                // We have enough blocks to perform merging (it is stupid to merge stuff if there is only two blocks,
-                // but whatever)
-                assert(boundary.back() > 0 && "The boundary is too small..." );
-                size_t indexOfLastSnpSecondLastBlock = snpLoc.at(boundary.back()-1); // just in case
-                size_t lastSnp = snpLoc.back();
-                if(snpList.at(lastSnp).getLoc()-snpList.at(indexOfLastSnpSecondLastBlock).getLoc() <= m_blockSize){
-                    boundary.pop_back();
-                    // Because we change the boundary here, we want to reconstruct the LD such that it fits
-                    bool boundaryChange = false;
-//                    fprintf(stderr, "Reconstruct\n");
-                    linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundaryChange);
-                    assert(!boundaryChange && "Error: Boundary should not change here");
-                }
+        if(windowEnd && !retainLastBlock && boundary.size() > 2){ //Check whether if we need to merge the two blocks
+            assert(boundary.back() > 0 && "The boundary is too small..." );
+            size_t indexOfLastSnpSecondLastBlock = snpLoc.at(boundary.back()-1); // just in case
+            size_t lastSnp = snpLoc.back();
+            if(snpList.at(lastSnp).getLoc()-snpList.at(indexOfLastSnpSecondLastBlock).getLoc() <= m_blockSize){
+                boundary.pop_back();
+                bool boundaryChange = false;
+                linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundaryChange);
+                assert(!boundaryChange && "Error: Boundary should not change here");
             }
         }
 
@@ -133,13 +95,24 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler, boost::pt
 //        std::cerr << std::endl;
 //        std::cerr << "Tidy up: " << retainLastBlock << " " << finalizeBuff << " " << starting << " " << boundary.size() << std::endl;
 //        fprintf(stderr, "Decomposition\n");
-        if(windowEnd) decompose.run(linkage, snpLoc, boundary, snpList, windowEnd, !retainLastBlock, starting, regionList);
-        else decompose.run(linkage, snpLoc, boundary, snpList, false, false, starting, regionList);
+        if(retainLastBlock && !windowEnd) throw std::runtime_error("Impossible combination of windowEnd and retain last block!");
+        decompose.run(linkage, snpLoc, boundary, snpList, windowEnd, !retainLastBlock, starting, regionList);
+
 //        fprintf(stderr, "Finish decompose\n");
         doneItems= snpLoc.at(boundary.back());
 //        chr = snpList[snpLoc[boundary.back()]].getRs();
         chr = snpList[snpLoc[boundary.back()]].getChr();
 //        fprintf(stderr, "RSID: %s\n", chr.c_str());
+checking++;
+if(checking==1){
+    std::ofstream debug;
+    debug.open("filter");
+    for(size_t i = 0; i < snpLoc.size();++i){
+        debug << snpList[snpLoc[i]].getRs() << std::endl;
+    }
+    linkage.print();
+    exit(-1);
+}
         if(retainLastBlock){
             // Then we must remove everything except the last block
             // because finalizeBuff must be true here

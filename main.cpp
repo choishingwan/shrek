@@ -76,7 +76,7 @@ int main(int argc, char *argv[]){
         // Then we build the index of for the SNPs
         // In this new algorithm, the snpIndex is used as a quick search for the genotypeFileHandler
         std::map<std::string, size_t> snpIndex;
-        Snp::generateSnpIndex(snpIndex,snpList,regionList);
+        Snp::generateSnpIndex(snpIndex,snpList,regionList); //It is actually more like set the region flags
 
         // Next, we need to read the reference panel
         GenotypeFileHandler genotypeFileHandler;

@@ -27,12 +27,11 @@ class GenotypeFileHandler
         virtual ~GenotypeFileHandler();
         void initialize(const Command &commander, const std::map<std::string, size_t> &snpIndex, boost::ptr_vector<Snp> &snpList);
         void getSNP(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &windowEnd, bool &completed, std::vector<size_t> &boundary);
-        void getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &windowEnd, bool &completed, std::vector<size_t> &boundary);
+        void getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &windowEnd, bool &completed, std::vector<size_t> &boundary, bool addition);
 
     protected:
     private:
         std::string m_genotypeFilePrefix="";
-        size_t m_thread=1;
         size_t m_nRefSample = 0;
         double m_mafThreshold =0.0;
 
