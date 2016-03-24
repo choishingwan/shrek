@@ -215,25 +215,25 @@ void Linkage::decompose(size_t start, const arma::vec &fStat, arma::vec &heritRe
 void Linkage::decompose(size_t start, const arma::vec &zStat, const arma::vec &fStat, const arma::vec &nSample, arma::vec &heritResult, arma::mat &varResult){
     if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
     size_t endOfBlock = start+fStat.n_elem-1;
-//Eigen::MatrixXd check = Eigen::MatrixXd::Zero(fStat.n_elem, fStat.n_elem);
-//Eigen::VectorXd beta = Eigen::VectorXd::Zero(fStat.n_elem);
-//for(size_t i = 0; i < fStat.n_elem; ++i){
-//    beta(i)=fStat(i);
-//    for(size_t j = i; j < fStat.n_elem; ++j){
-//        check(i,j) = ((arma::mat)m_linkage.submat(start,start,endOfBlock,endOfBlock))(i,j);
-//        check(j,i) = check(i,j);
-//    }
-//}
-//    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(check);
-//    double tolerance = std::numeric_limits<double>::epsilon() * fStat.n_elem * es.eigenvalues().array().maxCoeff();
-//    Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
-//    /** Calculate the h vector here **/
-//    Eigen::VectorXd herit = rInverse*beta;
-//    for(size_t i = 0; i < fStat.n_elem; ++i){
-//        heritResult(i) = herit(i);
-//    }
-    arma::mat rInv=pinv((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ));
-    heritResult = rInv * fStat;
+Eigen::MatrixXd check = Eigen::MatrixXd::Zero(fStat.n_elem, fStat.n_elem);
+Eigen::VectorXd beta = Eigen::VectorXd::Zero(fStat.n_elem);
+for(size_t i = 0; i < fStat.n_elem; ++i){
+    beta(i)=fStat(i);
+    for(size_t j = i; j < fStat.n_elem; ++j){
+        check(i,j) = ((arma::mat)m_linkage.submat(start,start,endOfBlock,endOfBlock))(i,j);
+        check(j,i) = check(i,j);
+    }
+}
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(check);
+    double tolerance = std::numeric_limits<double>::epsilon() * fStat.n_elem * es.eigenvalues().array().maxCoeff();
+    Eigen::MatrixXd rInverse = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
+    /** Calculate the h vector here **/
+    Eigen::VectorXd herit = rInverse*beta;
+    for(size_t i = 0; i < fStat.n_elem; ++i){
+        heritResult(i) = herit(i);
+    }
+//    arma::mat rInv=pinv((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ));
+//    heritResult = rInv * fStat;
 
 
 //    arma::mat error = m_linkage.submat( start, start, endOfBlock, endOfBlock )*heritResult - fStat;

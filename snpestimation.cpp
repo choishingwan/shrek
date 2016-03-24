@@ -103,16 +103,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler, boost::pt
 //        chr = snpList[snpLoc[boundary.back()]].getRs();
         chr = snpList[snpLoc[boundary.back()]].getChr();
 //        fprintf(stderr, "RSID: %s\n", chr.c_str());
-checking++;
-if(checking==1){
-    std::ofstream debug;
-    debug.open("filter");
-    for(size_t i = 0; i < snpLoc.size();++i){
-        debug << snpList[snpLoc[i]].getRs() << std::endl;
-    }
-    linkage.print();
-    exit(-1);
-}
+
         if(retainLastBlock){
             // Then we must remove everything except the last block
             // because finalizeBuff must be true here

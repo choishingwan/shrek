@@ -209,11 +209,15 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_d
                         ++indx; //so that we only need to modify the indx when adding samples but not in the mean and variance calculation
                         int first = b[c++];
                         int second = b[c++];
-                        if(first == 1 && second == 0) first = 3; //Missing value should be 3
-                        else{
+                        if(!(first == 1 && second == 0)){
                             validSample++;
+
+                            size_t genoRep=0;
+                            if(first==1 && second==1) genoRep=-1;
+                            else if(first==0 && second==1) genoRep=0;
+                            else if(first==0 && second==0) genoRep=1;
                             alleleCount += first+second;
-                            double value = (double)(first+second);
+                            double value = (double)(genoRep);
                             if(validSample==1){
                                 oldM = newM = value;
                                 oldS = 0.0;
@@ -225,7 +229,7 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_d
                                 oldS = newS;
                             }
                         }
-                        tempGenotype->AddsampleGenotype(first+second, indx-1); //0 1 2 or 3 where 3 is missing
+                        tempGenotype->AddsampleGenotype(first,second, indx-1); //0 1 2 or 3 where 3 is missing
                     }
                 }
                 validSample > 0 ? tempGenotype->Setmean(newM) : tempGenotype->Setmean(0.0);

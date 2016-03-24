@@ -17,7 +17,7 @@ void Command::generalOptions(){
     fprintf(stderr, "                            name_1:bed_file_1, name2:bed_file_2,...\n");
     //Although we prefer true, we will set default to false to give a clear parameter information
     fprintf(stderr, "         -b | --block       Size of Block [%u]\n", m_sizeOfBlock);
-    fprintf(stderr, "         -e | --correct     Perform LD correction [False]\n");
+//    fprintf(stderr, "         -e | --correct     Perform LD correction [False]\n");
     fprintf(stderr, "         -k | --keep        Keep ambiguous SNPs (e.g. G|C in reference panel and C|G in\n");
     fprintf(stderr, "                            p-value file [False]\n");
     fprintf(stderr, "         -u | --pvalue      P-values instead of summary statistics are provided [False]\n");
