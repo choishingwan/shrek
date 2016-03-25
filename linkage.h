@@ -46,8 +46,11 @@ class Linkage
         void clear(size_t nRemoveElements);
     protected:
     private:
+        static size_t check;
         arma::mat m_linkage;
         arma::mat m_linkageSqrt;
+//        Eigen::MatrixXd m_linkage;
+//        Eigen::MatrixXd m_linkageSqrt;
         size_t m_thread=1;
         size_t m_blockSize=0;
         static std::mutex linkageMtx;

@@ -42,7 +42,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler, boost::pt
     while(!completed){
         // Keep doing this until the whole genome is read
         progress =(double)(doneItems)/(double)totalSnp;
-        fprintf(stderr,"\r[");
+//        fprintf(stderr,"\r[");
         size_t pos=barWidth*progress;
         for(size_t i = 0; i < barWidth;++i){
             if(i < pos) fprintf(stderr,"=");
@@ -97,7 +97,8 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler, boost::pt
 //        fprintf(stderr, "Decomposition\n");
         if(retainLastBlock && !windowEnd) throw std::runtime_error("Impossible combination of windowEnd and retain last block!");
         decompose.run(linkage, snpLoc, boundary, snpList, windowEnd, !retainLastBlock, starting, regionList);
-
+        linkage.print();
+        exit(-1);
 //        fprintf(stderr, "Finish decompose\n");
         doneItems= snpLoc.at(boundary.back());
 //        chr = snpList[snpLoc[boundary.back()]].getRs();
@@ -140,7 +141,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler, boost::pt
         }
     }
     progress =1;
-    fprintf(stderr,"\r[");
+//    fprintf(stderr,"\r[");
     size_t pos=barWidth*progress;
     for(size_t i = 0; i < barWidth;++i){
         if(i < pos) fprintf(stderr,"=");

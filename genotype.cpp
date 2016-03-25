@@ -67,8 +67,15 @@ void Genotype::GetbothR(const Genotype &snpB, const bool correction, double &r, 
     double n = (double)m_nonMissSample - ((double)m_sampleNum-(double)snpB.m_nonMissSample);
     double cov12 = res0 * n - dxx * dyy;
     dxx = (res3 * n + dxx * dxx) * (res4 * n + dyy * dyy);
-    r=cov12 / sqrt(dxx);
-    rSq =(cov12 * cov12) / dxx;
+    if(dxx==0.0){
+        r=0.0;
+        rSq=0.0;
+    }
+    else{
+        r=cov12 / sqrt(dxx);
+        rSq =(cov12 * cov12) / dxx;
+    }
+
 }
 
 
