@@ -88,6 +88,9 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
     }
     for(size_t i = (starting)? 0:midStartIndex-decompStartIndex; i < sizeOfMatrix; ++i){
         snpList[snpLoc[i+decompStartIndex]].setHeritability(heritResult(i));
+        if(snpList[snpLoc[i+decompStartIndex]].getStatus()=='R' || snpList[snpLoc[i+decompStartIndex]].getStatus()=='F'){
+            std::cerr << std::endl << "ERROR!!! YES!!!" << std::endl;
+        }
     }
     if(sign){
         arma::mat varResult = arma::mat(sizeOfMatrix,sizeOfMatrix,arma::fill::eye);

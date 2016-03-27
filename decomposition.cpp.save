@@ -88,11 +88,12 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
     }
     for(size_t i = (starting)? 0:midStartIndex-decompStartIndex; i < sizeOfMatrix; ++i){
         snpList[snpLoc[i+decompStartIndex]].setHeritability(heritResult(i));
+        if(snpList[snpLoc[i+decompStartIndex]].getStatus()=='R' || )
     }
     if(sign){
         arma::mat varResult = arma::mat(sizeOfMatrix,sizeOfMatrix,arma::fill::eye);
         //linkage.complexSE(decompStartIndex, decompEndIndex, nSample, tStat, varResult);
-        //complexSEUpdate(decompStartIndex, decompEndIndex, midStartIndex, midEndIndex, snpLoc, snpList, regionList, starting, ending, varResult);
+        //complexSEUpdate(decompStartIndex, decompEndIndex, midStartIndex, midEndIndex, snpLoc, snpList, regionList, start, ending, varResult);
     }
     else{
         arma::vec varResult = arma::vec(sizeOfMatrix, arma::fill::zeros);

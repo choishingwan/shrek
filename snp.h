@@ -49,7 +49,7 @@ class Snp
         //Setters
         void setFlag(const size_t i, bool flag);
         void setStatus(char status);
-        void setHeritability(double herit){(*m_heritability)=herit;m_heritDebug=herit;};
+        void setHeritability(double herit){ (*m_heritability)=herit;m_heritDebug=herit;};
         void setEffective(double effective){ m_effectiveNumber=effective; };
         //Checking
         // This programme will return whether if the result is concordant and will flip accordingly

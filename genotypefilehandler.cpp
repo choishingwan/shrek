@@ -197,8 +197,8 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_d
         else if(currentLoc-blockStartLoc > m_blockSize) return;
         else{
             Genotype *tempGenotype = new Genotype();
-            size_t indx = 0;
             size_t alleleCount=0, validSample = 0;
+            double oldM=0.0, newM=0.0,oldS=0.0, newS=0.0;
             m_bedFile.seekg((m_snpLineNumber[m_snpIter]-m_nSnpSkipped) * m_nBytes, m_bedFile.cur); //Now read the target genotype
             m_nSnpSkipped = m_snpLineNumber[m_snpIter]+1;
             std::bitset<8> byteHolder; //Initiate the bit array
@@ -212,10 +212,24 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_d
                 while (genoBit<7 && sampleIndex<m_nRefSample ){
                     int first = byteHolder[genoBit++];
                     int second = byteHolder[genoBit++];
+//                    size_t value = 0;
                     if(!(first==1 && second==0)){ //When not missing
                         validSample++;
                         alleleCount += first+second;
+//                        value=first+second;
                     }
+//                    if(sampleIndex==1){
+//                        oldM = newM = value;
+//                        oldS = 0.0;
+//                    }
+//                    else{
+//                        newM = oldM + (value-oldM)/(validSample);
+//                        newS = oldS + (value-oldM)*(value-newM);
+//                        oldM = newM;
+//                        oldS = newS;
+//                    }
+//                    validSample > 0 ? tempGenotype->Setmean(newM) : tempGenotype->Setmean(0.0);
+//                    validSample > 1 ? tempGenotype->SetstandardDeviation(std::sqrt(newS/(validSample - 1.0))) : tempGenotype->SetstandardDeviation(0.0);
                     tempGenotype->AddsampleGenotype(first,second, sampleIndex);
                     sampleIndex++;
                 }

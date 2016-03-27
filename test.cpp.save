@@ -118,31 +118,49 @@ void Genotype::GetbothR(const Genotype *snpB, const bool correction, double &r, 
 		mlong tmp_sum1=0 , tmp_sum2=0;
 		if(i < range){
 	    	loader1 = m_genotype[i];
+		//std::cerr << loader1 << std::endl;
+
 	    	loader2 = snpB->m_genotype[i];
+
 	    	tmp_sum1 = snpB->m_missing[i];
+
 	    	tmp_sum2 =m_missing[i];
+
 			N+= __builtin_popcountll(tmp_sum1&tmp_sum2)/2;
 		}
 		else{
 			loader1 = 0;
 			loader2 = 0;
 		}
+
 	    i++;
+
 	    mlong tmp_sum12 = (loader1 | loader2) & FIVEMASK;
+
 		tmp_sum1 = tmp_sum1 & loader1;
 		tmp_sum2 = tmp_sum2 & loader2;
 		loader1 = (loader1 ^ loader2) & (AAAAMASK - tmp_sum12);
 		tmp_sum12 = tmp_sum12 | loader1;
 		sum11 += tmp_sum1 & FIVEMASK;
 		sum22 += tmp_sum2 & FIVEMASK;
+
 		sum1 += (tmp_sum1 & 0x33333333) + ((tmp_sum1 >> 2) & 0x33333333);
 		sum2 += (tmp_sum2 & 0x33333333) + ((tmp_sum2 >> 2) & 0x33333333);
 		sum12 += (tmp_sum12 & 0x33333333) + ((tmp_sum12 >> 2) & 0x33333333);
+
+
+
 	    if(i < range){
+
 			loader1 = m_genotype[i];
+		//std::cerr << loader1 << std::endl;
+
 			loader2 = snpB->m_genotype[i];
+
 			tmp_sum1 = snpB->m_missing[i];
+
 			tmp_sum2 =m_missing[i];
+
 			N+= __builtin_popcountll(tmp_sum1&tmp_sum2)/2;
 		}
 		else{
@@ -151,29 +169,36 @@ void Genotype::GetbothR(const Genotype *snpB, const bool correction, double &r, 
 			tmp_sum1=0;
 			tmp_sum2=0;
 		}
+
 		i++;
 		tmp_sum12 = (loader1 | loader2) & FIVEMASK;
+
 		tmp_sum1 = tmp_sum1 & loader1;
 		tmp_sum2 = tmp_sum2 & loader2;
 		loader1 = (loader1 ^ loader2) & (AAAAMASK - tmp_sum12);
 		tmp_sum12 = tmp_sum12 | loader1;
 		sum11 += tmp_sum1 & FIVEMASK;
 		sum22 += tmp_sum2 & FIVEMASK;
+
 		sum1 += (tmp_sum1 & 0x33333333) + ((tmp_sum1 >> 2) & 0x33333333);
 		sum2 += (tmp_sum2 & 0x33333333) + ((tmp_sum2 >> 2) & 0x33333333);
 		sum11 = (sum11 & 0x33333333) + ((sum11 >> 2) & 0x33333333);
 		sum22 = (sum22 & 0x33333333) + ((sum22 >> 2) & 0x33333333);
 		sum12 += (tmp_sum12 & 0x33333333) + ((tmp_sum12 >> 2) & 0x33333333);
+
 		sum1 = (sum1 & 0x0f0f0f0f) + ((sum1 >> 4) & 0x0f0f0f0f);
 		sum2 = (sum2 & 0x0f0f0f0f) + ((sum2 >> 4) & 0x0f0f0f0f);
 		sum11 = (sum11 & 0x0f0f0f0f) + ((sum11 >> 4) & 0x0f0f0f0f);
 		sum22 = (sum22 & 0x0f0f0f0f) + ((sum22 >> 4) & 0x0f0f0f0f);
 		sum12 = (sum12 & 0x0f0f0f0f) + ((sum12 >> 4) & 0x0f0f0f0f);
+
+		// technically could do the multiply-and-shift only once every two rounds
 		final_sum1 += (sum1 * 0x01010101) >> 24;
 		final_sum2 += (sum2 * 0x01010101) >> 24;
 		final_sum11 += (sum11 * 0x01010101) >> 24;
 		final_sum22 += (sum22 * 0x01010101) >> 24;
 		final_sum12 += (sum12 * 0x01010101) >> 24;
+
 	}
 
 	return_vals[0] -= final_sum12;
@@ -182,13 +207,38 @@ void Genotype::GetbothR(const Genotype *snpB, const bool correction, double &r, 
 	return_vals[3] += final_sum11;
 	return_vals[4] += final_sum22;
 
+
     double dxx = return_vals[1];
+
+    std::cerr << "Dxx: " << dxx << std::endl;
+
     double dyy = return_vals[2];
+
+    std::cerr << "Dyy: " << dyy << std::endl;
+
+    //The problem is the N
+
+    //double n = (double)m_nonMissSample - ((double)m_sampleNum-(double)snpB->m_nonMissSample);
+
     double n = N;
+
+    std::cerr << "N: " << n << std::endl;
+
     double cov12 = return_vals[0] * n - dxx * dyy;
+
+    std::cerr << "cov12: " << cov12 << std::endl;
+
     dxx = (return_vals[3] * n + dxx * dxx) * (return_vals[4] * n + dyy * dyy);
+
+    std::cerr << "Dxx again: " << dxx << std::endl;
+
     r=cov12 / sqrt(dxx);
+
     rSq =(cov12 * cov12) / dxx;
+
+//    std::cerr << "R: " << cov12 / sqrt(dxx) << "\t" << r << std::endl;
+
+//    std::cerr << "R2: " << (cov12 * cov12) / dxx << "\t" << rSq << std::endl;
 
 }
 

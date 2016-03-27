@@ -107,7 +107,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler, boost::pt
         }
     }
     progress(totalSnp, totalSnp, "");
-    fprintf(stderr, "\nEstimated the SNP Heritability, now proceed to output\n");
+    fprintf(stderr, "\n\nEstimated the SNP Heritability, now proceed to output\n");
 }
 
 

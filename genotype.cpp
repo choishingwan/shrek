@@ -19,70 +19,116 @@ Genotype::~Genotype(){
 
 void Genotype::GetbothR(const Genotype &snpB, const bool correction, double &r, double &rSq) const {
     size_t range = (m_requiredBit /(m_bitSize))+1;
-    mlong acc1 = 0;
-    mlong acc2 = 0;
-    mlong acc11 = 0;
-    mlong acc22 = 0;
-    mlong acc = 0;
-    double res[5];
-    res[0] = (double)m_sampleNum;
-    res[1] = -(double)snpB.m_nonMissSample;
-    res[2] = -(double)m_nonMissSample;
-    res[3] = res[1];
-    res[4] = res[2];
-    double n = 0.0;
-    for(size_t i = 0; i < range; ++i){
-        mlong loader1 = m_genotype[i];
-        mlong loader2 = snpB.m_genotype[i];
-        mlong sum1 = snpB.m_missing[i];
-        mlong sum2 = m_missing[i];
-        n+= (double)__builtin_popcountll(sum1&sum2)/2.0;
-        mlong sum12 = (loader1 | loader2) & m1;
-        sum1 = sum1&loader1;
-        sum2 = sum2&loader2;
-        mlong sum11 = sum1 & m1;
-        mlong sum22 = sum2 & m1;
-        loader1= ((~(m1+sum12)) & (loader1^loader2));
-        sum12 = sum12|loader1;
-        sum1 = ((sum1 & m2) + ((sum1 >> 2) & m2));
-        sum2 = ((sum2 & m2) + ((sum2 >> 2) & m2));
-        sum12 = ((sum12 & m2) + ((sum12 >> 2) & m2));
-        sum11 =((sum11 & m2) + ((sum11 >> 2) & m2));
-        sum22 =((sum22 & m2) + ((sum22 >> 2) & m2));
-        acc1 += ((sum1&m4)+((sum1>>4)& m4));
-        acc2 += ((sum2& m4) + ((sum2 >> 4) & m4));
-        acc11 += ((sum11& m4)+ ((sum11 >> 4) & m4));
-        acc22 += ((sum22& m4)+ ((sum22 >> 4) & m4));
-        acc += ((sum12& m4)+ ((sum12 >> 4) & m4));
-    }
-    acc1 = (acc1&m8)+((acc1>>8)&m8);
-    acc2 = (acc2&m8)+((acc2>>8)&m8);
-    acc = (acc&m8)+((acc>>8)&m8);
-    acc11 = ((acc11+(acc11>>8)) & m8);
-    acc22 = ((acc22+(acc22>>8)) & m8);
-    res[0] -= (acc*0x1000100010001LLU >> 48);
-    res[1] += (acc1*0x1000100010001LLU >> 48);
-    res[2] += (acc2*0x1000100010001LLU >> 48);
-    res[3] += (acc11*0x1000100010001LLU >> 48);
-    res[4] += (acc22*0x1000100010001LLU >> 48);
-    double dxx = res[1];
-    double dyy = res[2];
-    //double n = (double)m_nonMissSample - ((double)m_sampleNum-(double)snpB.m_nonMissSample);
-    double cov12 = res[0] * n - dxx * dyy;
-    dxx = (res[3] * n + dxx * dxx) * (res[4] * n + dyy * dyy);
-    if(dxx==0.0){
-        r=0.0;
-        rSq=0.0;
-    }
-    else{
-        r=cov12 / sqrt(dxx);
-        rSq =(cov12 * cov12) / dxx;
-        std::cerr << "Checking: " << rSq << std::endl;
-        if(correction){
-            r= r*(1+(1-r*r)/(2*(n-4))); //POPA
-            rSq=rSq-1.0/(2.0*n); //Weir & Hill
-        }
-    }
+    mlong loader1, loader2, sum1, sum2, sum11, sum12, sum22;
+	uint32_t final_sum1 = 0;
+	uint32_t final_sum2 = 0;
+	uint32_t final_sum11 = 0;
+	uint32_t final_sum22 = 0;
+	uint32_t final_sum12 = 0;
+	double return_vals[5];
+    return_vals[0] = (double)m_sampleNum;
+    return_vals[1] = -(double)snpB.m_nonMissSample;
+    return_vals[2] = -(double)m_nonMissSample;
+    return_vals[3] = return_vals[1];
+    return_vals[4] = return_vals[2];
+    unsigned int N =0;
+    for(size_t i = 0; i < range;){
+        loader1 = m_genotype[i];
+        loader2 = snpB.m_genotype[i];
+        sum1 = snpB.m_missing[i];
+        sum2 = m_missing[i];
+		i++;
+		N+= __builtin_popcountll(sum1&sum2)/2;
+		sum12 = (loader1 | loader2) & FIVEMASK;
+		sum1 = sum1 & loader1;
+		sum2 = sum2 & loader2;
+		loader1 = (loader1 ^ loader2) & (AAAAMASK - sum12);
+		sum12 = sum12 | loader1;
+		sum11 = sum1 & FIVEMASK;
+		sum22 = sum2 & FIVEMASK;
+		sum1 = (sum1 & 0x33333333) + ((sum1 >> 2) & 0x33333333);
+		sum2 = (sum2 & 0x33333333) + ((sum2 >> 2) & 0x33333333);
+		sum12 = (sum12 & 0x33333333) + ((sum12 >> 2) & 0x33333333);
+		mlong tmp_sum1=0 , tmp_sum2=0;
+		if(i < range){
+	    	loader1 = m_genotype[i];
+	    	loader2 = snpB.m_genotype[i];
+	    	tmp_sum1 = snpB.m_missing[i];
+	    	tmp_sum2 =m_missing[i];
+			N+= __builtin_popcountll(tmp_sum1&tmp_sum2)/2;
+		}
+		else{
+			loader1 = 0;
+			loader2 = 0;
+		}
+	    i++;
+	    mlong tmp_sum12 = (loader1 | loader2) & FIVEMASK;
+		tmp_sum1 = tmp_sum1 & loader1;
+		tmp_sum2 = tmp_sum2 & loader2;
+		loader1 = (loader1 ^ loader2) & (AAAAMASK - tmp_sum12);
+		tmp_sum12 = tmp_sum12 | loader1;
+		sum11 += tmp_sum1 & FIVEMASK;
+		sum22 += tmp_sum2 & FIVEMASK;
+		sum1 += (tmp_sum1 & 0x33333333) + ((tmp_sum1 >> 2) & 0x33333333);
+		sum2 += (tmp_sum2 & 0x33333333) + ((tmp_sum2 >> 2) & 0x33333333);
+		sum12 += (tmp_sum12 & 0x33333333) + ((tmp_sum12 >> 2) & 0x33333333);
+	    if(i < range){
+			loader1 = m_genotype[i];
+			loader2 = snpB.m_genotype[i];
+			tmp_sum1 = snpB.m_missing[i];
+			tmp_sum2 =m_missing[i];
+			N+= __builtin_popcountll(tmp_sum1&tmp_sum2)/2;
+		}
+		else{
+			loader1=0;
+			loader2=0;
+			tmp_sum1=0;
+			tmp_sum2=0;
+		}
+		i++;
+		tmp_sum12 = (loader1 | loader2) & FIVEMASK;
+		tmp_sum1 = tmp_sum1 & loader1;
+		tmp_sum2 = tmp_sum2 & loader2;
+		loader1 = (loader1 ^ loader2) & (AAAAMASK - tmp_sum12);
+		tmp_sum12 = tmp_sum12 | loader1;
+		sum11 += tmp_sum1 & FIVEMASK;
+		sum22 += tmp_sum2 & FIVEMASK;
+		sum1 += (tmp_sum1 & 0x33333333) + ((tmp_sum1 >> 2) & 0x33333333);
+		sum2 += (tmp_sum2 & 0x33333333) + ((tmp_sum2 >> 2) & 0x33333333);
+		sum11 = (sum11 & 0x33333333) + ((sum11 >> 2) & 0x33333333);
+		sum22 = (sum22 & 0x33333333) + ((sum22 >> 2) & 0x33333333);
+		sum12 += (tmp_sum12 & 0x33333333) + ((tmp_sum12 >> 2) & 0x33333333);
+		sum1 = (sum1 & 0x0f0f0f0f) + ((sum1 >> 4) & 0x0f0f0f0f);
+		sum2 = (sum2 & 0x0f0f0f0f) + ((sum2 >> 4) & 0x0f0f0f0f);
+		sum11 = (sum11 & 0x0f0f0f0f) + ((sum11 >> 4) & 0x0f0f0f0f);
+		sum22 = (sum22 & 0x0f0f0f0f) + ((sum22 >> 4) & 0x0f0f0f0f);
+		sum12 = (sum12 & 0x0f0f0f0f) + ((sum12 >> 4) & 0x0f0f0f0f);
+		final_sum1 += (sum1 * 0x01010101) >> 24;
+		final_sum2 += (sum2 * 0x01010101) >> 24;
+		final_sum11 += (sum11 * 0x01010101) >> 24;
+		final_sum22 += (sum22 * 0x01010101) >> 24;
+		final_sum12 += (sum12 * 0x01010101) >> 24;
+	}
+
+	return_vals[0] -= final_sum12;
+	return_vals[1] += final_sum1;
+	return_vals[2] += final_sum2;
+	return_vals[3] += final_sum11;
+	return_vals[4] += final_sum22;
+
+    double dxx = return_vals[1];
+    double dyy = return_vals[2];
+    double n = N;
+    double cov12 = return_vals[0] * n - dxx * dyy;
+    dxx = (return_vals[3] * n + dxx * dxx) * (return_vals[4] * n + dyy * dyy);
+    r=cov12 / sqrt(dxx);
+    rSq =(cov12 * cov12) / dxx;
+    if(correction){
+        r= r*(1.0+(1.0-r*r)/(2.0*(n-4.0))); //POPA
+        //rSq = 1.0-((m_sampleNum-3.0)/(m_sampleNum-2.0))*(1.0-rSq)*(1.0+(2.0*(1.0-rSq))/(m_sampleNum-3.3)); //OP5 from Shieh
+        rSq=rSq-1.0/(2.0*n); //Weir & Hill
+	}
+
 }
 
 

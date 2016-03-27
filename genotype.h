@@ -14,7 +14,6 @@
 #include <iostream>
 #include <deque>
 #include <limits.h>
-#include <emmintrin.h>
 #include "usefulTools.h"
 
 /** \class Genotype
@@ -23,7 +22,7 @@
  *  Uses the Pearson correlation to calculate the linkage between two genotypes
  *  and can perform r/r-square correction based on Shieh et al (2010)
  */
- typedef unsigned long long mlong;
+typedef unsigned int mlong;
 
 class Genotype
 {
@@ -33,16 +32,24 @@ class Genotype
         void GetbothR(const Genotype &snpB, const bool correction, double &r, double &rSq) const;
         static void SetsampleNum(size_t sampleNum);
         void AddsampleGenotype(const int first, const int second, const size_t sampleIndex);
+        void Setmean(double mean);
+        void SetstandardDeviation(double standardDeviation);
 	protected:
 	private:
         mlong *m_genotype;
+//        mlong *m_genotypeB;
         mlong *m_missing;
+        double m_mean=0.0;
+        double m_standardDeviation=0.0;
         size_t m_nonMissSample=0;
         static size_t m_sampleNum;
-        const static mlong m1 = 0x5555555555555555LLU;
-        const static mlong m2 = 0x3333333333333333LLU;
-        const static mlong m4 = 0x0f0f0f0f0f0f0f0fLLU;
-        const static mlong m8 = 0x00ff00ff00ff00ffLLU;
+//        const static mlong m1 = 0x5555555555555555LLU;
+//        const static mlong m2 = 0x3333333333333333LLU;
+//        const static mlong m4 = 0x0f0f0f0f0f0f0f0fLLU;
+//        const static mlong m8 = 0x00ff00ff00ff00ffLLU;
+		const static mlong FIVEMASK = 0x55555555;
+		const static mlong m2 = 0x33333333;
+		const static mlong AAAAMASK = 0xaaaaaaaa;
         unsigned int m_bitSize;
         unsigned int m_requiredBit;
 

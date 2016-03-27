@@ -38,9 +38,10 @@ void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::d
                         m_linkage(j,i) = r2;
                         m_linkageSqrt(j,i) = r;
 
+//                            linkageMtx.lock();
+//                            std::cerr << "Check: " << r2 << std::endl;
+//                            linkageMtx.unlock();
                         if(std::fabs(r-1.0) < 1e-6 || r > 1.0 || r < -1.0){ //Perfect LD if R = 1 or > abs(1)
-                            linkageMtx.lock();
-                            std::cerr << "Perfect LD: " << r << s
                             perfectLDBufferStore.push_back(j);
                             perfectLDRemainStore.push_back(i);
                         }
@@ -51,6 +52,7 @@ void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::d
 //  Now perform the thread safe recording of the perfect LD and update the beta
     linkageMtx.lock();
         for(size_t i = 0; i < perfectLDBufferStore.size(); ++i) snpList[snpLoc[perfectLDRemainStore[i]]].shareHeritability(snpList[snpLoc[perfectLDBufferStore[i]]]);
+        perfectLDBufferStore.clear();
         perfectLd.insert(perfectLd.end(), perfectLDBufferStore.begin(), perfectLDBufferStore.end());
     linkageMtx.unlock();
 
@@ -126,8 +128,12 @@ void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_deque<Gen
     }
     size_t numPerfect = perfectLd.size();
     // Now resize the matrix to remove unwanted stuff
-    m_linkage.resize(genoSize-numPerfect, genoSize-numPerfect);
-    m_linkageSqrt.resize(genoSize-numPerfect, genoSize-numPerfect);
+//    m_linkage.resize(genoSize-numPerfect, genoSize-numPerfect);
+//    m_linkageSqrt.resize(genoSize-numPerfect, genoSize-numPerfect);
+    arma::mat temp =m_linkage.submat(0,0,cI,cI);
+    m_linkage = temp;
+    temp =m_linkageSqrt.submat(0,0,cI,cI);
+    m_linkageSq
 //    m_linkage.conservativeResize(genoSize-numPerfect, genoSize-numPerfect);
 //    m_linkageSqrt.conservativeResize(genoSize-numPerfect, genoSize-numPerfect);
     // Now update the snpLoc and genotype

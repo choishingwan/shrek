@@ -38,9 +38,9 @@ void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::d
                         m_linkage(j,i) = r2;
                         m_linkageSqrt(j,i) = r;
 
-                            linkageMtx.lock();
-                            std::cerr << "Check: " << r2 << std::endl;
-                            linkageMtx.unlock();
+//                            linkageMtx.lock();
+//                            std::cerr << "Check: " << r2 << std::endl;
+//                            linkageMtx.unlock();
                         if(std::fabs(r-1.0) < 1e-6 || r > 1.0 || r < -1.0){ //Perfect LD if R = 1 or > abs(1)
                             perfectLDBufferStore.push_back(j);
                             perfectLDRemainStore.push_back(i);
@@ -52,6 +52,7 @@ void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::d
 //  Now perform the thread safe recording of the perfect LD and update the beta
     linkageMtx.lock();
         for(size_t i = 0; i < perfectLDBufferStore.size(); ++i) snpList[snpLoc[perfectLDRemainStore[i]]].shareHeritability(snpList[snpLoc[perfectLDBufferStore[i]]]);
+        perfectLDRemainStore.clear();
         perfectLd.insert(perfectLd.end(), perfectLDBufferStore.begin(), perfectLDBufferStore.end());
     linkageMtx.unlock();
 
@@ -127,9 +128,11 @@ void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_deque<Gen
     }
     size_t numPerfect = perfectLd.size();
     // Now resize the matrix to remove unwanted stuff
-    m_linkage.resize(genoSize-numPerfect, genoSize-numPerfect);
-    m_linkageSqrt.resize(genoSize-numPerfect, genoSize-numPerfect);
-//    m_linkage.conservativeResize(genoSize-numPerfect, genoSize-numPerfect);
+//    m_linkage.resize(genoSize-numPerfect, genoSize-numPerfect);
+//    m_linkageSqrt.resize(genoSize-numPerfect, genoSize-numPerfect);
+    m_linkage = m_linkage.submat(0,0,cI,cI);
+    m_linkageSqrt =m_linkageSqrt.submat(0,0,cI,cI);
+    //    m_linkage.conservativeResize(genoSize-numPerfect, genoSize-numPerfect);
 //    m_linkageSqrt.conservativeResize(genoSize-numPerfect, genoSize-numPerfect);
     // Now update the snpLoc and genotype
     size_t itemRemoved = 0;
@@ -198,12 +201,12 @@ double Linkage::m_tolerance = 0.0;
 void Linkage::decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult, bool printing){
     if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
     size_t endOfBlock = start+fStat.n_elem-1;
-//   m_rInv=arma::pinv((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ));
-    arma::mat subMat = (arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock );
+   m_rInv=arma::pinv((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ));
+//    arma::mat subMat = (arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock );
 
-    arma::vec eigval, eigvec;
+//    arma::vec eigval, eigvec;
 //    arma::eig_sym( eigval, eigvec, (arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ) );
-    arma::eig_sym( eigval, eigvec, subMat );
+//    arma::eig_sym( eigval, eigvec, subMat );
 //    arma::vec s;
 //    arma::mat U, V;
 //    arma::svd(U,s,V,subMat);
@@ -211,10 +214,10 @@ void Linkage::decompose(size_t start, const arma::vec &fStat, arma::vec &heritRe
 //    std::cout << "Checking: " << std::endl << U << std::endl;
 //    std::cout << "End Check" << std::endl;
 //    }
-    Linkage::m_tolerance = std::numeric_limits<double>::epsilon() * fStat.n_elem *arma::max(eigval);
+//    Linkage::m_tolerance = std::numeric_limits<double>::epsilon() * fStat.n_elem *arma::max(eigval);
 //    Linkage::m_tolerance = std::numeric_limits<double>::epsilon() * fStat.n_elem *arma::max(s);
-    eigval.for_each( [](arma::mat::elem_type& val) { if(val < Linkage::m_tolerance){val=0;}else{val = 1/val; }} );
-    m_rInv = eigvec*arma::diagmat(eigval) * eigvec.t();
+//    eigval.for_each( [](arma::mat::elem_type& val) { if(val < Linkage::m_tolerance){val=0;}else{val = 1/val; }} );
+//    m_rInv = eigvec*arma::diagmat(eigval) * eigvec.t();
 //    m_rInv = V*arma::diagmat(s) * U.t();
 //    m_rInv = arma::pinv(subMat);
     heritResult = m_rInv * fStat;
