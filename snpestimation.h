@@ -36,6 +36,8 @@ class SnpEstimation
         bool m_bt = false;
         size_t m_blockSize =0;
         std::string m_output="";
+        void progress(size_t doneItems, size_t totalSnp, std::string chr);
+
 };
 
 #endif // SNPESTIMATION_H

@@ -32,10 +32,7 @@ class Genotype
 		virtual ~Genotype();
         void GetbothR(const Genotype &snpB, const bool correction, double &r, double &rSq) const;
         static void SetsampleNum(size_t sampleNum);
-        void Setmean(double mean);
-        void SetstandardDeviation(double standardDeviation);
         void AddsampleGenotype(const int first, const int second, const size_t sampleIndex);
-        static void clean(std::deque<Genotype*> &genotype, size_t remaining);
 	protected:
 	private:
         mlong *m_genotype;
@@ -48,8 +45,6 @@ class Genotype
         const static mlong m8 = 0x00ff00ff00ff00ffLLU;
         unsigned int m_bitSize;
         unsigned int m_requiredBit;
-		double m_mean;
-		double m_standardDeviation;
 
 };
 #endif // GENOTYPE_H

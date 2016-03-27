@@ -39,16 +39,20 @@ class Linkage
         // The snpList is required for the perfectLD stuff
         void construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::vector<size_t> &boundary, boost::ptr_vector<Snp> &snpList, const bool correction,bool &boundCheck);
         void print();
-        void decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult, arma::vec &varResult);
-        void decompose(size_t start, const arma::vec &zStat, const arma::vec &fStat, const arma::vec &nSample, arma::vec &heritResult, arma::mat &varResult);
+        void print(size_t start, size_t ending, std::string name);
+        void effectiveSE(size_t startIndex, size_t endIndex, arma::vec &varResult);
+        void complexSE(size_t startIndex, size_t endIndex, const arma::vec &nSample, const arma::vec &tStat, arma::mat &varResult);
+        void decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult, bool printing);
         void computeHerit(const arma::vec &fStat, arma::vec &heritResult);
         void clear();
         void clear(size_t nRemoveElements);
     protected:
     private:
-        static size_t check;
+        static double m_tolerance;
         arma::mat m_linkage;
         arma::mat m_linkageSqrt;
+        arma::mat m_rInv;
+//        Eigen::MatrixXd m_rInv;
 //        Eigen::MatrixXd m_linkage;
 //        Eigen::MatrixXd m_linkageSqrt;
         size_t m_thread=1;
@@ -57,6 +61,7 @@ class Linkage
         // This will return the list of index that we would like to remove from the analysis
         void computeLd(const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd);
         void perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::vector<size_t > &boundary, boost::ptr_vector<Snp> &snpList, bool &boundCheck);
+
 };
 
 #endif // LINKAGE_H

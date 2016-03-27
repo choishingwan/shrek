@@ -24,16 +24,19 @@ void Genotype::GetbothR(const Genotype &snpB, const bool correction, double &r, 
     mlong acc11 = 0;
     mlong acc22 = 0;
     mlong acc = 0;
-    double res0 = (double)m_sampleNum;
-    double res1 = -(double)snpB.m_nonMissSample;
-    double res2 = -(double)m_nonMissSample;
-    double res3 = res1;
-    double res4 = res2;
+    double res[5];
+    res[0] = (double)m_sampleNum;
+    res[1] = -(double)snpB.m_nonMissSample;
+    res[2] = -(double)m_nonMissSample;
+    res[3] = res[1];
+    res[4] = res[2];
+    double n = 0.0;
     for(size_t i = 0; i < range; ++i){
         mlong loader1 = m_genotype[i];
         mlong loader2 = snpB.m_genotype[i];
         mlong sum1 = snpB.m_missing[i];
         mlong sum2 = m_missing[i];
+        n+= (double)__builtin_popcountll(sum1&sum2)/2.0;
         mlong sum12 = (loader1 | loader2) & m1;
         sum1 = sum1&loader1;
         sum2 = sum2&loader2;
@@ -57,16 +60,16 @@ void Genotype::GetbothR(const Genotype &snpB, const bool correction, double &r, 
     acc = (acc&m8)+((acc>>8)&m8);
     acc11 = ((acc11+(acc11>>8)) & m8);
     acc22 = ((acc22+(acc22>>8)) & m8);
-    res0 -= (acc*0x1000100010001LLU >> 48);
-    res1 += (acc1*0x1000100010001LLU >> 48);
-    res2 += (acc2*0x1000100010001LLU >> 48);
-    res3 += (acc11*0x1000100010001LLU >> 48);
-    res4 += (acc22*0x1000100010001LLU >> 48);
-    double dxx = res1;
-    double dyy = res2;
-    double n = (double)m_nonMissSample - ((double)m_sampleNum-(double)snpB.m_nonMissSample);
-    double cov12 = res0 * n - dxx * dyy;
-    dxx = (res3 * n + dxx * dxx) * (res4 * n + dyy * dyy);
+    res[0] -= (acc*0x1000100010001LLU >> 48);
+    res[1] += (acc1*0x1000100010001LLU >> 48);
+    res[2] += (acc2*0x1000100010001LLU >> 48);
+    res[3] += (acc11*0x1000100010001LLU >> 48);
+    res[4] += (acc22*0x1000100010001LLU >> 48);
+    double dxx = res[1];
+    double dyy = res[2];
+    //double n = (double)m_nonMissSample - ((double)m_sampleNum-(double)snpB.m_nonMissSample);
+    double cov12 = res[0] * n - dxx * dyy;
+    dxx = (res[3] * n + dxx * dxx) * (res[4] * n + dyy * dyy);
     if(dxx==0.0){
         r=0.0;
         rSq=0.0;
@@ -74,8 +77,12 @@ void Genotype::GetbothR(const Genotype &snpB, const bool correction, double &r, 
     else{
         r=cov12 / sqrt(dxx);
         rSq =(cov12 * cov12) / dxx;
+        std::cerr << "Checking: " << rSq << std::endl;
+        if(correction){
+            r= r*(1+(1-r*r)/(2*(n-4))); //POPA
+            rSq=rSq-1.0/(2.0*n); //Weir & Hill
+        }
     }
-
 }
 
 
@@ -86,9 +93,6 @@ void Genotype::SetsampleNum(size_t sampleNum){
     Genotype::m_sampleNum = sampleNum;
 }
 
-
-void Genotype::Setmean(double mean){ m_mean = mean; }
-void Genotype::SetstandardDeviation(double standardDeviation){ m_standardDeviation = standardDeviation; }
 
 
 void Genotype::AddsampleGenotype(const int first, const int second, const size_t sampleIndex){
@@ -108,17 +112,6 @@ void Genotype::AddsampleGenotype(const int first, const int second, const size_t
     }
     else if(first==1 && second ==0){ //missing
         m_genotype[(sampleIndex*2)/(m_bitSize)] = m_genotype[(sampleIndex*2)/(m_bitSize)]  | 0x1LLU << ((sampleIndex*2)% (m_bitSize));
-    }
-}
-
-
-void Genotype::clean(std::deque<Genotype*> &genotype, size_t remaining){
-    size_t sizeOfGenotype = genotype.size();
-    size_t removeCount = sizeOfGenotype-remaining;
-    for(size_t i = 0; i < removeCount; ++i){
-        Genotype* temp = genotype.front();
-        genotype.pop_front();
-        delete temp;
     }
 }
 

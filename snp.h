@@ -36,10 +36,9 @@ class Snp
         int getSampleSize() const{return m_nCase+m_nControl+m_nSample;};
         std::string getRef() const{return m_ref;};
         std::string getAlt() const{return m_alt;};
-        double getStat() const{return (*m_statistic)/(double)m_statistic.use_count();};
-        double getFStat() const{return (*m_fstat)/(double)m_fstat.use_count();};
-//        double getHeritability() const{ return (*m_heritability)/(double)m_heritability.use_count();};
-        double getHeritability() const{ return (*m_heritability)/(double)m_statistic.use_count();};
+        double getTStat() const{return (*m_tStat)/(double)m_tStat.use_count();};
+        double getFStat() const{return (*m_fStat)/(double)m_fStat.use_count();};
+        double getHeritability() const{ return (*m_heritability)/(double)m_heritability.use_count();};
 //        double getHeritability() const{ return m_heritDebug;};
         double getLDSC() const {return (*m_ldScore);};
         double getEffective() const{return m_effectiveNumber;};
@@ -87,8 +86,8 @@ class Snp
         // Need to write these in the manual
         char m_status='R';
         /** Special members use for managing the perfect LD stuff **/
-        std::shared_ptr<double> m_statistic; //Average of the Z score of all Snps with perfect LD
-        std::shared_ptr<double> m_fstat; //Average of the f-state of all Snps with perfect LD
+        std::shared_ptr<double> m_tStat; //Average of the Z score of all SNPs with perfect LD
+        std::shared_ptr<double> m_fStat; //Average of the f-state of all SNPs with perfect LD
         std::shared_ptr<double> m_heritability; //The master heritability
         double m_heritDebug = 0.0;
         std::shared_ptr<double> m_ldScore;

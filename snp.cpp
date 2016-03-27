@@ -1,8 +1,8 @@
 #include "snp.h"
 
 Snp::Snp(std::string chr, std::string rsId, size_t loc, size_t nSample, size_t nCase, size_t nControl, std::string refAllele, std::string altAllele, bool binary, bool quantitative, double statistic, double info, int sign):m_chr(chr),m_rsId(rsId), m_loc(loc),m_nSample(nSample),m_nCase(nCase),m_nControl(nControl),m_ref(refAllele),m_alt(altAllele),m_binary(binary), m_quantitative(quantitative), m_infoScore(info),m_sign(sign){
-	m_statistic = std::make_shared<double>(statistic);
-	m_fstat = std::make_shared<double>(statistic);
+	m_tStat = std::make_shared<double>(statistic);
+	m_fStat = std::make_shared<double>(statistic);
 	m_heritability = std::make_shared<double>(0.0);
 	m_ldScore = std::make_shared<double>(0.0);
 }
@@ -17,25 +17,25 @@ void Snp::flip(){
 }
 
  void Snp::shareHeritability( Snp& i ){
- 	if(i.m_statistic == m_statistic) return;
-    (*i.m_statistic) += (*m_statistic); //Add up the beta to get an average
-    (*i.m_fstat) += (*m_fstat); //Add up the fstat to get an average
+ 	if(i.m_tStat == m_tStat) return;
+    (*i.m_tStat) += (*m_tStat); //Add up the beta to get an average
+    (*i.m_fStat) += (*m_fStat); //Add up the fstat to get an average
     (*i.m_heritability) += (*m_heritability);
  	//i is the one who buy
  	//this is the one who sell
     //For this's family, all of them should point to the same location
-    m_statistic = (i.m_statistic); //They now share the same beta
-    m_fstat = (i.m_fstat); //They now share the same beta
+    m_tStat = (i.m_tStat); //They now share the same beta
+    m_fStat = (i.m_fStat); //They now share the same beta
     m_heritability = (i.m_heritability);
-//    std::cerr << "Snp checking here: " << m_statistic << "\t" << i.m_statistic << "\t" << i.m_statistic.use_count() << std::endl;
+//    std::cerr << "Snp checking here: " << m_tStat << "\t" << i.m_tStat << "\t" << i.m_tStat.use_count() << std::endl;
     m_status = 'L';
     i.m_status='L';
     m_ldScore = (i.m_ldScore);
     Snp* currentClass = m_targetClass;
     Snp* prevClass = this;
     while(currentClass != this){
-        currentClass->m_statistic = i.m_statistic; //The subsequent stuff are also pointing here
-        currentClass->m_fstat = i.m_fstat; //The subsequent stuff are also pointing here
+        currentClass->m_tStat = i.m_tStat; //The subsequent stuff are also pointing here
+        currentClass->m_fStat = i.m_fStat; //The subsequent stuff are also pointing here
         currentClass->m_heritability = i.m_heritability;
         currentClass->m_ldScore = i.m_ldScore;
         currentClass->m_status = 'L';
@@ -87,27 +87,27 @@ bool Snp::concordant(const std::string chr, const size_t loc, const std::string 
 void Snp::computeSummaryStatistic(bool isP){
     if(isP){
         double beta = 0.0;
-        if((*m_statistic) < 1.0){ //Direct transform p-value of 1 to summary statistics of 0
-            beta = fabs(usefulTools::qnorm((*m_statistic)/2.0));
+        if((*m_tStat) < 1.0){ //Direct transform p-value of 1 to summary statistics of 0
+            beta = fabs(usefulTools::qnorm((*m_tStat)/2.0));
             if(isnan(beta)){ //It means we cannot get the result from it
-                beta = fabs(usefulTools::qnorm(1.0-(((*m_statistic)+0.0)/2.0)));
+                beta = fabs(usefulTools::qnorm(1.0-(((*m_tStat)+0.0)/2.0)));
                 assert(!isnan(beta)&& "I don't know what is the problem");
             }
         }
         beta=fabs(beta);
-        (*m_statistic)=(m_quantitative)? beta : sqrt(beta);
-        if(m_sign!=0) (*m_statistic) = m_sign*(*m_statistic); // Give the value a sign if it is provided
+        (*m_tStat)=(m_quantitative)? beta : sqrt(beta);
+        if(m_sign!=0) (*m_tStat) = m_sign*(*m_tStat); // Give the value a sign if it is provided
     }
     else if(m_binary){ //This is the ChiSQ from a binary trait
-        (*m_statistic) = sqrt(fabs((*m_statistic)));
+        (*m_tStat) = sqrt(fabs((*m_tStat)));
     }
     //Now also calculate the F-Statistic
-    double t2 = (*m_statistic)*(*m_statistic);
+    double t2 = (*m_tStat)*(*m_tStat);
     double sampleSize = 0;
     if(m_binary) sampleSize = (double)(m_nCase+m_nControl);
     else if(m_quantitative) sampleSize= (double)m_nSample;
     else throw std::runtime_error("Unknown mode, cannot proceed");
-    (*m_fstat) = (t2-1.0)/(t2+sampleSize-2.0);
+    (*m_fStat) = (t2-1.0)/(t2+sampleSize-2.0);
 }
 
 Snp::~Snp()

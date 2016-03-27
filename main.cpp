@@ -7,7 +7,6 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <omp.h>
 #include <execinfo.h>
-#include <signal.h>
 #include "command.h"
 #include "region.h"
 #include "snp.h"
@@ -34,21 +33,10 @@
 extern "C" void openblas_set_num_threads(int); //This is for controlling the multi-thread
 extern "C" void goto_set_num_threads(int);
 
-void handler(int sig) {
-  void *array[10];
-  size_t size;
-  // get void*'s for all entries on the stack
-  size = backtrace(array, 10);
-  // print out all the frames to stderr
-  fprintf(stderr, "Error: signal %d:\n", sig);
-  backtrace_symbols_fd(array, size, STDERR_FILENO);
-  exit(EXIT_FAILURE);
-}
 
 int main(int argc, char *argv[]){
     //Parsing the parameters
     //Start working one by one
-    signal(SIGSEGV, handler);
     try{
         //We first parse the command line inputs
         Command commander; //Initialize the class (this will set all the default parameters)
