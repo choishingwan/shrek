@@ -121,13 +121,16 @@ void Genotype::GetbothR(const Genotype &snpB, const bool correction, double &r, 
     double n = N;
     double cov12 = return_vals[0] * n - dxx * dyy;
     dxx = (return_vals[3] * n + dxx * dxx) * (return_vals[4] * n + dyy * dyy);
-    r=cov12 / sqrt(dxx);
-    rSq =(cov12 * cov12) / dxx;
-    if(correction){
-        r= r*(1.0+(1.0-r*r)/(2.0*(n-4.0))); //POPA
-        //rSq = 1.0-((m_sampleNum-3.0)/(m_sampleNum-2.0))*(1.0-rSq)*(1.0+(2.0*(1.0-rSq))/(m_sampleNum-3.3)); //OP5 from Shieh
-        rSq=rSq-1.0/(2.0*n); //Weir & Hill
-	}
+    if(dxx !=0.0){
+        r=cov12 / sqrt(dxx);
+        rSq =(cov12 * cov12) / dxx;
+        if(correction){
+            r= r*(1.0+(1.0-r*r)/(2.0*(n-4.0))); //POPA
+            //rSq = 1.0-((m_sampleNum-3.0)/(m_sampleNum-2.0))*(1.0-rSq)*(1.0+(2.0*(1.0-rSq))/(m_sampleNum-3.3)); //OP5 from Shieh
+            rSq=rSq-1.0/(2.0*n); //Weir & Hill
+    //        rSq=rSq-(1.0-rSq)/(n-2.0); //Weir & Hill
+        }
+    }
 
 }
 
