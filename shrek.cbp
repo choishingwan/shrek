@@ -35,7 +35,6 @@
 		</Compiler>
 		<Unit filename="command.cpp" />
 		<Unit filename="command.h" />
-		<Unit filename="configure.h" />
 		<Unit filename="decomposition.cpp" />
 		<Unit filename="decomposition.h" />
 		<Unit filename="genotype.cpp" />
@@ -53,8 +52,6 @@
 		<Unit filename="snp.h" />
 		<Unit filename="snpestimation.cpp" />
 		<Unit filename="snpestimation.h" />
-		<Unit filename="snpindex.cpp" />
-		<Unit filename="snpindex.h" />
 		<Unit filename="usefulTools.cpp" />
 		<Unit filename="usefulTools.h" />
 		<Extensions>
