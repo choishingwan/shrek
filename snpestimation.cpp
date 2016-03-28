@@ -46,6 +46,7 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler, boost::pt
             genotypeFileHandler.getBlock(snpList, genotype, snpLoc, windowEnd, completed,boundary, false);
             bool boundChange = false;
             linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
+
             if(boundChange && boundary.back()==snpLoc.size()){
                     windowEnd=true;
                     boundary.pop_back();
@@ -57,7 +58,6 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler, boost::pt
             genotypeFileHandler.getBlock(snpList, genotype, snpLoc, windowEnd, completed,boundary, true);
             linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
         }
-        bool merged = false;
         if(windowEnd && !retainLastBlock && boundary.size() > 2){ //Check whether if we need to merge the two blocks
             size_t indexOfLastSnpOfSecondLastBlock = snpLoc.at(boundary.back()-1); // just in case
             size_t lastSnp = snpLoc.back();
@@ -65,12 +65,10 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler, boost::pt
                 boundary.pop_back();
                 bool boundChange=false;
                 linkage.construct(genotype, snpLoc, boundary, snpList, m_ldCorrection, boundChange);
-                merged=true;
             }
         }
-
         if(retainLastBlock && !windowEnd) throw std::runtime_error("Impossible combination of windowEnd and retain last block!");
-        decompose.run(linkage, snpLoc, boundary, snpList, windowEnd, !retainLastBlock, starting, regionList,merged);
+        decompose.run(linkage, snpLoc, boundary, snpList, windowEnd, !retainLastBlock, starting, regionList);
         doneItems= snpLoc.at(boundary.back());
         chr = snpList[snpLoc[boundary.back()]].getChr();
 

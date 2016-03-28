@@ -19,7 +19,7 @@ class Decomposition
         Decomposition(size_t thread);
         /** Default destructor */
         virtual ~Decomposition();
-        void run(Linkage &linkage, std::deque<size_t> &snpLoc, std::vector<size_t> &boundary, boost::ptr_vector<Snp> &snpList, bool windowEnd, bool decomposeAll, bool starting, boost::ptr_vector<Region> &regionList,bool merged);
+        void run(Linkage &linkage, std::deque<size_t> &snpLoc, std::vector<size_t> &boundary, boost::ptr_vector<Snp> &snpList, bool windowEnd, bool decomposeAll, bool starting, boost::ptr_vector<Region> &regionList);
     protected:
     private:
         static size_t check;

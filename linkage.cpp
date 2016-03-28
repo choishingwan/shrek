@@ -1,7 +1,7 @@
 #include "linkage.h"
 
 std::mutex Linkage::linkageMtx;
-
+size_t Linkage::check = 0;
 Linkage::Linkage(size_t thread):m_thread(thread){}
 Linkage::~Linkage(){}
 
@@ -37,10 +37,6 @@ void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::d
                         m_linkageSqrt(i,j) = r;
                         m_linkage(j,i) = r2;
                         m_linkageSqrt(j,i) = r;
-
-//                            linkageMtx.lock();
-//                            std::cerr << "Check: " << r2 << std::endl;
-//                            linkageMtx.unlock();
                         if(std::fabs(r-1.0) < 1e-6 || r > 1.0 || r < -1.0){ //Perfect LD if R = 1 or > abs(1)
                             perfectLDBufferStore.push_back(j);
                             perfectLDRemainStore.push_back(i);
@@ -95,11 +91,8 @@ void Linkage::construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t>
     }
     for (size_t i = 0; i < threadStore.size(); ++i) threadStore[i].join();
     threadStore.clear();
-    // We sort the index for easier management (they are not sorted because of multi threading
     std::sort(perfectLd.begin(), perfectLd.end());
-    // Remove duplicated index
     perfectLd.erase( std::unique( perfectLd.begin(), perfectLd.end() ), perfectLd.end() );
-    // If something are in perfect LD, perform the perfect LD removal
     if(perfectLd.size()!=0) perfectRemove(perfectLd, genotype, snpLoc, boundary, snpList, boundCheck);
 }
 
@@ -109,6 +102,7 @@ void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_deque<Gen
     size_t genoSize = genotype.size();
     size_t cI = 0;
     size_t perfectIndexI = 0;
+    //This script can actually be performed using multi-thread. But we will leave this out for now
     for(size_t i = 0; i < genoSize; ++i){
         if(i == perfectLd[perfectIndexI]) perfectIndexI++;// This is perfect LD, we will skip it
         else{ // The current I is required, go over the remaining
@@ -130,16 +124,12 @@ void Linkage::perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_deque<Gen
     // Now resize the matrix to remove unwanted stuff
 //    m_linkage.resize(genoSize-numPerfect, genoSize-numPerfect);
 //    m_linkageSqrt.resize(genoSize-numPerfect, genoSize-numPerfect);
-    m_linkage = m_linkage.submat(0,0,cI,cI);
+    m_linkage = m_linkage.submat(0,0,cI,cI); //Feel like this is safer
     m_linkageSqrt =m_linkageSqrt.submat(0,0,cI,cI);
-    //    m_linkage.conservativeResize(genoSize-numPerfect, genoSize-numPerfect);
-//    m_linkageSqrt.conservativeResize(genoSize-numPerfect, genoSize-numPerfect);
     // Now update the snpLoc and genotype
-    size_t itemRemoved = 0;
     for(size_t i = 0; i < numPerfect; ++i){
-        snpLoc.erase(snpLoc.begin()+(perfectLd[i]-itemRemoved));
-        genotype.erase(genotype.begin()+(perfectLd[i]-itemRemoved));
-        itemRemoved++;
+        snpLoc.erase(snpLoc.begin()+(perfectLd[i]-i));
+        genotype.erase(genotype.begin()+(perfectLd[i]-i));
     }
     // Now carefully check if the last boundary is in perfect LD
     if(boundary.size() > 1){
@@ -169,106 +159,64 @@ void Linkage::clear(size_t nRemoveElements){
 }
 
 void Linkage::complexSE(size_t startIndex, size_t endIndex, const arma::vec &nSample, const arma::vec &tStat, arma::mat &varResult){
-//    varResult = m_rInv*arma::diagmat(nSample)*(4*m_linkageSqrt.submat(startIndex,startIndex,endIndex,endIndex)%(tStat*tStat.t())-2*m_linkage.submat(startIndex,startIndex,endIndex, endIndex))*arma::diagmat(nSample)*m_rInv;
-//    m_rInv.clear();
+    varResult = m_rInv*arma::diagmat(nSample)*(4*m_linkageSqrt.submat(startIndex,startIndex,endIndex,endIndex)%(tStat*tStat.t())-2*m_linkage.submat(startIndex,startIndex,endIndex, endIndex))*arma::diagmat(nSample)*m_rInv;
+    m_rInv.clear();
 }
 
 void Linkage::effectiveSE(size_t startIndex, size_t endIndex, arma::vec &varResult){
-//    if(startIndex > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
-//    arma::vec effectiveNumber(endIndex-startIndex, arma::fill::ones);
-//    varResult = m_rInv*effectiveNumber;
-//    arma::vec errorVec = m_linkage.submat( startIndex, startIndex, endIndex, endIndex )*varResult - effectiveNumber;
-// 	double oriNorm = norm(effectiveNumber);
-//    double relative_error = norm(errorVec) / oriNorm;
-//    double prev_error = relative_error+1;
-//    arma::vec updateVec;
-//    int iterCount = 0, maxIter = 10000;
-//    while(relative_error < prev_error && iterCount < maxIter){
-//        prev_error = relative_error;
-//        updateVec=m_rInv*(-errorVec);
-//        errorVec= m_linkage.submat( startIndex, startIndex, endIndex, endIndex )*(varResult+updateVec) - effectiveNumber;
-//        relative_error = norm(errorVec) / oriNorm;
-//        if(relative_error < 1e-300) relative_error = 0; // 1e-300 is more than enough...
-//        varResult = varResult+updateVec;
-//        iterCount++; // This is to avoid infinite looping
-//    }
-//    m_rInv.clear();
+    if(startIndex > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
+    arma::vec effectiveNumber(endIndex-startIndex, arma::fill::ones);
+    varResult = m_rInv*effectiveNumber;
+    arma::vec errorVec = m_linkage.submat( startIndex, startIndex, endIndex, endIndex )*varResult - effectiveNumber;
+ 	double oriNorm = norm(effectiveNumber);
+    double relative_error = norm(errorVec) / oriNorm;
+    double prev_error = relative_error+1;
+    arma::vec updateVec;
+    int iterCount = 0, maxIter = 10000;
+    while(relative_error < prev_error && iterCount < maxIter){
+        prev_error = relative_error;
+        updateVec=m_rInv*(-errorVec);
+        errorVec= m_linkage.submat( startIndex, startIndex, endIndex, endIndex )*(varResult+updateVec) - effectiveNumber;
+        relative_error = norm(errorVec) / oriNorm;
+        if(relative_error < 1e-300) relative_error = 0; // 1e-300 is more than enough...
+        varResult = varResult+updateVec;
+        iterCount++; // This is to avoid infinite looping
+    }
+    m_rInv.clear();
 }
 
 
-double Linkage::m_tolerance = 0.0;
-
-void Linkage::decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult, bool printing){
+//double Linkage::m_tolerance = 0.0;
+void Linkage::decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult){
     if(start > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
     size_t endOfBlock = start+fStat.n_elem-1;
-   m_rInv=arma::pinv((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ));
-//    arma::mat subMat = (arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock );
-
+    m_rInv=arma::pinv((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ));
 //    arma::vec eigval, eigvec;
 //    arma::eig_sym( eigval, eigvec, (arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ) );
-//    arma::eig_sym( eigval, eigvec, subMat );
-//    arma::vec s;
+//    arma::vec eigval;
 //    arma::mat U, V;
-//    arma::svd(U,s,V,subMat);
-//    if(printing){
-//    std::cout << "Checking: " << std::endl << U << std::endl;
-//    std::cout << "End Check" << std::endl;
-//    }
+//    arma::svd(U,eigval,V,subMat);
 //    Linkage::m_tolerance = std::numeric_limits<double>::epsilon() * fStat.n_elem *arma::max(eigval);
-//    Linkage::m_tolerance = std::numeric_limits<double>::epsilon() * fStat.n_elem *arma::max(s);
 //    eigval.for_each( [](arma::mat::elem_type& val) { if(val < Linkage::m_tolerance){val=0;}else{val = 1/val; }} );
 //    m_rInv = eigvec*arma::diagmat(eigval) * eigvec.t();
-//    m_rInv = V*arma::diagmat(s) * U.t();
-//    m_rInv = arma::pinv(subMat);
+//    m_rInv = V*arma::diagmat(eigval) * U.t();
     heritResult = m_rInv * fStat;
-//    Eigen::MatrixXd temp = Eigen::MatrixXd::Zero(fStat.n_elem, fStat.n_elem);
-//    Eigen::VectorXd test = Eigen::VectorXd::Zero(fStat.n_elem);
-//    for(size_t i = 0; i < fStat.n_elem; ++i){
-//        test(i) = fStat(i);
-//        for(size_t j = i; j < fStat.n_elem; ++j){
-//            temp(i,j)= ((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ))(i,j);
-//            temp(j,i)= ((arma::mat)m_linkage.submat( start, start, endOfBlock, endOfBlock ))(j,i);
-//        }
-//    }
-//    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(temp);
-//    double tolerance = std::numeric_limits<double>::epsilon() * fStat.n_elem * es.eigenvalues().array().maxCoeff();
-//    m_rInv = es.eigenvectors()*(es.eigenvalues().array() > tolerance).select(es.eigenvalues().array().inverse(), 0).matrix().asDiagonal() * es.eigenvectors().transpose();
-//    Eigen::VectorXd tempRes = m_rInv * test;
-//    for(size_t i = 0; i < fStat.n_elem; ++i){
-//        heritResult(i) = tempRes(i);
-//    }
     /** Calculate the h vector here **/
-//    arma::mat error = m_linkage.submat( start, start, endOfBlock, endOfBlock )*heritResult - fStat;
-// 	double oriNorm = norm(fStat);
-//    double relative_error = norm(error) / oriNorm;
-//    double prev_error = relative_error+1;
-//    arma::mat update;
-//    int iterCount = 0, maxIter = 10000;
-//    while(relative_error < prev_error && iterCount < maxIter){
-//        prev_error = relative_error;
-//        update=m_rInv*(-error);
-//        error= m_linkage.submat( start, start, endOfBlock, endOfBlock )*(heritResult+update) - fStat;
-//        relative_error = norm(error) / oriNorm;
-//        if(relative_error < 1e-300) relative_error = 0; // 1e-300 is more than enough...
-//        heritResult = heritResult+update;
-//        iterCount++; // This is to avoid infinite looping
-//    }
+    arma::mat error = m_linkage.submat( start, start, endOfBlock, endOfBlock )*heritResult - fStat;
+ 	double oriNorm = norm(fStat);
+    double relative_error = norm(error) / oriNorm;
+    double prev_error = relative_error+1;
+    arma::mat update;
+    int iterCount = 0, maxIter = 10000;
+    while(relative_error < prev_error && iterCount < maxIter){
+        prev_error = relative_error;
+        update=m_rInv*(-error);
+        error= m_linkage.submat( start, start, endOfBlock, endOfBlock )*(heritResult+update) - fStat;
+        relative_error = norm(error) / oriNorm;
+        if(relative_error < 1e-300) relative_error = 0; // 1e-300 is more than enough...
+        heritResult = heritResult+update;
+        iterCount++; // This is to avoid infinite looping
+    }
 
-    //This part is here to safe guard any stupid mistakes I made
-//    if(isnan(arma::accu(varResult))){
-//        std::cout << varResult << std::endl;
-//        std::cout << "sample:"  << std::endl;
-//        std::cout << arma::diagmat(nSample) << std::endl;
-//        std::cout << "R2" << std::endl;
-//        std::cout << m_linkage.submat(start,start,endOfBlock, endOfBlock) << std::endl;
-//        std::cout << "R" << std::endl;
-//        std::cout << m_linkageSqrt.submat(start,start,endOfBlock,endOfBlock) << std::endl;
-//        std::cout << "Z" << std::endl;
-//        std::cout << (zStat*zStat.t()) << std::endl;
-//        std::cout << "Inverse" << std::endl;
-//        std::cout << rInv << std::endl;
-//        std::cout << "Fstat"<< std::endl;
-//        std::cout << fStat << std::endl;
-//    }
 }
 

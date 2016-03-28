@@ -99,13 +99,10 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     std::string famFileName = m_genotypeFilePrefix+".fam";
     std::ifstream famFile;
     famFile.open(famFileName.c_str());
-    if(!famFile.is_open()){
-        throw std::runtime_error("Cannot open fam file");
-    }
+    if(!famFile.is_open()) throw std::runtime_error("Cannot open fam file");
     std::string line;
     while(std::getline(famFile, line)){
-        line = usefulTools::trim(line);
-        if(!line.empty()) m_nRefSample++;
+        if(!usefulTools::trim(line).empty()) m_nRefSample++;
     }
     famFile.close();
     // We need to tell Genotype what is the maximum number of samples that can present in the reference panel
@@ -171,7 +168,7 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
 // Then read all the SNPs within the region
 
 void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, bool &windowEnd, bool &completed, std::vector<size_t> &boundary, bool addition){
-    if(!m_snpIter < m_nRequiredSnps) return; //Nothing to read
+    if(m_snpIter >= m_nRequiredSnps) return; //Nothing to read
     bool starting  = !addition;// Indicate that we are trying to identify the start of the current block
     // Simple declaration
     int blockStartIndex = (addition)? snpLoc[boundary.back()] : 0; // This is index for the start SNP of this block
@@ -180,7 +177,6 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_d
     size_t lastUsedLoc = (addition)? snpList[snpLoc.back()].getLoc() : 0; // The bp of the last SNP included in this block
     //m_inclusion contains the snpLoc whereas the m_snpLineNumber tells us how many line do we have to skip
     for(; m_snpIter < m_nRequiredSnps; ++m_snpIter){
-            std::cerr << "In loop" << std::endl;
         int snpIndex = m_inclusion[m_snpIter];
         if(starting){
             blockChr = snpList[snpIndex].getChr();
@@ -190,16 +186,17 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_d
         size_t currentLoc = snpList[snpIndex].getLoc();
         std::string currentChr = snpList[snpIndex].getChr();
         if(currentChr.compare(blockChr)!=0 ||
-            currentLoc-lastUsedLoc > m_blockSize)
+            (currentLoc-lastUsedLoc) > m_blockSize)
         {
+                st
                 windowEnd=true;
                 return;
         }
         else if(currentLoc-blockStartLoc > m_blockSize) return;
         else{
             Genotype *tempGenotype = new Genotype();
-            size_t indx = 0;
             size_t alleleCount=0, validSample = 0;
+            double oldM=0.0, newM=0.0,oldS=0.0, newS=0.0;
             m_bedFile.seekg((m_snpLineNumber[m_snpIter]-m_nSnpSkipped) * m_nBytes, m_bedFile.cur); //Now read the target genotype
             m_nSnpSkipped = m_snpLineNumber[m_snpIter]+1;
             std::bitset<8> byteHolder; //Initiate the bit array
@@ -216,15 +213,13 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_d
                     if(!(first==1 && second==0)){ //When not missing
                         validSample++;
                         alleleCount += first+second;
-                    }
-                    tempGenotype->AddsampleGenotype(first,second, sampleIndex);
+                    }tempGenotype->AddsampleGenotype(first,second, sampleIndex);
                     sampleIndex++;
                 }
             }
             double currentMaf = (validSample>0)?((double)alleleCount)/(2.0*(double)validSample):-1.0;
             currentMaf = (currentMaf > 0.5)? 1-currentMaf : currentMaf;
             if(m_mafThreshold > currentMaf){
-                    std::cerr << "Remove genotype: " << m_mafThreshold << "\t" << currentMaf << std::endl;
                 m_inclusion[m_snpIter]=-1;
                 m_nFilter++;
                 snpList[snpIndex].setFlag(0,false);
@@ -237,14 +232,12 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_d
                     starting = false;
                 }
                 snpList[snpIndex].setStatus('I');
-                std::cerr << "Adding new genotypes" << std::endl;
                 genotype.push_back(tempGenotype);
                 snpLoc.push_back(snpIndex); // index of in snpList
                 lastUsedLoc  = currentLoc; // This is for the coordinates
             }
         }
     }
-    std::cerr << "off"
     windowEnd = true;
     completed = true;
     m_bedFile.close();

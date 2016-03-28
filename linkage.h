@@ -21,7 +21,6 @@
 #include <assert.h>
 
 #include <armadillo>
-#include <Eigen/Dense>
 #include <limits>
 #include <mutex>
 #include <thread>
@@ -42,19 +41,17 @@ class Linkage
         void print(size_t start, size_t ending, std::string name);
         void effectiveSE(size_t startIndex, size_t endIndex, arma::vec &varResult);
         void complexSE(size_t startIndex, size_t endIndex, const arma::vec &nSample, const arma::vec &tStat, arma::mat &varResult);
-        void decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult, bool printing);
+        void decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult);
         void computeHerit(const arma::vec &fStat, arma::vec &heritResult);
         void clear();
         void clear(size_t nRemoveElements);
+        static size_t check;
     protected:
     private:
-        static double m_tolerance;
+//        static double m_tolerance;
         arma::mat m_linkage;
         arma::mat m_linkageSqrt;
         arma::mat m_rInv;
-//        Eigen::MatrixXd m_rInv;
-//        Eigen::MatrixXd m_linkage;
-//        Eigen::MatrixXd m_linkageSqrt;
         size_t m_thread=1;
         size_t m_blockSize=0;
         static std::mutex linkageMtx;

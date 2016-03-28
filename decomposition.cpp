@@ -52,7 +52,6 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
     arma::vec fStat = arma::vec(sizeOfMatrix, arma::fill::zeros);
     arma::vec heritResult = arma::vec(sizeOfMatrix, arma::fill::zeros);
     arma::vec tStat, nSample;
-    size_t debug1 = 0, debug2=0;
     if(sign){
         tStat = arma::vec(sizeOfMatrix, arma::fill::zeros);
         nSample = arma::vec(sizeOfMatrix, arma::fill::zeros);
@@ -62,40 +61,20 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
     size_t startCopyVectorIndex = (starting)? 0:midStartIndex-decompStartIndex;
     for(size_t snpLocIndex = decompStartIndex; snpLocIndex< decompEndIndex; ++snpLocIndex){
         fStat(snpLocIndex-decompStartIndex) = snpList[snpLoc[snpLocIndex]].getFStat(); // This is the f-statistic
-        if(snpList[snpLoc[snpLocIndex]].getRs().compare("rs7530997")==0){
-            debug1=snpLocIndex;
-        }
-        else if(snpList[snpLoc[snpLocIndex]].getRs().compare("rs12401299")==0){
-            debug2=snpLocIndex;
-        }
         if(sign){
             tStat(snpLocIndex-decompStartIndex) = snpList[snpLoc[snpLocIndex]].getTStat();
             nSample(snpLocIndex-decompStartIndex) = (double)1/(double)snpList[snpLoc[snpLocIndex]].getSampleSize();
         }
     }
 
-    linkage.decompose(decompStartIndex, fStat, heritResult, (debug1!=0&&debug2!=0));
-    if(debug1!=0 && debug2 != 0){
-////    linkage.print();
-//std::cout << "=============" << std::endl;
-//
-//    std::string debugName = "debug"+std::to_string(check);
-//    linkage.print(decompStartIndex,decompStartIndex+fStat.n_elem-1, debugName);
-//    check++;
-//        for(size_t i =0; i < fStat.n_elem; ++i){
-//            std::cout << snpList[snpLoc[decompStartIndex+i]].getRs() << "\t" << fStat(i) << "\t" << heritResult(i) << std::endl;
-//        }
-    }
+    linkage.decompose(decompStartIndex, fStat, heritResult);
     for(size_t i = (starting)? 0:midStartIndex-decompStartIndex; i < sizeOfMatrix; ++i){
         snpList[snpLoc[i+decompStartIndex]].setHeritability(heritResult(i));
-        if(snpList[snpLoc[i+decompStartIndex]].getStatus()=='R' || snpList[snpLoc[i+decompStartIndex]].getStatus()=='F'){
-            std::cerr << std::endl << "ERROR!!! YES!!!" << std::endl;
-        }
     }
     if(sign){
         arma::mat varResult = arma::mat(sizeOfMatrix,sizeOfMatrix,arma::fill::eye);
-        //linkage.complexSE(decompStartIndex, decompEndIndex, nSample, tStat, varResult);
-        //complexSEUpdate(decompStartIndex, decompEndIndex, midStartIndex, midEndIndex, snpLoc, snpList, regionList, start, ending, varResult);
+        linkage.complexSE(decompStartIndex, decompEndIndex, nSample, tStat, varResult);
+        complexSEUpdate(decompStartIndex, decompEndIndex, midStartIndex, midEndIndex, snpLoc, snpList, regionList, start, ending, varResult);
     }
     else{
         arma::vec varResult = arma::vec(sizeOfMatrix, arma::fill::zeros);
@@ -108,20 +87,17 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
 }
 
 
-void Decomposition::run(Linkage &linkage, std::deque<size_t> &snpLoc, std::vector<size_t> &boundary, boost::ptr_vector<Snp> &snpList, bool windowEnd, bool decomposeAll, bool starting, boost::ptr_vector<Region> &regionList, bool merged){
+void Decomposition::run(Linkage &linkage, std::deque<size_t> &snpLoc, std::vector<size_t> &boundary, boost::ptr_vector<Snp> &snpList, bool windowEnd, bool decomposeAll, bool starting, boost::ptr_vector<Region> &regionList){
     // The proper decomposition process
     bool sign = !(snpList.front().getSign()==0); // Check whether if sign is given
     size_t boundSize = boundary.size();
     size_t snpLocSize = snpLoc.size();
     // Perform some basic checking
     if(!windowEnd) decomposeAll = false;
-
     assert(!(boundSize>5) && "Why? Not possible...");
     assert(!(starting && !windowEnd && boundSize != 5) && "Must have 5 boundaries if this is the start and not the end");
-    //Three condition
-    // 1. Decomposition everything
-    // 2. There is one extra block remaining
-    // 3. This is one block, so not possible for 2
+
+
     size_t decomposeStart = 0;
     size_t decomposeEnd = (decomposeAll)? ((boundSize>3)?boundary[3]:snpLocSize) : ((boundSize>3)? boundary[3]:boundary.back());
     assert(decomposeEnd!=decomposeStart && "Not possible to have 1 block and still want to retain stuff");
@@ -137,7 +113,6 @@ void Decomposition::run(Linkage &linkage, std::deque<size_t> &snpLoc, std::vecto
     if(windowEnd && boundSize>3){
         //Maximum two more situation
         for(size_t i = 0; i < boundSize-3-!decomposeAll;++i){
-
             decomposeStart=boundary[i+1];
             decomposeEnd = (i+4>=boundSize)? snpLocSize:boundary[i+4];
             copyStart = boundary[i+2];

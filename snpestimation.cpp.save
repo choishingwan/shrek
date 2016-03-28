@@ -69,6 +69,8 @@ void SnpEstimation::estimate(GenotypeFileHandler &genotypeFileHandler, boost::pt
             }
         }
 
+        for(size_t i = 0; i < boundary.size(); ++i)std::cout << snpLoc[boundary[i]] << " ";
+
         if(retainLastBlock && !windowEnd) throw std::runtime_error("Impossible combination of windowEnd and retain last block!");
         decompose.run(linkage, snpLoc, boundary, snpList, windowEnd, !retainLastBlock, starting, regionList,merged);
         doneItems= snpLoc.at(boundary.back());
@@ -141,12 +143,12 @@ void SnpEstimation::result(const boost::ptr_vector<Snp> &snpList, const boost::p
             fprintf(stderr, "Will only provide basic output\n");
         }
         else{
-            fullOutput << "Chr\tLoc\trsID\tZ\tF\tH\tStatus\tTest" << std::endl;
+            fullOutput << "Chr\tLoc\trsID\tZ\tF\tH\tStatus" << std::endl;
         }
     }
     for(size_t i = 0; i < snpList.size(); ++i){
         if(requireFullOut){
-            fullOutput << snpList[i].getChr() << "\t" << snpList[i].getLoc() << "\t" << snpList[i].getRs() << "\t" << snpList[i].getTStat() << "\t"<< snpList[i].getFStat() << "\t" << snpList[i].getHeritability() << "\t" << snpList[i].getStatus() << "\t" << ns<< std::endl;
+            fullOutput << snpList[i].getChr() << "\t" << snpList[i].getLoc() << "\t" << snpList[i].getRs() << "\t" << snpList[i].getTStat() << "\t"<< snpList[i].getFStat() << "\t" << snpList[i].getHeritability() << "\t" << snpList[i].getStatus() << std::endl;
         }
         for(size_t j = 0; j < regionList.size(); ++j){
 //            if(j ==0) std::cerr << snpList[i].flag(j) << std::endl;

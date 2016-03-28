@@ -99,13 +99,10 @@ void GenotypeFileHandler::initialize(const Command &commander, const std::map<st
     std::string famFileName = m_genotypeFilePrefix+".fam";
     std::ifstream famFile;
     famFile.open(famFileName.c_str());
-    if(!famFile.is_open()){
-        throw std::runtime_error("Cannot open fam file");
-    }
+    if(!famFile.is_open()) throw std::runtime_error("Cannot open fam file");
     std::string line;
     while(std::getline(famFile, line)){
-        line = usefulTools::trim(line);
-        if(!line.empty()) m_nRefSample++;
+        if(!usefulTools::trim(line).empty()) m_nRefSample++;
     }
     famFile.close();
     // We need to tell Genotype what is the maximum number of samples that can present in the reference panel
@@ -212,25 +209,10 @@ void GenotypeFileHandler::getBlock(boost::ptr_vector<Snp> &snpList, boost::ptr_d
                 while (genoBit<7 && sampleIndex<m_nRefSample ){
                     int first = byteHolder[genoBit++];
                     int second = byteHolder[genoBit++];
-//                    size_t value = 0;
                     if(!(first==1 && second==0)){ //When not missing
                         validSample++;
                         alleleCount += first+second;
-//                        value=first+second;
-                    }
-//                    if(sampleIndex==1){
-//                        oldM = newM = value;
-//                        oldS = 0.0;
-//                    }
-//                    else{
-//                        newM = oldM + (value-oldM)/(validSample);
-//                        newS = oldS + (value-oldM)*(value-newM);
-//                        oldM = newM;
-//                        oldS = newS;
-//                    }
-//                    validSample > 0 ? tempGenotype->Setmean(newM) : tempGenotype->Setmean(0.0);
-//                    validSample > 1 ? tempGenotype->SetstandardDeviation(std::sqrt(newS/(validSample - 1.0))) : tempGenotype->SetstandardDeviation(0.0);
-                    tempGenotype->AddsampleGenotype(first,second, sampleIndex);
+                    }tempGenotype->AddsampleGenotype(first,second, sampleIndex);
                     sampleIndex++;
                 }
             }
