@@ -87,23 +87,23 @@ void Linkage::construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t>
     }
     for (size_t i = 0; i < threadStore.size(); ++i) threadStore[i].join();
     threadStore.clear();
-    if(perfectLd.size() != 0){
-        std::sort(perfectLd.begin(), perfectLd.end());
-        std::vector<size_t> perfectRemoveStore; //This vector will contain all the stuff that we want to remove from the LD matrix
-        std::map<size_t, std::map<size_t, bool> > duplicateCheck; //There must be some better way to do this
-        for(size_t i = 0;i < perfectLd.size(); ++i){
-            size_t firstOfPair = perfectLd[i].getStart();
-            size_t secondOfPair = perfectLd[i].getEnd();
-            if(!(duplicateCheck.find(firstOfPair)!=duplicateCheck.end() && duplicateCheck[firstOfPair].find(secondOfPair)!=duplicateCheck[firstOfPair].end())){
-                //Then we can work on it
-                perfectRemoveStore.push_back(secondOfPair);
-                duplicateCheck[firstOfPair][secondOfPair]=true;
-                snpList[snpLoc[firstOfPair]].shareHeritability(snpList[snpLoc[secondOfPair]]);
-            }
+    if(perfectLd.size() != 0)
+    std::sort(perfectLd.begin(), perfectLd.end());
+    std::vector<size_t> perfectRemoveStore; //This vector will contain all the stuff that we want to remove from the LD matrix
+    std::map<size_t, std::map<size_t, bool> > duplicateCheck; //There must be some better way to do this
+    for(size_t i = 0;i < perfectLd.size(); ++i){
+        size_t firstOfPair = perfectLd[i].getStart();
+        size_t secondOfPair = perfectLd[i].getEnd();
+        if(!(duplicateCheck.find(firstOfPair)!=duplicateCheck.end() && duplicateCheck[firstOfPair].find(secondOfPair)!=duplicateCheck[firstOfPair].end())){
+            //Then we can work on it
+            perfectRemoveStore.push_back(secondOfPair);
+            duplicateCheck[firstOfPair][secondOfPair]=true;
+            snpList[snpLoc[firstOfPair]].shareHeritability(snpList[snpLoc[secondOfPair]]);
         }
-        std::sort(perfectRemoveStore.begin(), perfectRemoveStore.end());
-        perfectRemoveStore.erase( std::unique( perfectRemoveStore.begin(), perfectRemoveStore.end() ), perfectRemoveStore.end() );
     }
+    std::sort(perfectRemoveStore.begin(), perfectRemoveStore.end());
+    perfectRemoveStore.erase( std::unique( perfectRemoveStore.begin(), perfectRemoveStore.end() ), perfectRemoveStore.end() );
+    if(perfectRemoveStore.size()!=0) perfectRemove(perfectRemoveStore, genotype, snpLoc, boundary, snpList, boundCheck);
 }
 
 

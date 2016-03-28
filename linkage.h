@@ -25,6 +25,7 @@
 #include <mutex>
 #include <thread>
 
+#include "interval.h"
 #include "genotype.h"
 #include "snp.h"
 
@@ -38,14 +39,12 @@ class Linkage
         // The snpList is required for the perfectLD stuff
         void construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::vector<size_t> &boundary, boost::ptr_vector<Snp> &snpList, const bool correction,bool &boundCheck);
         void print();
-        void print(size_t start, size_t ending, std::string name);
         void effectiveSE(size_t startIndex, size_t endIndex, arma::vec &varResult);
         void complexSE(size_t startIndex, size_t endIndex, const arma::vec &nSample, const arma::vec &tStat, arma::mat &varResult);
         void decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult);
         void computeHerit(const arma::vec &fStat, arma::vec &heritResult);
         void clear();
         void clear(size_t nRemoveElements);
-        static size_t check;
     protected:
     private:
 //        static double m_tolerance;
@@ -56,7 +55,8 @@ class Linkage
         size_t m_blockSize=0;
         static std::mutex linkageMtx;
         // This will return the list of index that we would like to remove from the analysis
-        void computeLd(const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd);
+//        void computeLd(const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd);
+        void computeLd(const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, boost::ptr_vector<Snp> &snpList, const bool &correction, boost::ptr_vector<Interval> &perfectLd);
         void perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::vector<size_t > &boundary, boost::ptr_vector<Snp> &snpList, bool &boundCheck);
 
 };

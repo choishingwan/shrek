@@ -74,7 +74,7 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
     if(sign){
         arma::mat varResult = arma::mat(sizeOfMatrix,sizeOfMatrix,arma::fill::eye);
         linkage.complexSE(decompStartIndex, decompEndIndex, nSample, tStat, varResult);
-        complexSEUpdate(decompStartIndex, decompEndIndex, midStartIndex, midEndIndex, snpLoc, snpList, regionList, start, ending, varResult);
+        complexSEUpdate(decompStartIndex, decompEndIndex, midStartIndex, midEndIndex, snpLoc, snpList, regionList, starting, ending, varResult);
     }
     else{
         arma::vec varResult = arma::vec(sizeOfMatrix, arma::fill::zeros);

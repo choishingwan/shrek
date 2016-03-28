@@ -35,7 +35,7 @@ class Genotype
         void AddsampleGenotype(const int first, const int second, const size_t sampleIndex);
         void Setmean(double mean);
         void SetstandardDeviation(double standardDeviation);
-        size_t getNonMiss()const{return m_nonMissSample;};
+        size_t n
 	protected:
 	private:
         mlong *m_genotype;
