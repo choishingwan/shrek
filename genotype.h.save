@@ -35,7 +35,7 @@ class Genotype
         void AddsampleGenotype(const int first, const int second, const size_t sampleIndex);
         void Setmean(double mean);
         void SetstandardDeviation(double standardDeviation);
-        size_t n
+        size_t getNonMiss()const{return m_nonMissSample;};
 	protected:
 	private:
         mlong *m_genotype;
@@ -50,7 +50,8 @@ class Genotype
 //        const static mlong m4 = 0x0f0f0f0f0f0f0f0fLLU;
 //        const static mlong m8 = 0x00ff00ff00ff00ffLLU;
 		const static mlong FIVEMASK = 0x55555555;
-		const static mlong m2 = 0x33333333;
+		const static mlong THREEMASK = 0x33333333;
+		const static mlong  = 0x33333333;
 		const static mlong AAAAMASK = 0xaaaaaaaa;
 //        const static mlong FIVEMASK = 0x5555555555555555LLU; //not smart enough to increase the bit length...
 //		const static mlong m2 = 0x3333333333333333LLU;

@@ -25,7 +25,6 @@
 #include <mutex>
 #include <thread>
 
-#include "interval.h"
 #include "genotype.h"
 #include "snp.h"
 
@@ -55,9 +54,8 @@ class Linkage
         size_t m_blockSize=0;
         static std::mutex linkageMtx;
         // This will return the list of index that we would like to remove from the analysis
-//        void computeLd(const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd);
-        void computeLd(const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, boost::ptr_vector<Snp> &snpList, const bool &correction, boost::ptr_vector<Interval> &perfectLd);
-        void perfectRemove(std::vector<size_t> &perfectLd, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::vector<size_t > &boundary, boost::ptr_vector<Snp> &snpList, bool &boundCheck);
+        void computeLd(const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &snpLoc, size_t startIndex, size_t verEnd, size_t horistart, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd);
+        void perfectRemove(const std::vector<size_t> &perfectLd, boost::ptr_deque<Genotype> &genotype, std::deque<size_t> &snpLoc, std::vector<size_t > &boundary, boost::ptr_vector<Snp> &snpList, bool &boundCheck);
 
 };
 

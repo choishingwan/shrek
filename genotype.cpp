@@ -46,9 +46,9 @@ void Genotype::GetbothR(const Genotype &snpB, const bool correction, double &r, 
 		sum12 = sum12 | loader1;
 		sum11 = sum1 & FIVEMASK;
 		sum22 = sum2 & FIVEMASK;
-		sum1 = (sum1 & 0x33333333) + ((sum1 >> 2) & 0x33333333);
-		sum2 = (sum2 & 0x33333333) + ((sum2 >> 2) & 0x33333333);
-		sum12 = (sum12 & 0x33333333) + ((sum12 >> 2) & 0x33333333);
+		sum1 = (sum1 & THREEMASK) + ((sum1 >> 2) & THREEMASK);
+		sum2 = (sum2 & THREEMASK) + ((sum2 >> 2) & THREEMASK);
+		sum12 = (sum12 & THREEMASK) + ((sum12 >> 2) & THREEMASK);
 		mlong tmp_sum1=0 , tmp_sum2=0;
 		if(i < range){
 	    	loader1 = m_genotype[i];
@@ -69,9 +69,9 @@ void Genotype::GetbothR(const Genotype &snpB, const bool correction, double &r, 
 		tmp_sum12 = tmp_sum12 | loader1;
 		sum11 += tmp_sum1 & FIVEMASK;
 		sum22 += tmp_sum2 & FIVEMASK;
-		sum1 += (tmp_sum1 & 0x33333333) + ((tmp_sum1 >> 2) & 0x33333333);
-		sum2 += (tmp_sum2 & 0x33333333) + ((tmp_sum2 >> 2) & 0x33333333);
-		sum12 += (tmp_sum12 & 0x33333333) + ((tmp_sum12 >> 2) & 0x33333333);
+		sum1 += (tmp_sum1 & THREEMASK) + ((tmp_sum1 >> 2) & THREEMASK);
+		sum2 += (tmp_sum2 & THREEMASK) + ((tmp_sum2 >> 2) & THREEMASK);
+		sum12 += (tmp_sum12 & THREEMASK) + ((tmp_sum12 >> 2) & THREEMASK);
 	    if(i < range){
 			loader1 = m_genotype[i];
 			loader2 = snpB.m_genotype[i];
@@ -93,21 +93,21 @@ void Genotype::GetbothR(const Genotype &snpB, const bool correction, double &r, 
 		tmp_sum12 = tmp_sum12 | loader1;
 		sum11 += tmp_sum1 & FIVEMASK;
 		sum22 += tmp_sum2 & FIVEMASK;
-		sum1 += (tmp_sum1 & 0x33333333) + ((tmp_sum1 >> 2) & 0x33333333);
-		sum2 += (tmp_sum2 & 0x33333333) + ((tmp_sum2 >> 2) & 0x33333333);
-		sum11 = (sum11 & 0x33333333) + ((sum11 >> 2) & 0x33333333);
-		sum22 = (sum22 & 0x33333333) + ((sum22 >> 2) & 0x33333333);
-		sum12 += (tmp_sum12 & 0x33333333) + ((tmp_sum12 >> 2) & 0x33333333);
-		sum1 = (sum1 & 0x0f0f0f0f) + ((sum1 >> 4) & 0x0f0f0f0f);
-		sum2 = (sum2 & 0x0f0f0f0f) + ((sum2 >> 4) & 0x0f0f0f0f);
-		sum11 = (sum11 & 0x0f0f0f0f) + ((sum11 >> 4) & 0x0f0f0f0f);
-		sum22 = (sum22 & 0x0f0f0f0f) + ((sum22 >> 4) & 0x0f0f0f0f);
-		sum12 = (sum12 & 0x0f0f0f0f) + ((sum12 >> 4) & 0x0f0f0f0f);
-		final_sum1 += (sum1 * 0x01010101) >> 24;
-		final_sum2 += (sum2 * 0x01010101) >> 24;
-		final_sum11 += (sum11 * 0x01010101) >> 24;
-		final_sum22 += (sum22 * 0x01010101) >> 24;
-		final_sum12 += (sum12 * 0x01010101) >> 24;
+		sum1 += (tmp_sum1 & THREEMASK) + ((tmp_sum1 >> 2) & THREEMASK);
+		sum2 += (tmp_sum2 & THREEMASK) + ((tmp_sum2 >> 2) & THREEMASK);
+		sum11 = (sum11 & THREEMASK) + ((sum11 >> 2) & THREEMASK);
+		sum22 = (sum22 & THREEMASK) + ((sum22 >> 2) & THREEMASK);
+		sum12 += (tmp_sum12 & THREEMASK) + ((tmp_sum12 >> 2) & THREEMASK);
+		sum1 = (sum1 & OFMASK) + ((sum1 >> 4) & OFMASK);
+		sum2 = (sum2 & OFMASK) + ((sum2 >> 4) & OFMASK);
+		sum11 = (sum11 & OFMASK) + ((sum11 >> 4) & OFMASK);
+		sum22 = (sum22 & OFMASK) + ((sum22 >> 4) & OFMASK);
+		sum12 = (sum12 & OFMASK) + ((sum12 >> 4) & OFMASK);
+		final_sum1 += (sum1 * ONEZEROMASK) >> 24;
+		final_sum2 += (sum2 * ONEZEROMASK) >> 24;
+		final_sum11 += (sum11 * ONEZEROMASK) >> 24;
+		final_sum22 += (sum22 * ONEZEROMASK) >> 24;
+		final_sum12 += (sum12 * ONEZEROMASK) >> 24;
 	}
 
 	return_vals[0] -= final_sum12;

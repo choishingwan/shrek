@@ -44,6 +44,8 @@ int main(int argc, char *argv[]){
         // Here we hope to control for the threads used by openBLAS
         openblas_set_num_threads(commander.getNThread());
         goto_set_num_threads(commander.getNThread());
+//        openblas_set_num_threads(1);
+//        goto_set_num_threads(1);
         time_t now = time(0);
         char* dt = ctime(&now);
         fprintf(stderr, "\nTime: %s\n", dt);

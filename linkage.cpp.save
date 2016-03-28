@@ -8,11 +8,9 @@ Linkage::~Linkage(){}
 
 void Linkage::print(){ std::cout << m_linkage << std::endl; }
 
-//void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &snpLoc, size_t verticalStartIndex, size_t verticalEndBound, size_t horizontalStartIndex, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd){
-void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &snpLoc, size_t verticalStartIndex, size_t verticalEndBound, size_t horizontalStartIndex, boost::ptr_vector<Snp> &snpList, const bool &correction, boost::ptr_vector<Interval> &perfectLd){
-//    std::vector<size_t> perfectLDBufferStore; //This stores the SNP that are going to be removed because of perfect LD
-//    std::vector<size_t> perfectLDRemainStore; //This stores the survivor from the perfect LD removal
-    boost::ptr_vector<Interval> perfectLDBufferStorage; //This stores the survivor from the perfect LD removal
+void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::deque<size_t> &snpLoc, size_t verticalStartIndex, size_t verticalEndBound, size_t horizontalStartIndex, boost::ptr_vector<Snp> &snpList, const bool &correction, std::vector<size_t> &perfectLd){
+    std::vector<size_t> perfectLDBufferStore; //This stores the SNP that are going to be removed because of perfect LD
+    std::vector<size_t> perfectLDRemainStore; //This stores the survivor from the perfect LD removal
     size_t horizontalEndBound = snpLoc.size();
     for(size_t i = verticalStartIndex; i < verticalEndBound; ++i){
         size_t horizontalStart = (i>horizontalStartIndex)? i:horizontalStartIndex;
@@ -31,9 +29,8 @@ void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::d
                     m_linkage(j,i) = r2;
                     m_linkageSqrt(j,i) = r;
                     if(std::fabs(r-1.0) < 1e-6 || r > 1.0 || r < -1.0){ //Perfect LD if R = 1 or > abs(1)
-//                        perfectLDBufferStore.push_back(j);
-//                        perfectLDRemainStore.push_back(i);
-                        perfectLDBufferStorage.push_back(new Interval("", i,j));
+                        perfectLDBufferStore.push_back(j);
+                        perfectLDRemainStore.push_back(i);
                     }
                 }
             }
@@ -43,8 +40,7 @@ void Linkage::computeLd(const boost::ptr_deque<Genotype> &genotype, const std::d
     Linkage::linkageMtx.lock();
 //        for(size_t i = 0; i < perfectLDBufferStore.size(); ++i) snpList[snpLoc[perfectLDRemainStore[i]]].shareHeritability(snpList[snpLoc[perfectLDBufferStore[i]]]);
 //        perfectLDRemainStore.clear();
-//        perfectLd.insert(perfectLd.end(), perfectLDBufferStore.begin(), perfectLDBufferStore.end());
-        perfectLd.insert(perfectLd.end(), perfectLDBufferStorage.begin(), perfectLDBufferStorage.end());
+        perfectLd.insert(perfectLd.end(), perfectLDBufferStore.begin(), perfectLDBufferStore.end());
     Linkage::linkageMtx.unlock();
 
 }
@@ -63,8 +59,7 @@ void Linkage::construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t>
         m_linkage.resize(genoSize, genoSize);
         m_linkageSqrt.resize(genoSize, genoSize);
     }
-//    std::vector<size_t> perfectLd; // This is the vector use to store the perfect LD information
-    boost::ptr_vector<Interval> perfectLd; // This is the vector use to store the perfect LD information
+    std::vector<size_t> perfectLd; // This is the vector use to store the perfect LD information
     int boundSize = boundary.size();
     size_t startBoundIndex = (boundSize>3)? boundary[boundSize-3]: boundary.front();
     size_t snpLocSize = snpLoc.size();
@@ -87,23 +82,11 @@ void Linkage::construct(boost::ptr_deque<Genotype> &genotype, std::deque<size_t>
     }
     for (size_t i = 0; i < threadStore.size(); ++i) threadStore[i].join();
     threadStore.clear();
-    if(perfectLd.size() != 0)
+    if(perfectLd.size()!=0){
     std::sort(perfectLd.begin(), perfectLd.end());
-    std::vector<size_t> perfectRemoveStore; //This vector will contain all the stuff that we want to remove from the LD matrix
-    std::map<size_t, std::map<size_t, bool> > duplicateCheck; //There must be some better way to do this
-    for(size_t i = 0;i < perfectLd.size(); ++i){
-        size_t firstOfPair = perfectLd[i].getStart();
-        size_t secondOfPair = perfectLd[i].getEnd();
-        if(!(duplicateCheck.find(firstOfPair)!=duplicateCheck.end() && duplicateCheck[firstOfPair].find(secondOfPair)!=duplicateCheck[firstOfPair].end())){
-            //Then we can work on it
-            perfectRemoveStore.push_back(secondOfPair);
-            duplicateCheck[firstOfPair][secondOfPair]=true;
-            snpList[snpLoc[firstOfPair]].shareHeritability(snpList[snpLoc[secondOfPair]]);
-        }
-    }
-    std::sort(perfectRemoveStore.begin(), perfectRemoveStore.end());
-    perfectRemoveStore.erase( std::unique( perfectRemoveStore.begin(), perfectRemoveStore.end() ), perfectRemoveStore.end() );
-    if(perfectRemoveStore.size()!=0) perfectRemove(perfectRemoveStore, genotype, snpLoc, boundary, snpList, boundCheck);
+    perfectLd.erase( std::unique( perfectLd.begin(), perfectLd.end() ), perfectLd.end() );
+    perfectRemove(perfectLd, genotype, snpLoc, boundary, snpList, boundCheck);
+    
 }
 
 

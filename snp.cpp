@@ -27,7 +27,6 @@ void Snp::flip(){
     m_tStat = (i.m_tStat); //They now share the same beta
     m_fStat = (i.m_fStat); //They now share the same beta
     m_heritability = (i.m_heritability);
-//    std::cerr << "Snp checking here: " << m_tStat << "\t" << i.m_tStat << "\t" << i.m_tStat.use_count() << std::endl;
     m_status = 'L';
     i.m_status='L';
     m_ldScore = (i.m_ldScore);

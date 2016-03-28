@@ -22,8 +22,8 @@
  *  Uses the Pearson correlation to calculate the linkage between two genotypes
  *  and can perform r/r-square correction based on Shieh et al (2010)
  */
-//typedef unsigned long long mlong;
-typedef unsigned int mlong;
+typedef unsigned long long mlong;
+//typedef unsigned int mlong;
 
 class Genotype
 {
@@ -49,12 +49,16 @@ class Genotype
 //        const static mlong m2 = 0x3333333333333333LLU;
 //        const static mlong m4 = 0x0f0f0f0f0f0f0f0fLLU;
 //        const static mlong m8 = 0x00ff00ff00ff00ffLLU;
-		const static mlong FIVEMASK = 0x55555555;
-		const static mlong m2 = 0x33333333;
-		const static mlong AAAAMASK = 0xaaaaaaaa;
-//        const static mlong FIVEMASK = 0x5555555555555555LLU; //not smart enough to increase the bit length...
-//		const static mlong m2 = 0x3333333333333333LLU;
-//		const static mlong AAAAMASK = 0xaaaaaaaaaaaaaaaaLLU;
+//		const static mlong FIVEMASK = 0x55555555;
+//		const static mlong THREEMASK = 0x33333333;
+//		const static mlong OFMASK = 0x0f0f0f0f;
+//		const static mlong ONEZEROMASK = 0x01010101;
+//		const static mlong AAAAMASK = 0xaaaaaaaa;
+        const static mlong FIVEMASK = 0x5555555555555555LLU; //not smart enough to increase the bit length...
+		const static mlong THREEMASK = 0x3333333333333333LLU;
+		const static mlong AAAAMASK = 0xaaaaaaaaaaaaaaaaLLU;
+		const static mlong OFMASK = 0x0f0f0f0f0f0f0f0fLLU;
+		const static mlong ONEZEROMASK = 0x0101010101010101LLU;
         unsigned int m_bitSize;
         unsigned int m_requiredBit;
 
