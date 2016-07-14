@@ -119,7 +119,6 @@ target_compile_features(genotype PRIVATE cxx_range_for)
 add_library(linkage SHARED "src/linkage.cpp") 
 add_dependencies(linkage ArmadilloDownload)
 target_compile_features(linkage PRIVATE cxx_range_for)
-add_dependencies(usefultools ArmadilloDownload)
 
 # decomposition
 add_library(decomposition SHARED "src/decomposition.cpp") 
