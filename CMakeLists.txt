@@ -87,35 +87,43 @@ target_compile_features(usefultools PRIVATE cxx_range_for)
 
 # genotypefilehandler
 add_library(genotypefilehandler SHARED "src/genotypefilehandler.cpp") 
+add_dependencies(genotypefilehandler ArmadilloDownload)
 target_compile_features(genotypefilehandler PRIVATE cxx_range_for)
 
 # command
 add_library(commander SHARED "src/command.cpp") 
+add_dependencies(commander ArmadilloDownload)
 target_compile_features(commander PRIVATE cxx_range_for)
 
 # snp
 add_library(snp SHARED "src/snp.cpp") 
+add_dependencies(snp ArmadilloDownload)
 target_compile_features(snp PRIVATE cxx_range_for)
 
 # region
 add_library(region SHARED "src/region.cpp") 
+add_dependencies(region ArmadilloDownload)
 target_compile_features(region PRIVATE cxx_range_for)
 
 # snpestimation
-add_library(snpestimation SHARED "src/snpestimation.cpp") 
+add_library(usefultools SHARED "src/snpestimation.cpp") 
+add_dependencies(usefultools ArmadilloDownload)
 target_compile_features(snpestimation PRIVATE cxx_range_for)
 
 # genotype
-add_library(genotype SHARED "src/genotype.cpp") 
+add_library(usefultools SHARED "src/genotype.cpp") 
+add_dependencies(usefultools ArmadilloDownload)
 target_compile_features(genotype PRIVATE cxx_range_for)
 
 # linkage
 add_library(linkage SHARED "src/linkage.cpp") 
+add_dependencies(usefultools ArmadilloDownload)
 target_compile_features(linkage PRIVATE cxx_range_for)
-add_dependencies(linkage ArmadilloDownload)
+add_dependencies(usefultools ArmadilloDownload)
 
 # decomposition
 add_library(decomposition SHARED "src/decomposition.cpp") 
+add_dependencies(decomposition ArmadilloDownload)
 target_compile_features(decomposition PRIVATE cxx_range_for)
 
 add_executable(shrek ${CMAKE_SOURCE_DIR}/src/main.cpp)
