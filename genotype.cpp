@@ -160,7 +160,9 @@ void Genotype::AddsampleGenotype(const int first, const int second, const size_t
         m_nonMissSample++;
     }
     else if(first==1 && second ==0){ //missing
+        m_missing[(sampleIndex*2)/(m_bitSize)] = m_missing[(sampleIndex*2)/(m_bitSize)]  | 0x3LLU << ((sampleIndex*2)% (m_bitSize)); //this is if we code missing as 0
         m_genotype[(sampleIndex*2)/(m_bitSize)] = m_genotype[(sampleIndex*2)/(m_bitSize)]  | 0x1LLU << ((sampleIndex*2)% (m_bitSize));
+        m_nonMissSample++; //this is if we code missing as 0
     }
 }
 

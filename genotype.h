@@ -14,6 +14,7 @@
 #include <iostream>
 #include <deque>
 #include <limits.h>
+#include <cmath>
 
 /** \class Genotype
  *  \brief Responsible for storing the genotype information and calculate the LD
