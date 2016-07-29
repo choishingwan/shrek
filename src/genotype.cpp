@@ -1,5 +1,4 @@
 #include "genotype.h"
-#include <math.h>
 
 size_t Genotype::m_sampleNum;
 
