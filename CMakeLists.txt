@@ -31,23 +31,6 @@ endif()
 # External projects
 # ================
 
-# Armadillo
-#============
-ExternalProject_Add(ArmadilloDownload
-	PREFIX ${LIBRARY_OUTPUT_PATH}/armadillo-7.100.3
-	DOWNLOAD_COMMAND wget http://sourceforge.net/projects/arma/files/armadillo-7.100.3.tar.xz
-	CONFIGURE_COMMAND tar -xf ../armadillo-7.100.3.tar.xz -C ../ArmadilloDownload  --strip-components=1
-	BUILD_IN_SOURCE 1
-	BUILD_COMMAND cmake .
-	INSTALL_COMMAND make
-	UPDATE_COMMAND ""
-	)
-
-set(Armadillo_DIR ${LIBRARY_OUTPUT_PATH}/armadillo-7.100.3/src/ArmadilloDownload)
-set(ARMADILLO_LIBRARY ${Armadillo_DIR}/libarmadillo.so)
-set(ARMADILLO_INCLUDE_DIR ${Armadillo_DIR}/include/)
-include_directories(${ARMADILLO_INCLUDE_DIR})
-
 # OpenBlas
 #============
 ExternalProject_Add(OpenBlasDownload
@@ -71,6 +54,24 @@ if(OPENMP_FOUND)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
+
+
+# Armadillo
+#============
+ExternalProject_Add(ArmadilloDownload
+	PREFIX ${LIBRARY_OUTPUT_PATH}/armadillo-7.100.3
+	DOWNLOAD_COMMAND wget http://sourceforge.net/projects/arma/files/armadillo-7.100.3.tar.xz
+	CONFIGURE_COMMAND tar -xf ../armadillo-7.100.3.tar.xz -C ../ArmadilloDownload  --strip-components=1
+	BUILD_IN_SOURCE 1
+	BUILD_COMMAND cmake .
+	INSTALL_COMMAND make
+	UPDATE_COMMAND ""
+	)
+
+set(Armadillo_DIR ${LIBRARY_OUTPUT_PATH}/armadillo-7.100.3/src/ArmadilloDownload)
+set(ARMADILLO_LIBRARY ${Armadillo_DIR}/libarmadillo.so)
+set(ARMADILLO_INCLUDE_DIR ${Armadillo_DIR}/include/)
+include_directories(${ARMADILLO_INCLUDE_DIR})
 
 # Boost
 #========
