@@ -47,7 +47,7 @@ void Decomposition::complexSEUpdate(size_t decompStartIndex, size_t decompEndInd
 }
 
 size_t Decomposition::check = 0;
-void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size_t decompStartIndex, size_t decompEndIndex, size_t midStartIndex, size_t midEndIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> &regionList, bool sign, bool starting, bool ending){
+void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, const size_t decompStartIndex, const size_t decompEndIndex, const size_t midStartIndex, const size_t midEndIndex, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> &regionList, bool sign, bool starting, bool ending){
     size_t sizeOfMatrix = decompEndIndex-decompStartIndex;
     arma::vec fStat = arma::vec(sizeOfMatrix, arma::fill::zeros);
     arma::vec heritResult = arma::vec(sizeOfMatrix, arma::fill::zeros);
@@ -67,7 +67,7 @@ void Decomposition::decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size
         }
     }
 
-    linkage.decompose(decompStartIndex, fStat, heritResult);
+    linkage.decompose(decompStartIndex, decompEndIndex, fStat, heritResult);
     for(size_t i = (starting)? 0:midStartIndex-decompStartIndex; i < sizeOfMatrix; ++i){
         snpList[snpLoc[i+decompStartIndex]].setHeritability(heritResult(i));
     }

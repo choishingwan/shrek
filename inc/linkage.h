@@ -40,7 +40,7 @@ class Linkage
         void print();
         void effectiveSE(size_t startIndex, size_t endIndex, arma::vec &varResult);
         void complexSE(size_t startIndex, size_t endIndex, const arma::vec &nSample, const arma::vec &tStat, arma::mat &varResult);
-        void decompose(size_t start, const arma::vec &fStat, arma::vec &heritResult);
+        void decompose(const size_t start, const size_t endBound, const arma::vec &fStat, arma::vec &heritResult);
         void computeHerit(const arma::vec &fStat, arma::vec &heritResult);
         void clear();
         void clear(size_t nRemoveElements);

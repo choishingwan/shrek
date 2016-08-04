@@ -24,7 +24,7 @@ class Decomposition
     private:
         static size_t check;
         size_t m_thread = 0;
-        void decompose(Linkage &linkage, std::deque<size_t> &snpLoc, size_t startDecompIter, size_t endDecompIter, size_t startVarIter, size_t endVarIter, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> &regionList, bool sign, bool start, bool ending);
+        void decompose(Linkage &linkage, std::deque<size_t> &snpLoc, const size_t startDecompIter, const size_t endDecompIter, const size_t startVarIter, const size_t endVarIter, boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> &regionList, bool sign, bool start, bool ending);
         void complexSEUpdate(size_t decompStartIndex, size_t decompEndIndex, size_t midStartIndex, size_t midEndIndex, std::deque<size_t> &snpLoc,boost::ptr_vector<Snp> &snpList, boost::ptr_vector<Region> &regionList, bool starting, bool ending, const arma::mat &varResult);
 
 };

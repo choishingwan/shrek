@@ -153,8 +153,8 @@ void Linkage::clear(size_t nRemoveElements){
 }
 
 void Linkage::complexSE(size_t startIndex, size_t endBound, const arma::vec &nSample, const arma::vec &tStat, arma::mat &varResult){
-    size_t endOfBlock = endBound-1;
-    varResult = m_rInv*arma::diagmat(nSample)*(4*m_linkageSqrt.submat(startIndex,startIndex,endOfBlock,endOfBlock)%(tStat*tStat.t())-2*m_linkage.submat(startIndex,startIndex,endOfBlock, endOfBlock))*arma::diagmat(nSample)*m_rInv;
+    e
+    varResult = m_rInv*arma::diagmat(nSample)*(4*m_linkageSqrt.submat(startIndex,startIndex,endIndex,endIndex)%(tStat*tStat.t())-2*m_linkage.submat(startIndex,startIndex,endIndex, endIndex))*arma::diagmat(nSample)*m_rInv;
     m_rInv.clear();
 }
 
