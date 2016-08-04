@@ -157,10 +157,11 @@ void Linkage::complexSE(size_t startIndex, size_t endIndex, const arma::vec &nSa
     m_rInv.clear();
 }
 
-void Linkage::effectiveSE(size_t startIndex, size_t endIndex, arma::vec &varResult){
+void Linkage::effectiveSE(size_t startIndex, arma::vec &varResult){
     if(startIndex > m_linkage.n_cols) throw "Start coordinates exceeds the matrix size";
-    arma::vec effectiveNumber(endIndex-startIndex, arma::fill::ones);
+    arma::vec effectiveNumber(m_rInv.n_cols, arma::fill::ones);
     varResult = m_rInv*effectiveNumber;
+    size_t endIndex = startIndex+m_rInv.n_cols-1;
     arma::vec errorVec = m_linkage.submat( startIndex, startIndex, endIndex, endIndex )*varResult - effectiveNumber;
  	double oriNorm = norm(effectiveNumber);
     double relative_error = norm(errorVec) / oriNorm;
